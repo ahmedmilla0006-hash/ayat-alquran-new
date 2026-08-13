@@ -167,26 +167,57 @@ html,body{
 .side-menu{
   position:fixed;
   top:0;left:0;
-  width:min(320px,88vw);
+  width:min(76vw,520px);
   height:100dvh;
   z-index:90;
-  background:#fff;
-  padding:22px 15px;
+  background:#202020;
+  padding:28px 26px 30px;
+  overflow-y:auto;
   transform:translateX(-105%);
   transition:transform .25s ease;
-  box-shadow:8px 0 25px #0004;
+  box-shadow:8px 0 25px #0007;
 }
 .side-menu.open{transform:translateX(0)}
 .side-menu h2{
-  margin:10px 0 22px;
-  text-align:center;color:var(--green);
+  margin:14px 0 42px;
+  text-align:center;
+  color:var(--green);
+  font-size:29px;
+  font-weight:bold;
 }
 .menu-item{
   display:block;width:100%;
-  margin:6px 0;padding:13px;
-  border:0;border-radius:10px;
-  background:#f1eee6;
-  text-align:right;font-family:inherit;font-size:15px;
+  margin:0 0 16px;
+  padding:17px 22px;
+  min-height:70px;
+  border:0;border-radius:16px;
+  background:var(--green);
+  color:#fff;
+  text-align:right;
+  font-family:inherit;
+  font-size:19px;
+  box-shadow:0 2px 4px #0003;
+}
+.menu-item:active{
+  background:var(--green-dark);
+  transform:scale(.99);
+}
+@media(max-width:600px){
+  .side-menu{
+    width:76vw;
+    padding:24px 26px 28px;
+  }
+  .side-menu h2{
+    font-size:28px;
+    margin-bottom:40px;
+  }
+  .menu-item{
+    min-height:68px;
+    margin-bottom:16px;
+    padding:16px 20px;
+    font-size:18px;
+    border-radius:16px;
+  }
 }
 @media(max-width:600px){
   .menu-button{top:14px;left:14px}
@@ -267,9 +298,13 @@ html,body{
   <button class="menu-item">📖 السور</button>
   <button class="menu-item">📚 الأجزاء والأحزاب</button>
   <button class="menu-item">🔎 البحث</button>
-  <button class="menu-item">🔖 العلامات المرجعية</button>
+  <button class="menu-item">🔖 حفظ الصفحة الحالية</button>
+  <button class="menu-item">🕘 الذهاب إلى العلامة المرجعية</button>
+  <button class="menu-item">🌙 الوضع الليلي</button>
+  <button class="menu-item">🔍 تكبير</button>
+  <button class="menu-item">🔍 تصغير</button>
+  <button class="menu-item">↔️ الحجم الطبيعي</button>
   <button class="menu-item">🎧 القراء والتلاوات</button>
-  <button class="menu-item">⚙️ الإعدادات</button>
   <button class="menu-item" id="closeMenu">✕ إغلاق</button>
 </aside>
 
