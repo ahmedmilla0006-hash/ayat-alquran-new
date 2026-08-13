@@ -4,166 +4,199 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
 
-<title>القرآن الكريم - صفحات المصحف</title>
+<title>القرآن الكريم - أبو إسلام</title>
 
 <style>
 * {
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
-  background: #f3efe4;
+  min-height: 100%;
+  background: #eee9dc;
   color: #222;
   font-family: Tahoma, Arial, sans-serif;
-  min-height: 100%;
 }
 
 body.dark {
-  background: #151515;
+  background: #111;
   color: #eee;
 }
+
+/* العنوان */
 
 header {
   background: #146b2f;
   color: white;
-  padding: 14px 10px;
   text-align: center;
+  padding: 12px 8px;
   position: sticky;
   top: 0;
   z-index: 20;
-  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
 }
 
 header h1 {
   margin: 0;
-  font-size: 25px;
+  font-size: 23px;
 }
 
 header p {
-  margin: 5px 0 0;
-  font-size: 14px;
+  margin: 4px 0 0;
+  font-size: 13px;
 }
 
+/* شريط التحكم */
+
 .controls {
+  background: #f5f1e6;
+  padding: 8px;
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 7px;
   flex-wrap: wrap;
-  padding: 10px;
-  background: #eee9dc;
   position: sticky;
-  top: 74px;
+  top: 66px;
   z-index: 19;
+  box-shadow: 0 1px 5px rgba(0,0,0,.1);
 }
 
 body.dark .controls {
-  background: #222;
+  background: #202020;
 }
 
-button,
-select {
-  border: none;
+.controls button,
+.controls select {
+  border: 0;
   border-radius: 9px;
-  padding: 9px 12px;
-  font-size: 15px;
+  padding: 8px 11px;
   background: #146b2f;
   color: white;
+  font-size: 14px;
   cursor: pointer;
 }
 
-button:active {
-  transform: scale(.96);
-}
-
-.page-number {
+.page-info {
   font-weight: bold;
-  min-width: 100px;
+  min-width: 90px;
   text-align: center;
 }
+
+/* المصحف */
 
 .reader {
   width: 100%;
   max-width: 850px;
-  margin: 12px auto 80px;
-  padding: 0 8px;
-  text-align: center;
+  margin: 10px auto 20px;
+  padding: 0 5px;
 }
 
-.page-container {
-  position: relative;
+.page-wrapper {
   width: 100%;
   overflow: hidden;
   background: white;
-  border-radius: 5px;
-  box-shadow: 0 2px 12px rgba(0,0,0,.18);
+  border-radius: 4px;
+  box-shadow: 0 3px 15px rgba(0,0,0,.2);
+
+  /* مهم للسحب */
   touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+body.dark .page-wrapper {
+  background: #222;
 }
 
 .page {
   display: block;
   width: 100%;
   height: auto;
-  margin: auto;
+  margin: 0 auto;
   user-select: none;
   -webkit-user-drag: none;
+  pointer-events: none;
+
+  transition: transform .18s ease;
 }
 
 .loading {
-  padding: 40px 10px;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  text-align: center;
   font-size: 18px;
 }
 
-.bottom-controls {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(20,107,47,.96);
-  padding: 8px;
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  z-index: 30;
-}
+/* تعليمات */
 
-.bottom-controls button {
-  background: white;
-  color: #146b2f;
-  min-width: 90px;
-}
-
-.info {
+.hint {
   text-align: center;
-  margin-top: 10px;
-  color: #555;
+  color: #666;
   font-size: 13px;
+  padding: 8px;
 }
 
-body.dark .info {
-  color: #bbb;
+body.dark .hint {
+  color: #aaa;
 }
+
+/* زر الرجوع */
+
+.back {
+  display: block;
+  width: fit-content;
+  margin: 8px auto;
+  padding: 8px 15px;
+  background: #146b2f;
+  color: white;
+  text-decoration: none;
+  border-radius: 9px;
+  font-size: 14px;
+}
+
+/* الهاتف */
 
 @media (max-width: 600px) {
+
   header h1 {
-    font-size: 22px;
+    font-size: 21px;
+  }
+
+  header p {
+    font-size: 12px;
   }
 
   .controls {
-    top: 69px;
+    top: 62px;
+    padding: 7px 4px;
   }
 
-  button,
-  select {
-    padding: 8px 10px;
-    font-size: 14px;
+  .controls button,
+  .controls select {
+    font-size: 13px;
+    padding: 7px 8px;
+  }
+
+  .page-info {
+    min-width: 80px;
+    font-size: 13px;
   }
 
   .reader {
-    padding: 0 4px;
-    margin-top: 8px;
+    padding: 0 2px;
+    margin-top: 7px;
+  }
+
+  .page-wrapper {
+    border-radius: 2px;
   }
 }
 </style>
@@ -176,118 +209,173 @@ body.dark .info {
   <p>صفحات المصحف الشريف</p>
 </header>
 
+<a href="index.html" class="back">
+  ← العودة للرئيسية
+</a>
+
 <div class="controls">
 
-  <button onclick="previousPage()">‹ السابق</button>
-
-  <span class="page-number">
+  <span class="page-info">
     صفحة <span id="pageNumber">1</span> / 604
   </span>
 
-  <button onclick="nextPage()">التالي ›</button>
+  <select id="pageSelect" aria-label="اختيار الصفحة">
+  </select>
 
   <button onclick="zoomOut()">−</button>
   <button onclick="zoomIn()">+</button>
 
   <button onclick="toggleDark()">🌙</button>
 
-  <select id="pageSelect" onchange="goToPage(this.value)">
-  </select>
-
 </div>
 
 <main class="reader">
 
-  <div class="page-container" id="pageContainer">
+  <div
+    class="page-wrapper"
+    id="pageWrapper"
+  >
 
-    <div class="loading" id="loading">
+    <div
+      class="loading"
+      id="loading"
+    >
       جاري تحميل صفحة المصحف...
     </div>
 
     <img
       id="quranPage"
       class="page"
-      alt="صفحة القرآن الكريم"
+      alt="صفحة المصحف"
       draggable="false"
       style="display:none;"
     >
 
   </div>
 
-  <div class="info">
-    اسحب الصفحة يمينًا أو يسارًا للتنقل
+  <div class="hint">
+    👆 اسحب الصفحة يمينًا أو يسارًا لتقليب الصفحات
   </div>
 
 </main>
 
-<div class="bottom-controls">
-
-  <button onclick="previousPage()">← الصفحة السابقة</button>
-
-  <button onclick="nextPage()">الصفحة التالية →</button>
-
-</div>
-
 <script>
 
-const totalPages = 604;
+/* =========================
+   إعدادات المصحف
+========================= */
+
+const TOTAL_PAGES = 604;
 
 let currentPage =
   parseInt(localStorage.getItem("quranPage") || "1");
 
 let zoom = 1;
 
-const image = document.getElementById("quranPage");
-const loading = document.getElementById("loading");
-const pageNumber = document.getElementById("pageNumber");
-const pageSelect = document.getElementById("pageSelect");
-const container = document.getElementById("pageContainer");
+
+/* =========================
+   العناصر
+========================= */
+
+const pageWrapper =
+  document.getElementById("pageWrapper");
+
+const image =
+  document.getElementById("quranPage");
+
+const loading =
+  document.getElementById("loading");
+
+const pageNumber =
+  document.getElementById("pageNumber");
+
+const pageSelect =
+  document.getElementById("pageSelect");
 
 
-// إنشاء قائمة الصفحات
-for (let i = 1; i <= totalPages; i++) {
+/* =========================
+   قائمة الصفحات
+========================= */
 
-  const option = document.createElement("option");
+for (let i = 1; i <= TOTAL_PAGES; i++) {
+
+  const option =
+    document.createElement("option");
 
   option.value = i;
-  option.textContent = "الصفحة " + i;
+  option.textContent =
+    "صفحة " + i;
 
   pageSelect.appendChild(option);
 }
 
 
-// تحميل الصفحة
+/* =========================
+   تحميل الصفحة
+========================= */
+
 function loadPage(page) {
 
-  if (page < 1) page = 1;
-  if (page > totalPages) page = totalPages;
+  page = parseInt(page);
+
+  if (page < 1) {
+    page = 1;
+  }
+
+  if (page > TOTAL_PAGES) {
+    page = TOTAL_PAGES;
+  }
 
   currentPage = page;
 
-  pageNumber.textContent = page;
-  pageSelect.value = page;
+  pageNumber.textContent =
+    currentPage;
 
-  loading.style.display = "block";
-  image.style.display = "none";
+  pageSelect.value =
+    currentPage;
+
+  loading.style.display =
+    "flex";
+
+  image.style.display =
+    "none";
+
+  /*
+    الصور الموجودة في GitHub:
+    1.png
+    2.png
+    3.png
+    ...
+    604.png
+  */
 
   image.onload = function() {
 
-    loading.style.display = "none";
-    image.style.display = "block";
+    loading.style.display =
+      "none";
+
+    image.style.display =
+      "block";
 
     applyZoom();
+
   };
 
   image.onerror = function() {
 
     loading.textContent =
-      "تعذر تحميل الصفحة رقم " + page +
-      ". تأكد أن الملف " + page + ".png موجود في المستودع.";
+      "تعذر تحميل صفحة المصحف رقم " +
+      currentPage;
+
   };
 
-  image.src = page + ".png";
+  image.src =
+    currentPage + ".png";
 
-  localStorage.setItem("quranPage", page);
+  localStorage.setItem(
+    "quranPage",
+    currentPage
+  );
 
   window.scrollTo({
     top: 0,
@@ -296,130 +384,347 @@ function loadPage(page) {
 }
 
 
-// الصفحة التالية
-function nextPage() {
+/* =========================
+   اختيار الصفحة
+========================= */
 
-  if (currentPage < totalPages) {
-    loadPage(currentPage + 1);
+pageSelect.addEventListener(
+  "change",
+  function() {
+
+    loadPage(this.value);
+
   }
-
-}
-
-
-// الصفحة السابقة
-function previousPage() {
-
-  if (currentPage > 1) {
-    loadPage(currentPage - 1);
-  }
-
-}
+);
 
 
-// الانتقال إلى صفحة
-function goToPage(page) {
+/* =========================
+   التكبير
+========================= */
 
-  loadPage(parseInt(page));
-
-}
-
-
-// التكبير
 function zoomIn() {
 
   if (zoom < 2.5) {
+
     zoom += 0.1;
+
     applyZoom();
+
   }
 
 }
 
 
-// التصغير
 function zoomOut() {
 
   if (zoom > 0.5) {
+
     zoom -= 0.1;
+
     applyZoom();
+
   }
 
 }
 
 
-// تطبيق التكبير
 function applyZoom() {
 
-  image.style.width = (zoom * 100) + "%";
+  image.style.width =
+    (zoom * 100) + "%";
+
 }
 
 
-// الوضع الليلي
+/* =========================
+   الوضع الليلي
+========================= */
+
 function toggleDark() {
 
-  document.body.classList.toggle("dark");
+  document.body.classList.toggle(
+    "dark"
+  );
 
   localStorage.setItem(
     "quranDark",
-    document.body.classList.contains("dark")
+    document.body.classList.contains(
+      "dark"
+    )
   );
 
 }
 
 
-// استعادة الوضع الليلي
-if (localStorage.getItem("quranDark") === "true") {
-  document.body.classList.add("dark");
+if (
+  localStorage.getItem(
+    "quranDark"
+  ) === "true"
+) {
+
+  document.body.classList.add(
+    "dark"
+  );
+
 }
 
 
-// السحب باللمس
-let touchStartX = 0;
-let touchEndX = 0;
+/* =========================
+   السحب باللمس
+========================= */
 
-container.addEventListener("touchstart", function(e) {
+let startX = 0;
+let startY = 0;
 
-  touchStartX = e.changedTouches[0].screenX;
+let endX = 0;
+let endY = 0;
 
-}, {passive: true});
+let isDragging = false;
 
 
-container.addEventListener("touchend", function(e) {
+/* بداية السحب */
 
-  touchEndX = e.changedTouches[0].screenX;
+pageWrapper.addEventListener(
+  "touchstart",
+  function(event) {
 
-  const distance = touchEndX - touchStartX;
+    const touch =
+      event.touches[0];
 
-  if (Math.abs(distance) > 60) {
+    startX =
+      touch.clientX;
 
-    if (distance > 0) {
-      previousPage();
+    startY =
+      touch.clientY;
+
+    isDragging = true;
+
+  },
+  {
+    passive: true
+  }
+);
+
+
+/* نهاية السحب */
+
+pageWrapper.addEventListener(
+  "touchend",
+  function(event) {
+
+    if (!isDragging) {
+      return;
+    }
+
+    isDragging = false;
+
+    const touch =
+      event.changedTouches[0];
+
+    endX =
+      touch.clientX;
+
+    endY =
+      touch.clientY;
+
+    const differenceX =
+      endX - startX;
+
+    const differenceY =
+      endY - startY;
+
+    /*
+      إذا كانت الحركة عمودية
+      فلا نقلب الصفحة
+    */
+
+    if (
+      Math.abs(differenceY) >
+      Math.abs(differenceX)
+    ) {
+
+      return;
+
+    }
+
+    /*
+      يجب أن تكون مسافة السحب
+      60 بكسل على الأقل
+    */
+
+    if (
+      Math.abs(differenceX) < 60
+    ) {
+
+      return;
+
+    }
+
+    /*
+      سحب من اليمين إلى اليسار
+      = الصفحة التالية
+    */
+
+    if (differenceX < 0) {
+
+      if (
+        currentPage < TOTAL_PAGES
+      ) {
+
+        loadPage(
+          currentPage + 1
+        );
+
+      }
+
+    }
+
+    /*
+      سحب من اليسار إلى اليمين
+      = الصفحة السابقة
+    */
+
+    else {
+
+      if (currentPage > 1) {
+
+        loadPage(
+          currentPage - 1
+        );
+
+      }
+
+    }
+
+  },
+  {
+    passive: true
+  }
+);
+
+
+/* =========================
+   دعم الماوس للكمبيوتر
+========================= */
+
+let mouseStartX = 0;
+let mouseDown = false;
+
+
+pageWrapper.addEventListener(
+  "mousedown",
+  function(event) {
+
+    mouseDown = true;
+
+    mouseStartX =
+      event.clientX;
+
+  }
+);
+
+
+pageWrapper.addEventListener(
+  "mouseup",
+  function(event) {
+
+    if (!mouseDown) {
+      return;
+    }
+
+    mouseDown = false;
+
+    const difference =
+      event.clientX -
+      mouseStartX;
+
+    if (
+      Math.abs(difference) < 60
+    ) {
+
+      return;
+
+    }
+
+    if (difference < 0) {
+
+      if (
+        currentPage < TOTAL_PAGES
+      ) {
+
+        loadPage(
+          currentPage + 1
+        );
+
+      }
+
     } else {
-      nextPage();
+
+      if (currentPage > 1) {
+
+        loadPage(
+          currentPage - 1
+        );
+
+      }
+
     }
 
   }
+);
 
-}, {passive: true});
 
+/* =========================
+   الأسهم في لوحة المفاتيح
+========================= */
 
-// لوحة المفاتيح
-document.addEventListener("keydown", function(e) {
+document.addEventListener(
+  "keydown",
+  function(event) {
 
-  if (e.key === "ArrowRight") {
-    nextPage();
+    if (
+      event.key === "ArrowLeft"
+    ) {
+
+      if (
+        currentPage > 1
+      ) {
+
+        loadPage(
+          currentPage - 1
+        );
+
+      }
+
+    }
+
+    if (
+      event.key === "ArrowRight"
+    ) {
+
+      if (
+        currentPage < TOTAL_PAGES
+      ) {
+
+        loadPage(
+          currentPage + 1
+        );
+
+      }
+
+    }
+
   }
-
-  if (e.key === "ArrowLeft") {
-    previousPage();
-  }
-
-});
+);
 
 
-// تشغيل أول صفحة
+/* =========================
+   تشغيل الصفحة المحفوظة
+========================= */
+
 loadPage(currentPage);
 
 </script>
 
 </body>
-</html>
+    </html>
