@@ -12,7 +12,9 @@
   --cream:#f5f0e7;
 }
 
-*{box-sizing:border-box}
+*{
+  box-sizing:border-box;
+}
 
 html,body{
   margin:0;
@@ -44,7 +46,7 @@ html,body{
 .page-area{
   width:100%;
   height:100%;
-  overflow:hidden;
+  overflow:auto;
   display:flex;
   justify-content:center;
   align-items:flex-start;
@@ -61,6 +63,7 @@ html,body{
   user-select:none;
   -webkit-user-drag:none;
   pointer-events:none;
+  transform-origin:center top;
 }
 
 .menu-button{
@@ -232,8 +235,6 @@ html,body{
   cursor:pointer;
 }
 
-/* القائمة الجانبية */
-
 .overlay{
   position:fixed;
   inset:0;
@@ -295,9 +296,7 @@ html,body{
   transform:scale(.99);
 }
 
-/* نافذة السور */
-
-.surah-overlay{
+.popup-overlay{
   position:fixed;
   inset:0;
   z-index:200;
@@ -305,54 +304,55 @@ html,body{
   display:none;
   align-items:center;
   justify-content:center;
-  padding:20px;
+  padding:18px;
 }
 
-.surah-overlay.show{
+.popup-overlay.show{
   display:flex;
 }
 
-.surah-box{
-  width:min(92vw,500px);
-  max-height:88vh;
+.popup-box{
+  width:min(94vw,520px);
+  max-height:90vh;
   background:#202020;
   border-radius:22px;
-  padding:20px;
-  box-shadow:0 10px 35px #0009;
+  padding:18px;
+  box-shadow:0 10px 40px #0009;
   display:flex;
   flex-direction:column;
 }
 
-.surah-header{
+.popup-header{
   display:flex;
   align-items:center;
   justify-content:space-between;
   margin-bottom:15px;
 }
 
-.surah-header h2{
+.popup-header h2{
   margin:0;
   color:var(--green);
   font-size:24px;
 }
 
-.surah-close{
+.popup-close{
   width:42px;
   height:42px;
   border:0;
   border-radius:50%;
   background:var(--green);
   color:#fff;
-  font-size:22px;
+  font-size:21px;
   cursor:pointer;
 }
 
-.surah-list{
+.popup-list{
   overflow-y:auto;
-  padding:4px;
+  padding:3px;
 }
 
-.surah-item{
+.popup-item{
+  display:block;
   width:100%;
   border:0;
   border-radius:13px;
@@ -366,11 +366,13 @@ html,body{
   cursor:pointer;
 }
 
-.surah-item:active{
+.popup-item:active{
   background:var(--green-dark);
 }
 
-/* الوضع الليلي */
+.popup-item small{
+  opacity:.8;
+}
 
 .night-mode .app,
 .night-mode .reader,
@@ -451,10 +453,7 @@ html,body{
 
   <main class="reader">
 
-    <button
-      class="menu-button"
-      id="menuButton"
-      aria-label="القائمة">
+    <button class="menu-button" id="menuButton">
       ☰
     </button>
 
@@ -463,7 +462,7 @@ html,body{
       <img
         id="quranPage"
         class="page"
-        src="3.png"
+        src="images/3.png"
         alt="صفحة القرآن الكريم"
         draggable="false">
 
@@ -482,17 +481,11 @@ html,body{
       <div class="reader-data">
 
         <div class="reader-row">
+          <span class="reader-label">القارئ:</span>
 
-          <span class="reader-label">
-            القارئ:
-          </span>
-
-          <span
-            class="reader-name"
-            id="readerName">
+          <span class="reader-name" id="readerName">
             الشيخ عبد الرحمن السديس
           </span>
-
         </div>
 
         <div class="readers-title">
@@ -503,52 +496,19 @@ html,body{
 
       <select
         class="reader-select"
-        id="readerSelect"
-        aria-label="اختيار القارئ">
+        id="readerSelect">
 
-        <option value="sudais">
-          الشيخ عبد الرحمن السديس
-        </option>
-
-        <option value="abdulbasit">
-          الشيخ عبد الباسط عبد الصمد
-        </option>
-
-        <option value="minshawi">
-          الشيخ محمد صديق المنشاوي
-        </option>
-
-        <option value="husary">
-          الشيخ محمود خليل الحصري
-        </option>
-
-        <option value="shatri">
-          أبو بكر الشاطري
-        </option>
-
-        <option value="idrees">
-          إدريس أبكر
-        </option>
-
-        <option value="islam">
-          إسلام صبحي
-        </option>
-
-        <option value="fares">
-          فارس عباد
-        </option>
-
-        <option value="afasy">
-          مشاري العفاسي
-        </option>
-
-        <option value="hazza">
-          هزاع البلوشي
-        </option>
-
-        <option value="lahidan">
-          محمد اللحيدان
-        </option>
+        <option value="sudais">الشيخ عبد الرحمن السديس</option>
+        <option value="abdulbasit">الشيخ عبد الباسط عبد الصمد</option>
+        <option value="minshawi">الشيخ محمد صديق المنشاوي</option>
+        <option value="husary">الشيخ محمود خليل الحصري</option>
+        <option value="shatri">أبو بكر الشاطري</option>
+        <option value="idrees">إدريس أبكر</option>
+        <option value="islam">إسلام صبحي</option>
+        <option value="fares">فارس عباد</option>
+        <option value="afasy">مشاري العفاسي</option>
+        <option value="hazza">هزاع البلوشي</option>
+        <option value="lahidan">محمد اللحيدان</option>
 
       </select>
 
@@ -556,9 +516,7 @@ html,body{
 
     <div class="progress-row">
 
-      <span
-        class="progress-time"
-        id="duration">
+      <span class="progress-time" id="duration">
         0:00
       </span>
 
@@ -569,9 +527,7 @@ html,body{
         max="100">
       </progress>
 
-      <span
-        class="progress-time"
-        id="currentTime">
+      <span class="progress-time" id="currentTime">
         0:00
       </span>
 
@@ -579,66 +535,28 @@ html,body{
 
     <div class="controls">
 
-      <button
-        class="control"
-        id="nextButton">
-
-        <span class="control-icon">
-          ▮▶
-        </span>
-
-        <span class="control-text">
-          التالي
-        </span>
-
+      <button class="control" id="nextButton">
+        <span class="control-icon">▮▶</span>
+        <span class="control-text">التالي</span>
       </button>
 
-      <button
-        class="control"
-        id="forwardButton">
-
-        <span class="control-icon">
-          ↷<small>10</small>
-        </span>
-
-        <span class="control-text">
-          تقدم 10 ث
-        </span>
-
+      <button class="control" id="forwardButton">
+        <span class="control-icon">↷</span>
+        <span class="control-text">تقدم 10 ث</span>
       </button>
 
-      <button
-        class="play-button"
-        id="playButton">
+      <button class="play-button" id="playButton">
         ▶
       </button>
 
-      <button
-        class="control"
-        id="backButton">
-
-        <span class="control-icon">
-          ↶<small>10</small>
-        </span>
-
-        <span class="control-text">
-          رجوع 10 ث
-        </span>
-
+      <button class="control" id="backButton">
+        <span class="control-icon">↶</span>
+        <span class="control-text">رجوع 10 ث</span>
       </button>
 
-      <button
-        class="control"
-        id="prevButton">
-
-        <span class="control-icon">
-          ◀▮
-        </span>
-
-        <span class="control-text">
-          السابق
-        </span>
-
+      <button class="control" id="prevButton">
+        <span class="control-icon">◀▮</span>
+        <span class="control-text">السابق</span>
       </button>
 
     </div>
@@ -647,86 +565,53 @@ html,body{
 
 </div>
 
-<!-- التعتيم -->
+<div class="overlay" id="overlay"></div>
 
-<div
-  class="overlay"
-  id="overlay">
-</div>
+<aside class="side-menu" id="sideMenu">
 
-<!-- القائمة الرئيسية -->
+  <h2>القرآن الكريم</h2>
 
-<aside
-  class="side-menu"
-  id="sideMenu">
-
-  <h2>
-    القرآن الكريم
-  </h2>
-
-  <button
-    class="menu-item"
-    id="surahsButton">
+  <button class="menu-item" id="surahsButton">
     📖 السور
   </button>
 
-  <button
-    class="menu-item"
-    id="juzButton">
+  <button class="menu-item" id="juzButton">
     📚 الأجزاء والأحزاب
   </button>
 
-  <button
-    class="menu-item"
-    id="searchButton">
+  <button class="menu-item" id="searchButton">
     🔎 البحث
   </button>
 
-  <button
-    class="menu-item"
-    id="saveButton">
+  <button class="menu-item" id="saveButton">
     🔖 حفظ الصفحة الحالية
   </button>
 
-  <button
-    class="menu-item"
-    id="bookmarkButton">
+  <button class="menu-item" id="bookmarkButton">
     🕘 الذهاب إلى العلامة المرجعية
   </button>
 
-  <button
-    class="menu-item"
-    id="nightButton">
+  <button class="menu-item" id="nightButton">
     🌙 الوضع الليلي
   </button>
 
-  <button
-    class="menu-item"
-    id="zoomInButton">
+  <button class="menu-item" id="zoomInButton">
     🔍 تكبير
   </button>
 
-  <button
-    class="menu-item"
-    id="zoomOutButton">
+  <button class="menu-item" id="zoomOutButton">
     🔍 تصغير
   </button>
 
-  <button
-    class="menu-item"
-    id="zoomResetButton">
+  <button class="menu-item" id="zoomResetButton">
     ↔️ الحجم الطبيعي
   </button>
 
-  <button
-    class="menu-item"
-    id="recitersButton">
+  <button class="menu-item" id="recitersButton">
     🎧 القراء والتلاوات
   </button>
 
-  <button
-    class="menu-item"
-    id="closeMenu">
+  <button class="menu-item" id="closeMenu">
     ✕ إغلاق
   </button>
 
@@ -734,30 +619,43 @@ html,body{
 
 <!-- نافذة السور -->
 
-<div
-  class="surah-overlay"
-  id="surahOverlay">
+<div class="popup-overlay" id="surahOverlay">
 
-  <div class="surah-box">
+  <div class="popup-box">
 
-    <div class="surah-header">
+    <div class="popup-header">
 
-      <h2>
-        سور القرآن الكريم
-      </h2>
+      <h2>سور القرآن الكريم</h2>
 
-      <button
-        class="surah-close"
-        id="surahClose">
+      <button class="popup-close" id="surahClose">
         ✕
       </button>
 
     </div>
 
-    <div
-      class="surah-list"
-      id="surahList">
+    <div class="popup-list" id="surahList"></div>
+
+  </div>
+
+</div>
+
+<!-- نافذة الأجزاء -->
+
+<div class="popup-overlay" id="juzOverlay">
+
+  <div class="popup-box">
+
+    <div class="popup-header">
+
+      <h2>الأجزاء</h2>
+
+      <button class="popup-close" id="juzClose">
+        ✕
+      </button>
+
     </div>
+
+    <div class="popup-list" id="juzList"></div>
 
   </div>
 
@@ -773,7 +671,6 @@ let currentPage =
   Number(localStorage.getItem("quranPage") || 3);
 
 let startX = 0;
-let startY = 0;
 
 const page =
   document.getElementById("quranPage");
@@ -823,8 +720,19 @@ const surahList =
 const surahClose =
   document.getElementById("surahClose");
 
+const juzOverlay =
+  document.getElementById("juzOverlay");
 
-/* تحميل صفحة المصحف */
+const juzList =
+  document.getElementById("juzList");
+
+const juzClose =
+  document.getElementById("juzClose");
+
+
+/* =========================
+   تحميل الصفحة
+========================= */
 
 function loadPage(n){
 
@@ -840,65 +748,73 @@ function loadPage(n){
   );
 
   page.src =
-    currentPage + ".png";
+    "images/" +
+    currentPage +
+    ".png";
+
 }
 
 
-/* الصفحة التالية */
+/* =========================
+   الصفحة التالية
+========================= */
 
 function nextPage(){
 
   if(currentPage < TOTAL_PAGES){
-    loadPage(currentPage + 1);
+
+    loadPage(
+      currentPage + 1
+    );
+
   }
 
 }
 
 
-/* الصفحة السابقة */
+/* =========================
+   الصفحة السابقة
+========================= */
 
 function prevPage(){
 
   if(currentPage > 1){
-    loadPage(currentPage - 1);
+
+    loadPage(
+      currentPage - 1
+    );
+
   }
 
 }
 
 
-/* السحب بين الصفحات */
+/* =========================
+   السحب
+========================= */
 
 pageArea.addEventListener(
   "touchstart",
   e=>{
 
-    const t = e.touches[0];
-
-    startX = t.clientX;
-    startY = t.clientY;
+    startX =
+      e.touches[0].clientX;
 
   },
   {passive:true}
 );
 
-
 pageArea.addEventListener(
   "touchend",
   e=>{
 
-    const t =
-      e.changedTouches[0];
+    const endX =
+      e.changedTouches[0].clientX;
 
     const dx =
-      t.clientX - startX;
+      endX - startX;
 
-    const dy =
-      t.clientY - startY;
-
-    if(
-      Math.abs(dx) < 60 ||
-      Math.abs(dy) > Math.abs(dx)
-    ){
+    if(Math.abs(dx) < 60){
       return;
     }
 
@@ -913,7 +829,9 @@ pageArea.addEventListener(
 );
 
 
-/* القائمة */
+/* =========================
+   القائمة
+========================= */
 
 function openMenu(){
 
@@ -923,7 +841,6 @@ function openMenu(){
 
 }
 
-
 function closeSideMenu(){
 
   sideMenu.classList.remove("open");
@@ -931,7 +848,6 @@ function closeSideMenu(){
   overlay.classList.remove("show");
 
 }
-
 
 menuButton.onclick =
   openMenu;
@@ -943,7 +859,9 @@ overlay.onclick =
   closeSideMenu;
 
 
-/* اختيار القارئ */
+/* =========================
+   القراء
+========================= */
 
 readerSelect.onchange = ()=>{
 
@@ -955,7 +873,9 @@ readerSelect.onchange = ()=>{
 };
 
 
-/* الوقت */
+/* =========================
+   الوقت
+========================= */
 
 function fmt(s){
 
@@ -975,7 +895,6 @@ function fmt(s){
 
 }
 
-
 audio.addEventListener(
   "loadedmetadata",
   ()=>{
@@ -985,7 +904,6 @@ audio.addEventListener(
 
   }
 );
-
 
 audio.addEventListener(
   "timeupdate",
@@ -1007,25 +925,16 @@ audio.addEventListener(
 );
 
 
-audio.addEventListener(
-  "ended",
-  ()=>{
-
-    playButton.textContent =
-      "▶";
-
-  }
-);
-
-
-/* التشغيل */
+/* =========================
+   التشغيل
+========================= */
 
 playButton.onclick = ()=>{
 
   if(!audio.src){
 
     alert(
-      "التصميم جاهز، وبقي ربط ملفات التلاوة الحقيقية بالقراء."
+      "ملفات التلاوة تحتاج إلى ربطها بالمصادر الصوتية."
     );
 
     return;
@@ -1051,7 +960,9 @@ playButton.onclick = ()=>{
 };
 
 
-/* رجوع 10 ثواني */
+/* =========================
+   التحكم بالصوت
+========================= */
 
 document.getElementById(
   "backButton"
@@ -1064,9 +975,6 @@ document.getElementById(
     );
 
 };
-
-
-/* تقدم 10 ثواني */
 
 document.getElementById(
   "forwardButton"
@@ -1081,7 +989,9 @@ document.getElementById(
 };
 
 
-/* أزرار الصفحات */
+/* =========================
+   أزرار الصفحات
+========================= */
 
 document.getElementById(
   "prevButton"
@@ -1094,7 +1004,9 @@ document.getElementById(
   nextPage;
 
 
-/* حفظ الصفحة */
+/* =========================
+   حفظ الصفحة
+========================= */
 
 document.getElementById(
   "saveButton"
@@ -1113,7 +1025,9 @@ document.getElementById(
 };
 
 
-/* العلامة المرجعية */
+/* =========================
+   العلامة المرجعية
+========================= */
 
 document.getElementById(
   "bookmarkButton"
@@ -1143,7 +1057,9 @@ document.getElementById(
 };
 
 
-/* الوضع الليلي */
+/* =========================
+   الوضع الليلي
+========================= */
 
 document.getElementById(
   "nightButton"
@@ -1156,10 +1072,11 @@ document.getElementById(
 };
 
 
-/* التكبير */
+/* =========================
+   التكبير والتصغير
+========================= */
 
 let pageScale = 1;
-
 
 document.getElementById(
   "zoomInButton"
@@ -1178,9 +1095,6 @@ document.getElementById(
 
 };
 
-
-/* التصغير */
-
 document.getElementById(
   "zoomOutButton"
 ).onclick = ()=>{
@@ -1198,9 +1112,6 @@ document.getElementById(
 
 };
 
-
-/* الحجم الطبيعي */
-
 document.getElementById(
   "zoomResetButton"
 ).onclick = ()=>{
@@ -1213,165 +1124,162 @@ document.getElementById(
 };
 
 
-/* أسماء السور */
+/* =====================================================
+   السور
+===================================================== */
 
 const surahs = [
 
-  "الفاتحة",
-  "البقرة",
-  "آل عمران",
-  "النساء",
-  "المائدة",
-  "الأنعام",
-  "الأعراف",
-  "الأنفال",
-  "التوبة",
-  "يونس",
-  "هود",
-  "يوسف",
-  "الرعد",
-  "إبراهيم",
-  "الحجر",
-  "النحل",
-  "الإسراء",
-  "الكهف",
-  "مريم",
-  "طه",
-  "الأنبياء",
-  "الحج",
-  "المؤمنون",
-  "النور",
-  "الفرقان",
-  "الشعراء",
-  "النمل",
-  "القصص",
-  "العنكبوت",
-  "الروم",
-  "لقمان",
-  "السجدة",
-  "الأحزاب",
-  "سبأ",
-  "فاطر",
-  "يس",
-  "الصافات",
-  "ص",
-  "الزمر",
-  "غافر",
-  "فصلت",
-  "الشورى",
-  "الزخرف",
-  "الدخان",
-  "الجاثية",
-  "الأحقاف",
-  "محمد",
-  "الفتح",
-  "الحجرات",
-  "ق",
-  "الذاريات",
-  "الطور",
-  "النجم",
-  "القمر",
-  "الرحمن",
-  "الواقعة",
-  "الحديد",
-  "المجادلة",
-  "الحشر",
-  "الممتحنة",
-  "الصف",
-  "الجمعة",
-  "المنافقون",
-  "التغابن",
-  "الطلاق",
-  "التحريم",
-  "الملك",
-  "القلم",
-  "الحاقة",
-  "المعارج",
-  "نوح",
-  "الجن",
-  "المزمل",
-  "المدثر",
-  "القيامة",
-  "الإنسان",
-  "المرسلات",
-  "النبأ",
-  "النازعات",
-  "عبس",
-  "التكوير",
-  "الانفطار",
-  "المطففين",
-  "الانشقاق",
-  "البروج",
-  "الطارق",
-  "الأعلى",
-  "الغاشية",
-  "الفجر",
-  "البلد",
-  "الشمس",
-  "الليل",
-  "الضحى",
-  "الشرح",
-  "التين",
-  "العلق",
-  "القدر",
-  "البينة",
-  "الزلزلة",
-  "العاديات",
-  "القارعة",
-  "التكاثر",
-  "العصر",
-  "الهمزة",
-  "الفيل",
-  "قريش",
-  "الماعون",
-  "الكوثر",
-  "الكافرون",
-  "النصر",
-  "المسد",
-  "الإخلاص",
-  "الفلق",
-  "الناس"
+  ["الفاتحة",1],
+  ["البقرة",2],
+  ["آل عمران",50],
+  ["النساء",77],
+  ["المائدة",106],
+  ["الأنعام",128],
+  ["الأعراف",151],
+  ["الأنفال",177],
+  ["التوبة",187],
+  ["يونس",208],
+  ["هود",221],
+  ["يوسف",235],
+  ["الرعد",249],
+  ["إبراهيم",255],
+  ["الحجر",262],
+  ["النحل",267],
+  ["الإسراء",282],
+  ["الكهف",293],
+  ["مريم",305],
+  ["طه",312],
+  ["الأنبياء",322],
+  ["الحج",332],
+  ["المؤمنون",342],
+  ["النور",350],
+  ["الفرقان",359],
+  ["الشعراء",367],
+  ["النمل",377],
+  ["القصص",385],
+  ["العنكبوت",396],
+  ["الروم",404],
+  ["لقمان",411],
+  ["السجدة",415],
+  ["الأحزاب",418],
+  ["سبأ",428],
+  ["فاطر",434],
+  ["يس",440],
+  ["الصافات",446],
+  ["ص",453],
+  ["الزمر",458],
+  ["غافر",467],
+  ["فصلت",477],
+  ["الشورى",483],
+  ["الزخرف",489],
+  ["الدخان",496],
+  ["الجاثية",499],
+  ["الأحقاف",502],
+  ["محمد",507],
+  ["الفتح",511],
+  ["الحجرات",515],
+  ["ق",518],
+  ["الذاريات",520],
+  ["الطور",523],
+  ["النجم",526],
+  ["القمر",528],
+  ["الرحمن",531],
+  ["الواقعة",534],
+  ["الحديد",537],
+  ["المجادلة",542],
+  ["الحشر",545],
+  ["الممتحنة",549],
+  ["الصف",551],
+  ["الجمعة",553],
+  ["المنافقون",554],
+  ["التغابن",556],
+  ["الطلاق",558],
+  ["التحريم",560],
+  ["الملك",562],
+  ["القلم",564],
+  ["الحاقة",566],
+  ["المعارج",568],
+  ["نوح",570],
+  ["الجن",572],
+  ["المزمل",574],
+  ["المدثر",575],
+  ["القيامة",577],
+  ["الإنسان",578],
+  ["المرسلات",580],
+  ["النبأ",582],
+  ["النازعات",583],
+  ["عبس",585],
+  ["التكوير",586],
+  ["الانفطار",587],
+  ["المطففين",587],
+  ["الانشقاق",589],
+  ["البروج",590],
+  ["الطارق",591],
+  ["الأعلى",591],
+  ["الغاشية",592],
+  ["الفجر",593],
+  ["البلد",594],
+  ["الشمس",595],
+  ["الليل",595],
+  ["الضحى",596],
+  ["الشرح",596],
+  ["التين",597],
+  ["العلق",597],
+  ["القدر",598],
+  ["البينة",598],
+  ["الزلزلة",599],
+  ["العاديات",599],
+  ["القارعة",600],
+  ["التكاثر",600],
+  ["العصر",601],
+  ["الهمزة",601],
+  ["الفيل",601],
+  ["قريش",602],
+  ["الماعون",602],
+  ["الكوثر",602],
+  ["الكافرون",603],
+  ["النصر",603],
+  ["المسد",603],
+  ["الإخلاص",604],
+  ["الفلق",604],
+  ["الناس",604]
 
 ];
 
 
-/* فتح قائمة السور */
+/* بناء قائمة السور */
 
-document.getElementById(
-  "surahsButton"
-).onclick = ()=>{
-
-  closeSideMenu();
+function buildSurahList(){
 
   surahList.innerHTML = "";
 
   surahs.forEach(
-    (name,index)=>{
+    (surah,index)=>{
 
       const button =
-        document.createElement("button");
+        document.createElement(
+          "button"
+        );
 
       button.className =
-        "surah-item";
+        "popup-item";
 
-      button.textContent =
-        (index + 1) +
-        " - " +
-        name;
+      button.innerHTML =
+        "سورة " +
+        surah[0] +
+        " <small>— الصفحة " +
+        surah[1] +
+        "</small>";
 
       button.onclick = ()=>{
 
-        /*
-          في هذه المرحلة نفتح السورة
-          من خلال البحث عن اسمها.
-          الربط الدقيق بين السورة
-          ورقم الصفحة سيأتي في
-          الخطوة التالية.
-        */
+        loadPage(
+          surah[1]
+        );
 
-        alert(
-          "اخترت سورة " +
-          name
+        surahOverlay.classList.remove(
+          "show"
         );
 
       };
@@ -1383,6 +1291,19 @@ document.getElementById(
     }
   );
 
+}
+
+
+/* فتح السور */
+
+document.getElementById(
+  "surahsButton"
+).onclick = ()=>{
+
+  closeSideMenu();
+
+  buildSurahList();
+
   surahOverlay.classList.add(
     "show"
   );
@@ -1390,7 +1311,7 @@ document.getElementById(
 };
 
 
-/* إغلاق قائمة السور */
+/* إغلاق السور */
 
 surahClose.onclick = ()=>{
 
@@ -1399,7 +1320,6 @@ surahClose.onclick = ()=>{
   );
 
 };
-
 
 surahOverlay.onclick = e=>{
 
@@ -1414,33 +1334,149 @@ surahOverlay.onclick = e=>{
 };
 
 
-/* الأجزاء */
+/* =====================================================
+   الأجزاء الثلاثون
+===================================================== */
+
+const juz = [
+
+  ["الجزء الأول",1],
+  ["الجزء الثاني",22],
+  ["الجزء الثالث",42],
+  ["الجزء الرابع",62],
+  ["الجزء الخامس",82],
+  ["الجزء السادس",102],
+  ["الجزء السابع",122],
+  ["الجزء الثامن",142],
+  ["الجزء التاسع",162],
+  ["الجزء العاشر",182],
+  ["الجزء الحادي عشر",202],
+  ["الجزء الثاني عشر",222],
+  ["الجزء الثالث عشر",242],
+  ["الجزء الرابع عشر",262],
+  ["الجزء الخامس عشر",282],
+  ["الجزء السادس عشر",302],
+  ["الجزء السابع عشر",322],
+  ["الجزء الثامن عشر",342],
+  ["الجزء التاسع عشر",362],
+  ["الجزء العشرون",382],
+  ["الجزء الحادي والعشرون",402],
+  ["الجزء الثاني والعشرون",422],
+  ["الجزء الثالث والعشرون",442],
+  ["الجزء الرابع والعشرون",462],
+  ["الجزء الخامس والعشرون",482],
+  ["الجزء السادس والعشرون",502],
+  ["الجزء السابع والعشرون",522],
+  ["الجزء الثامن والعشرون",542],
+  ["الجزء التاسع والعشرون",562],
+  ["الجزء الثلاثون",582]
+
+];
+
+
+/* بناء قائمة الأجزاء */
+
+function buildJuzList(){
+
+  juzList.innerHTML = "";
+
+  juz.forEach(
+    item=>{
+
+      const button =
+        document.createElement(
+          "button"
+        );
+
+      button.className =
+        "popup-item";
+
+      button.innerHTML =
+        item[0] +
+        " <small>— الصفحة " +
+        item[1] +
+        "</small>";
+
+      button.onclick = ()=>{
+
+        loadPage(
+          item[1]
+        );
+
+        juzOverlay.classList.remove(
+          "show"
+        );
+
+      };
+
+      juzList.appendChild(
+        button
+      );
+
+    }
+  );
+
+}
+
+
+/* فتح الأجزاء */
 
 document.getElementById(
   "juzButton"
 ).onclick = ()=>{
 
-  alert(
-    "قسم الأجزاء والأحزاب سيكون في الخطوة التالية."
+  closeSideMenu();
+
+  buildJuzList();
+
+  juzOverlay.classList.add(
+    "show"
   );
 
 };
 
 
-/* البحث */
+/* إغلاق الأجزاء */
+
+juzClose.onclick = ()=>{
+
+  juzOverlay.classList.remove(
+    "show"
+  );
+
+};
+
+juzOverlay.onclick = e=>{
+
+  if(e.target === juzOverlay){
+
+    juzOverlay.classList.remove(
+      "show"
+    );
+
+  }
+
+};
+
+
+/* =====================================================
+   البحث
+===================================================== */
 
 document.getElementById(
   "searchButton"
 ).onclick = ()=>{
 
   alert(
-    "قسم البحث سيكون في الخطوة التالية."
+    "البحث سيكون في الخطوة التالية."
   );
 
 };
 
 
-/* القراء */
+/* =====================================================
+   القراء
+===================================================== */
 
 document.getElementById(
   "recitersButton"
@@ -1453,7 +1489,9 @@ document.getElementById(
 };
 
 
-/* تشغيل الصفحة الحالية */
+/* =====================================================
+   بدء الموقع
+===================================================== */
 
 loadPage(
   currentPage
