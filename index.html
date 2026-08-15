@@ -628,111 +628,6 @@ html,body{
 }
 
 </style>
-
-<!-- ===== تجربة آمنة: مصحف HTML قابل لتلوين الحروف (لا تغيّر صفحة المصحف الأصلية) ===== -->
-<script src="https://unpkg.com/quran-madina-html@1.0.1"></script>
-<style>
-  .word-color-test-box{
-    width:min(96vw,760px);
-    max-height:92vh;
-  }
-  .word-color-test-body{
-    overflow:auto;
-    padding:4px 2px 12px;
-    background:#fff;
-    border-radius:14px;
-  }
-  .night-mode .word-color-test-body{
-    background:#202020;
-  }
-  .word-color-test-actions{
-    display:grid;
-    grid-template-columns:1fr 1fr 1fr;
-    gap:8px;
-    margin:8px 0 12px;
-  }
-  .word-color-test-actions button{
-    border:0;
-    border-radius:12px;
-    padding:12px 8px;
-    font-family:inherit;
-    font-size:15px;
-    background:var(--green);
-    color:#fff;
-    cursor:pointer;
-  }
-  .word-color-test-actions button:active{
-    background:var(--green-dark);
-    transform:scale(.99);
-  }
-  .word-color-test-status{
-    text-align:center;
-    color:#555;
-    font-size:13px;
-    margin:6px 0 10px;
-  }
-  .night-mode .word-color-test-status{color:#ccc;}
-
-  /*
-    أهم جزء في التجربة:
-    لا نستخدم polygon ولا مستطيل.
-    مكتبة quran-madina-html ترسم الحروف كنص HTML حقيقي،
-    ونحن نغيّر لون عنصر الكلمة نفسه.
-  */
-  #wordColorTestVerse{
-    --qmh-highlight:transparent !important;
-    --qmh-error:transparent !important;
-    color:#111;
-    font-size:24px;
-  }
-  #wordColorTestVerse .quran-madina-html-word-highlight{
-    background:transparent !important;
-    color:#16803b !important;
-    box-shadow:none !important;
-  }
-  #wordColorTestVerse .quran-madina-html-word-error{
-    background:transparent !important;
-    color:#16803b !important;
-    box-shadow:none !important;
-  }
-
-  #wordColorTestWord{
-    --qmh-highlight:transparent !important;
-    --qmh-error:transparent !important;
-    color:#111;
-    font-size:24px;
-  }
-  #wordColorTestWord .quran-madina-html-word-highlight{
-    background:transparent !important;
-    color:#16803b !important;
-    box-shadow:none !important;
-  }
-  #wordColorTestWord .quran-madina-html-word-error{
-    background:transparent !important;
-    color:#16803b !important;
-    box-shadow:none !important;
-  }
-
-  .word-color-test-note{
-    text-align:center;
-    font-size:12px;
-    line-height:1.7;
-    color:#777;
-    margin-top:10px;
-  }
-  .night-mode .word-color-test-note{color:#aaa;}
-
-  @media(max-width:600px){
-    .word-color-test-actions{
-      grid-template-columns:1fr;
-    }
-    #wordColorTestVerse,
-    #wordColorTestWord{
-      font-size:21px;
-    }
-  }
-</style>
-
 </head>
 
 <body>
@@ -907,10 +802,6 @@ html,body{
     🎧 القراء والتلاوات
   </button>
 
-  <button class="menu-item" id="wordColorTestButton">
-    🧪 تجربة تغيير لون الآية والكلمة
-  </button>
-
   <button class="menu-item" id="aboutButton">
     ℹ️ حول
   </button>
@@ -1045,42 +936,6 @@ html,body{
 
   </div>
 
-</div>
-
-
-<!-- نافذة التجربة: مستقلة عن صورة المصحف الأصلية -->
-<div class="popup-overlay" id="wordColorTestOverlay">
-  <div class="popup-box word-color-test-box">
-    <div class="popup-header">
-      <h2>تجربة لون الآية والكلمة</h2>
-      <button class="popup-close" id="wordColorTestClose">✕</button>
-    </div>
-
-    <div class="word-color-test-actions">
-      <button id="testVerseColorButton">🎨 لون الآية</button>
-      <button id="testWordColorButton">🖊️ لون الكلمة</button>
-      <button id="testResetColorButton">↩ بدون لون</button>
-    </div>
-
-    <div class="word-color-test-status" id="wordColorTestStatus">
-      هذه تجربة مستقلة على الآية الثانية من البقرة.
-    </div>
-
-    <div class="word-color-test-body">
-      <quran-madina-html
-        id="wordColorTestVerse"
-        sura="2"
-        aya="2"
-        headless="true"
-        data-font="Hafs">
-      </quran-madina-html>
-
-      <div class="word-color-test-note">
-        هذه النافذة لا تغيّر صورة المصحف الأصلية ولا نظام التظليل الحالي.
-        الهدف فقط التأكد من إمكانية تغيير لون الحروف نفسها.
-      </div>
-    </div>
-  </div>
 </div>
 
 <audio id="audio"></audio>
@@ -1307,95 +1162,6 @@ closeMenu.onclick =
 
 overlay.onclick =
   closeSideMenu;
-
-
-
-/* =====================================================
-   تجربة آمنة: تغيير لون حروف الآية والكلمة
-   هذه التجربة لا تستخدم ayahHighlightLayer ولا polygon
-   ولا تغيّر صورة المصحف الأصلية.
-===================================================== */
-const wordColorTestOverlay =
-  document.getElementById("wordColorTestOverlay");
-
-const wordColorTestButton =
-  document.getElementById("wordColorTestButton");
-
-const wordColorTestClose =
-  document.getElementById("wordColorTestClose");
-
-const wordColorTestStatus =
-  document.getElementById("wordColorTestStatus");
-
-function resetWordColorTest(){
-  const verse =
-    document.getElementById("wordColorTestVerse");
-
-  if(verse){
-    verse.removeAttribute("highlight");
-    verse.removeAttribute("error");
-    verse.style.color = "";
-  }
-
-  if(wordColorTestStatus){
-    wordColorTestStatus.textContent =
-      "هذه تجربة مستقلة على الآية الثانية من البقرة.";
-  }
-}
-
-wordColorTestButton.onclick = ()=>{
-  closeSideMenu();
-
-  resetWordColorTest();
-
-  wordColorTestOverlay.classList.add("show");
-};
-
-wordColorTestClose.onclick = ()=>{
-  wordColorTestOverlay.classList.remove("show");
-};
-
-wordColorTestOverlay.onclick = e=>{
-  if(e.target === wordColorTestOverlay){
-    wordColorTestOverlay.classList.remove("show");
-  }
-};
-
-document.getElementById("testVerseColorButton").onclick = ()=>{
-  const verse =
-    document.getElementById("wordColorTestVerse");
-
-  if(!verse) return;
-
-  /*
-    نستخدم الآية الثانية من البقرة لأنها تحتوي عدة كلمات،
-    حتى نميّز بين تغيير لون الآية كاملة وتغيير لون كلمة واحدة.
-  */
-  verse.setAttribute("highlight","1-7");
-
-  wordColorTestStatus.textContent =
-    "تجربة لون الآية: يجب أن تصبح حروف الآية كاملة خضراء بدون مستطيل.";
-};
-
-document.getElementById("testWordColorButton").onclick = ()=>{
-  const verse =
-    document.getElementById("wordColorTestVerse");
-
-  if(!verse) return;
-
-  /*
-    الكلمة الأولى من الآية نفسها.
-    اللون يطبّق على عنصر الكلمة الحقيقي في HTML.
-  */
-  verse.setAttribute("highlight","1");
-
-  wordColorTestStatus.textContent =
-    "تجربة لون الكلمة: يجب أن تتغير حروف الكلمة نفسها بدون خلفية.";
-};
-
-document.getElementById("testResetColorButton").onclick = ()=>{
-  resetWordColorTest();
-};
 
 
 /* =========================
