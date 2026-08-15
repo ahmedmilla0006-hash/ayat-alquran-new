@@ -561,7 +561,7 @@ html,body{
   }
 }
 
-/* === تظليل الآية فوق صورة المصحف === */
+/* === تلوين حروف الآية المقروءة فوق نفس صورة المصحف === */
 .page-area{position:relative;}
 .ayah-highlight-layer{
   position:absolute;
@@ -574,9 +574,6 @@ html,body{
 /* ضبط تظليل الفاتحة وأول البقرة:
    بيانات التوقيت لهاتين الصفحتين تأتي منخفضة قليلاً مقارنة
    بمكان الكلمات في صورة المصحف، لذلك نرفع طبقة التظليل 18px. */
-.ayah-highlight-layer.page-1-2-adjust{
-  transform:translateY(-28px);
-}
 .ayah-highlight-layer polygon,
 .ayah-highlight-layer rect{
   fill:rgba(190,240,145,.48);
@@ -584,6 +581,12 @@ html,body{
   stroke-width:.8;
 }
 
+
+/* === إعدادات التمييز === */
+.highlight-settings-list{display:flex;flex-direction:column;gap:10px;}
+.highlight-option{width:100%;border:1px solid #d4cbb9;border-radius:12px;background:#fff;padding:14px 12px;font:inherit;font-weight:700;text-align:right;cursor:pointer;}
+.highlight-option.active{outline:3px solid rgba(22,132,67,.22);border-color:#168443;}
+.night-mode .highlight-option{background:#303030;color:#fff;border-color:#555;}
 
 /* === اختيار القارئ والسورة أسفل المشغل === */
 .bottom-selection-area{
@@ -786,6 +789,10 @@ html,body{
     🌙 الوضع الليلي
   </button>
 
+  <button class="menu-item" id="highlightSettingsButton">
+    🎨 إعدادات التمييز
+  </button>
+
   <button class="menu-item" id="zoomInButton">
     🔍 تكبير
   </button>
@@ -898,6 +905,20 @@ html,body{
 
 <!-- نافذة حول -->
 
+<div class="popup-overlay" id="highlightSettingsOverlay">
+  <div class="popup-box">
+    <div class="popup-header">
+      <h2>إعدادات التمييز</h2>
+      <button class="popup-close" id="highlightSettingsClose">✕</button>
+    </div>
+    <div class="highlight-settings-list">
+      <button class="highlight-option" data-highlight-mode="ayah-highlight">🟨 تظليل الآية المقروءة</button>
+      <button class="highlight-option" data-highlight-mode="word-color">🎨 تلوين حروف الآية المقروءة</button>
+      <button class="highlight-option" data-highlight-mode="none">🚫 بدون تمييز</button>
+    </div>
+  </div>
+</div>
+
 <div class="popup-overlay" id="aboutOverlay">
 
   <div class="popup-box about-box">
@@ -946,6 +967,8 @@ const TOTAL_PAGES = 604;
 
 let currentPage =
   Number(localStorage.getItem("quranPage") || 3);
+
+let highlightMode = localStorage.getItem("highlightMode") || "word-color";
 
 let startX = 0;
 
@@ -1434,6 +1457,9 @@ async function loadQuranPageFromInternet(pageNumber){
 
   clearAyahHighlight();
 
+  /* الصفحتان 1 و2 بلا تمييز. */
+  if(Number(pageNumber) < 3) highlightMode === "none";
+
   /* الصورة نفسها تُحمّل مباشرة من الإنترنت */
   page.src = url;
 
@@ -1550,54 +1576,98 @@ function getHighlightMapping(pageNumber){
 function drawAyahHighlight(item){
   clearAyahHighlight();
 
-  if(
-    !item ||
-    !item.polygon ||
-    !page.complete
-  ){
-    return;
-  }
+  /* الصفحتان 1 و2 تبقيان بدون أي تمييز مفروض. */
+  if(currentPage < 3) return;
+  if(highlightMode === "none") return;
+  if(!item || !item.polygon || !page.complete) return;
 
-  const targetPage =
-    pageFromTiming(item) || currentPage;
+  const targetPage = pageFromTiming(item) || currentPage;
+  if(targetPage !== currentPage) return;
 
-  if(targetPage !== currentPage){
-    return;
-  }
-
-  const pts =
-    String(item.polygon)
-      .trim()
-      .split(/\s+/)
-      .map(pair=>{
-        const p = pair.split(",").map(Number);
-        return (
-          p.length === 2 &&
-          Number.isFinite(p[0]) &&
-          Number.isFinite(p[1])
-        ) ? p : null;
-      })
-      .filter(Boolean);
-
+  const pts = String(item.polygon).trim().split(/\s+/).map(pair=>{
+    const p = pair.split(",").map(Number);
+    return (p.length===2 && p.every(Number.isFinite)) ? p : null;
+  }).filter(Boolean);
   if(!pts.length) return;
 
   const m = getHighlightMapping(targetPage);
   positionHighlightLayer(targetPage);
 
-  const poly =
-    document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      "polygon"
-    );
-
-  poly.setAttribute(
-    "points",
-    pts.map(p =>
+  /* تظليل الآية: نفس حدود الـ polygon، بدون إعادة رسم النص. */
+  if(highlightMode === "ayah-highlight"){
+    const ns = "http://www.w3.org/2000/svg";
+    const poly = document.createElementNS(ns,"polygon");
+    poly.setAttribute("points", pts.map(p =>
       m.mapX(p[0]) + "," + m.mapY(p[1])
-    ).join(" ")
-  );
+    ).join(" "));
+    poly.setAttribute("fill","rgba(190,240,145,.48)");
+    poly.setAttribute("stroke","rgba(125,185,85,.28)");
+    poly.setAttribute("stroke-width",".8");
+    ayahHighlightLayer.appendChild(poly);
+    ayahHighlightLayer.style.display = "block";
+    return;
+  }
 
-  ayahHighlightLayer.appendChild(poly);
+  /*
+     تلوين حقيقي فوق نفس ملف المصحف:
+     - لا نكتب الآية من جديد.
+     - لا نستخدم HTML text.
+     - لا نرسم مستطيلاً ملوناً.
+     - نكرر نفس SVG الصفحة داخل طبقة SVG ونقصّه بحدود
+       الـ polygon الذي أعاده Timing API، ثم نستخدم فلترًا
+       يحوّل الحبر الداكن داخل المنطقة إلى أخضر ويترك الخلفية
+       البيضاء بيضاء تقريبًا.
+  */
+  const ns = "http://www.w3.org/2000/svg";
+  const clipId = "ayahColorClip_" + Date.now();
+
+  const defs = document.createElementNS(ns,"defs");
+  const clip = document.createElementNS(ns,"clipPath");
+  clip.setAttribute("id",clipId);
+  clip.setAttribute("clipPathUnits","userSpaceOnUse");
+
+  const poly = document.createElementNS(ns,"polygon");
+  poly.setAttribute("points", pts.map(p =>
+    m.mapX(p[0]) + "," + m.mapY(p[1])
+  ).join(" "));
+  clip.appendChild(poly);
+
+  /* يحوّل البكسلات الداكنة إلى الأخضر، مع إبقاء الأبيض أبيض */
+  const filterId = "ayahInkGreen_" + Date.now();
+  const filter = document.createElementNS(ns,"filter");
+  filter.setAttribute("id",filterId);
+  filter.setAttribute("x","-5%");
+  filter.setAttribute("y","-5%");
+  filter.setAttribute("width","110%");
+  filter.setAttribute("height","110%");
+
+  const matrix = document.createElementNS(ns,"feColorMatrix");
+  matrix.setAttribute("type","matrix");
+  /* luminance = 0.299R+0.587G+0.114B
+     النتيجة: الأبيض يبقى أبيض، والأسود يتحول إلى #168443 */
+  matrix.setAttribute("values",
+    "0.299 0.587 0.114 0 0.086\n"+
+    "0.299 0.587 0.114 0 0.518\n"+
+    "0.299 0.587 0.114 0 0.263\n"+
+    "0 0 0 1 0");
+  filter.appendChild(matrix);
+
+  defs.appendChild(clip);
+  defs.appendChild(filter);
+  ayahHighlightLayer.appendChild(defs);
+
+  const img = document.createElementNS(ns,"image");
+  img.setAttribute("href", page.src || quranPageSvgUrl(currentPage));
+  img.setAttribute("x","0");
+  img.setAttribute("y","0");
+  img.setAttribute("width",m.viewW);
+  img.setAttribute("height",m.viewH);
+  img.setAttribute("preserveAspectRatio","none");
+  img.setAttribute("clip-path",`url(#${clipId})`);
+  img.setAttribute("filter",`url(#${filterId})`);
+  img.setAttribute("pointer-events","none");
+
+  ayahHighlightLayer.appendChild(img);
   ayahHighlightLayer.style.display = "block";
 }
 
@@ -2027,6 +2097,45 @@ document.getElementById(
 ).onclick =
   nextPage;
 
+
+/* =========================
+   إعدادات التمييز
+========================= */
+const highlightSettingsButton = document.getElementById("highlightSettingsButton");
+const highlightSettingsOverlay = document.getElementById("highlightSettingsOverlay");
+const highlightSettingsClose = document.getElementById("highlightSettingsClose");
+
+function refreshHighlightSettingsUI(){
+  document.querySelectorAll("#highlightSettingsOverlay [data-highlight-mode]").forEach(btn=>{
+    btn.classList.toggle("active", btn.dataset.highlightMode === highlightMode);
+  });
+}
+
+if(highlightSettingsButton){
+  highlightSettingsButton.onclick = ()=>{
+    highlightSettingsOverlay.classList.add("show");
+    refreshHighlightSettingsUI();
+    sideMenu.classList.remove("open");
+    overlay.classList.remove("show");
+  };
+}
+if(highlightSettingsClose){
+  highlightSettingsClose.onclick = ()=>highlightSettingsOverlay.classList.remove("show");
+}
+if(highlightSettingsOverlay){
+  highlightSettingsOverlay.addEventListener("click", e=>{
+    if(e.target === highlightSettingsOverlay) highlightSettingsOverlay.classList.remove("show");
+  });
+  highlightSettingsOverlay.querySelectorAll("[data-highlight-mode]").forEach(btn=>{
+    btn.onclick=()=>{
+      highlightMode=btn.dataset.highlightMode;
+      localStorage.setItem("highlightMode", highlightMode);
+      refreshHighlightSettingsUI();
+      highlightSettingsOverlay.classList.remove("show");
+      syncHighlight();
+    };
+  });
+}
 
 /* =========================
    حفظ الصفحة
