@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Download project
         uses: actions/checkout@v4
 
@@ -32,6 +33,7 @@ jobs:
       - name: Prepare web files
         run: |
           mkdir -p android-app/www
+
           rsync -av \
             --exclude='.git' \
             --exclude='.github' \
@@ -51,7 +53,88 @@ jobs:
       - name: Set Android app name
         working-directory: android-app
         run: |
-          sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">آية<\/string>/' android/app/src/main/res/values/strings.xml || true
+          sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">آية<\/string>/' \
+            android/app/src/main/res/values/strings.xml
+
+      - name: Install ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Install Aya app icon
+        run: |
+          ICON="icon.png"
+          RES="android-app/android/app/src/main/res"
+
+          if [ ! -f "$ICON" ]; then
+            echo "ERROR: icon.png not found in project root"
+            exit 1
+          fi
+
+          # إنشاء صورة مربعة من الأيقونة الأصلية بدون تشويه
+          mkdir -p /tmp/aya-icon
+
+          magick "$ICON" \
+            -resize "192x192^" \
+            -gravity center \
+            -extent 192x192 \
+            /tmp/aya-icon/icon-192.png
+
+          # إزالة أيقونات Android adaptive الافتراضية حتى يستخدم النظام PNG الجديدة
+          rm -f "$RES/mipmap-anydpi-v26/ic_launcher.xml"
+          rm -f "$RES/mipmap-anydpi-v26/ic_launcher_round.xml"
+
+          # إنشاء مجلدات الأيقونات
+          mkdir -p "$RES/mipmap-mdpi"
+          mkdir -p "$RES/mipmap-hdpi"
+          mkdir -p "$RES/mipmap-xhdpi"
+          mkdir -p "$RES/mipmap-xxhdpi"
+          mkdir -p "$RES/mipmap-xxxhdpi"
+
+          # mdpi = 48x48
+          magick /tmp/aya-icon/icon-192.png \
+            -resize 48x48 \
+            "$RES/mipmap-mdpi/ic_launcher.png"
+
+          magick /tmp/aya-icon/icon-192.png \
+            -resize 48x48 \
+            "$RES/mipmap-mdpi/ic_launcher_round.png"
+
+          # hdpi = 72x72
+          magick /tmp/aya-icon/icon-192.png \
+            -resize 72x72 \
+            "$RES/mipmap-hdpi/ic_launcher.png"
+
+          magick /tmp/aya-icon/icon-192.png \
+            -resize 72x72 \
+            "$RES/mipmap-hdpi/ic_launcher_round.png"
+
+          # xhdpi = 96x96
+          magick /tmp/aya-icon/icon-192.png \
+            -resize 96x96 \
+            "$RES/mipmap-xhdpi/ic_launcher.png"
+
+          magick /tmp/aya-icon/icon-192.png \
+            -resize 96x96 \
+            "$RES/mipmap-xhdpi/ic_launcher_round.png"
+
+          # xxhdpi = 144x144
+          magick /tmp/aya-icon/icon-192.png \
+            -resize 144x144 \
+            "$RES/mipmap-xxhdpi/ic_launcher.png"
+
+          magick /tmp/aya-icon/icon-192.png \
+            -resize 144x144 \
+            "$RES/mipmap-xxhdpi/ic_launcher_round.png"
+
+          # xxxhdpi = 192x192
+          cp /tmp/aya-icon/icon-192.png \
+            "$RES/mipmap-xxxhdpi/ic_launcher.png"
+
+          cp /tmp/aya-icon/icon-192.png \
+            "$RES/mipmap-xxxhdpi/ic_launcher_round.png"
+
+          echo "Aya icon installed successfully."
 
       - name: Configure Android application
         working-directory: android-app
@@ -63,8 +146,8 @@ jobs:
           text = p.read_text(encoding="utf-8")
 
           text = text.replace(
-              'android:label="@string/app_name"',
-              'android:label="@string/app_name"'
+              'android:icon="@mipmap/ic_launcher"',
+              'android:icon="@mipmap/ic_launcher"'
           )
 
           p.write_text(text, encoding="utf-8")
