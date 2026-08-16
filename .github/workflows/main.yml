@@ -1,0 +1,65 @@
+name: Build Aya Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download project
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build Aya
+        working-directory: artifacts/ayat-alquran
+        run: pnpm build
+
+      - name: Install Capacitor
+        run: |
+          mkdir android-app
+          cd android-app
+          npm init -y
+          npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+
+      - name: Prepare web files
+        run: |
+          cd android-app
+          mkdir www
+          cp -r ../artifacts/ayat-alquran/dist/public/. www/
+
+      - name: Create Android project
+        working-directory: android-app
+        run: |
+          npx cap init "آية" "com.aya.alquran" --web-dir www
+          npx cap add android
+          npx cap copy android
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build APK
+        working-directory: android-app/android
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aya-APK
+          path: android-app/android/app/build/outputs/apk/debug/app-debug.apk
