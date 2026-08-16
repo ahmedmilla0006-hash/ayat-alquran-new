@@ -9,27 +9,34 @@ jobs:
 
     steps:
 
+      # تحميل المشروع
       - name: Download project
         uses: actions/checkout@v4
 
+      # تثبيت Node.js
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
+      # تثبيت Java
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
 
+      # إنشاء مشروع Android
       - name: Create Android project
         run: |
           mkdir android-app
           cd android-app
+
           npm init -y
+
           npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
 
+      # تجهيز ملفات الموقع
       - name: Prepare web files
         run: |
           mkdir -p android-app/www
@@ -40,47 +47,53 @@ jobs:
             --exclude='android-app' \
             ./ android-app/www/
 
+      # تهيئة Capacitor
       - name: Initialize Capacitor
         working-directory: android-app
         run: |
           npx cap init "آية" "com.aya.alquran" --web-dir www
 
+      # إضافة Android
       - name: Add Android platform
         working-directory: android-app
         run: |
           npx cap add android
 
+      # تعيين اسم التطبيق
       - name: Set Android app name
         working-directory: android-app
         run: |
           sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">آية<\/string>/' \
             android/app/src/main/res/values/strings.xml
 
+      # تثبيت ImageMagick
       - name: Install ImageMagick
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick
 
+      # تثبيت أيقونة تطبيق آية
       - name: Install Aya app icon
         run: |
           ICON="icon.png"
           RES="android-app/android/app/src/main/res"
 
           if [ ! -f "$ICON" ]; then
-            echo "ERROR: icon.png not found in project root"
+            echo "ERROR: icon.png not found"
             exit 1
           fi
 
-          # إنشاء صورة مربعة من الأيقونة الأصلية بدون تشويه
+          # إنشاء مجلد مؤقت للأيقونة
           mkdir -p /tmp/aya-icon
 
-          magick "$ICON" \
+          # إنشاء نسخة أصلية 192x192 بدون تشويه
+          convert "$ICON" \
             -resize "192x192^" \
             -gravity center \
             -extent 192x192 \
             /tmp/aya-icon/icon-192.png
 
-          # إزالة أيقونات Android adaptive الافتراضية حتى يستخدم النظام PNG الجديدة
+          # إزالة أيقونات Android adaptive القديمة
           rm -f "$RES/mipmap-anydpi-v26/ic_launcher.xml"
           rm -f "$RES/mipmap-anydpi-v26/ic_launcher_round.xml"
 
@@ -92,80 +105,33 @@ jobs:
           mkdir -p "$RES/mipmap-xxxhdpi"
 
           # mdpi = 48x48
-          magick /tmp/aya-icon/icon-192.png \
+          convert /tmp/aya-icon/icon-192.png \
             -resize 48x48 \
             "$RES/mipmap-mdpi/ic_launcher.png"
 
-          magick /tmp/aya-icon/icon-192.png \
+          convert /tmp/aya-icon/icon-192.png \
             -resize 48x48 \
             "$RES/mipmap-mdpi/ic_launcher_round.png"
 
           # hdpi = 72x72
-          magick /tmp/aya-icon/icon-192.png \
+          convert /tmp/aya-icon/icon-192.png \
             -resize 72x72 \
             "$RES/mipmap-hdpi/ic_launcher.png"
 
-          magick /tmp/aya-icon/icon-192.png \
+          convert /tmp/aya-icon/icon-192.png \
             -resize 72x72 \
             "$RES/mipmap-hdpi/ic_launcher_round.png"
 
           # xhdpi = 96x96
-          magick /tmp/aya-icon/icon-192.png \
+          convert /tmp/aya-icon/icon-192.png \
             -resize 96x96 \
             "$RES/mipmap-xhdpi/ic_launcher.png"
 
-          magick /tmp/aya-icon/icon-192.png \
+          convert /tmp/aya-icon/icon-192.png \
             -resize 96x96 \
             "$RES/mipmap-xhdpi/ic_launcher_round.png"
 
           # xxhdpi = 144x144
-          magick /tmp/aya-icon/icon-192.png \
+          convert /tmp/aya-icon/icon-192.png \
             -resize 144x144 \
-            "$RES/mipmap-xxhdpi/ic_launcher.png"
-
-          magick /tmp/aya-icon/icon-192.png \
-            -resize 144x144 \
-            "$RES/mipmap-xxhdpi/ic_launcher_round.png"
-
-          # xxxhdpi = 192x192
-          cp /tmp/aya-icon/icon-192.png \
-            "$RES/mipmap-xxxhdpi/ic_launcher.png"
-
-          cp /tmp/aya-icon/icon-192.png \
-            "$RES/mipmap-xxxhdpi/ic_launcher_round.png"
-
-          echo "Aya icon installed successfully."
-
-      - name: Configure Android application
-        working-directory: android-app
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          p = Path("android/app/src/main/AndroidManifest.xml")
-          text = p.read_text(encoding="utf-8")
-
-          text = text.replace(
-              'android:icon="@mipmap/ic_launcher"',
-              'android:icon="@mipmap/ic_launcher"'
-          )
-
-          p.write_text(text, encoding="utf-8")
-          PY
-
-      - name: Sync Capacitor
-        working-directory: android-app
-        run: |
-          npx cap sync android
-
-      - name: Build APK
-        working-directory: android-app/android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: aya-android-apk
-          path: android-app/android/app/build/outputs/apk/debug/app-debug.apk
+            "$RES/mipmap-xxhdpi/ic_launcher
