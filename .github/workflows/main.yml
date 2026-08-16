@@ -9,34 +9,33 @@ jobs:
 
     steps:
 
-      # تحميل المشروع
       - name: Download project
         uses: actions/checkout@v4
 
-      # تثبيت Node.js
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      # تثبيت Java
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
 
-      # إنشاء مشروع Android
+
       - name: Create Android project
         run: |
-          mkdir android-app
+          mkdir -p android-app
           cd android-app
 
           npm init -y
 
           npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
 
-      # تجهيز ملفات الموقع
+
       - name: Prepare web files
         run: |
           mkdir -p android-app/www
@@ -47,91 +46,135 @@ jobs:
             --exclude='android-app' \
             ./ android-app/www/
 
-      # تهيئة Capacitor
+
       - name: Initialize Capacitor
         working-directory: android-app
         run: |
           npx cap init "آية" "com.aya.alquran" --web-dir www
 
-      # إضافة Android
+
       - name: Add Android platform
         working-directory: android-app
         run: |
           npx cap add android
 
-      # تعيين اسم التطبيق
-      - name: Set Android app name
+
+      - name: Configure Android app name
         working-directory: android-app
         run: |
-          sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">آية<\/string>/' \
-            android/app/src/main/res/values/strings.xml
+          python3 - <<'PY'
+          from pathlib import Path
 
-      # تثبيت ImageMagick
-      - name: Install ImageMagick
+          p = Path("android/app/src/main/res/values/strings.xml")
+
+          if p.exists():
+              text = p.read_text(encoding="utf-8")
+              text = text.replace("app_name\">App", "app_name\">آية")
+              p.write_text(text, encoding="utf-8")
+
+          print("Android app name configured.")
+          PY
+
+
+      - name: Install Pillow
         run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pillow
 
-      # تثبيت أيقونة تطبيق آية
+
       - name: Install Aya app icon
         run: |
-          ICON="icon.png"
-          RES="android-app/android/app/src/main/res"
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image
 
-          if [ ! -f "$ICON" ]; then
-            echo "ERROR: icon.png not found"
-            exit 1
-          fi
+          icon = Path("icon.png")
 
-          # إنشاء مجلد مؤقت للأيقونة
-          mkdir -p /tmp/aya-icon
+          if not icon.exists():
+              raise SystemExit(
+                  "ERROR: icon.png was not found in the project root."
+              )
 
-          # إنشاء نسخة أصلية 192x192 بدون تشويه
-          convert "$ICON" \
-            -resize "192x192^" \
-            -gravity center \
-            -extent 192x192 \
-            /tmp/aya-icon/icon-192.png
+          image = Image.open(icon).convert("RGBA")
 
-          # إزالة أيقونات Android adaptive القديمة
-          rm -f "$RES/mipmap-anydpi-v26/ic_launcher.xml"
-          rm -f "$RES/mipmap-anydpi-v26/ic_launcher_round.xml"
+          sizes = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192,
+          }
 
-          # إنشاء مجلدات الأيقونات
-          mkdir -p "$RES/mipmap-mdpi"
-          mkdir -p "$RES/mipmap-hdpi"
-          mkdir -p "$RES/mipmap-xhdpi"
-          mkdir -p "$RES/mipmap-xxhdpi"
-          mkdir -p "$RES/mipmap-xxxhdpi"
+          base = Path(
+              "android-app/android/app/src/main/res"
+          )
 
-          # mdpi = 48x48
-          convert /tmp/aya-icon/icon-192.png \
-            -resize 48x48 \
-            "$RES/mipmap-mdpi/ic_launcher.png"
+          for folder, size in sizes.items():
+              target_dir = base / folder
+              target_dir.mkdir(parents=True, exist_ok=True)
 
-          convert /tmp/aya-icon/icon-192.png \
-            -resize 48x48 \
-            "$RES/mipmap-mdpi/ic_launcher_round.png"
+              resized = image.resize(
+                  (size, size),
+                  Image.Resampling.LANCZOS
+              )
 
-          # hdpi = 72x72
-          convert /tmp/aya-icon/icon-192.png \
-            -resize 72x72 \
-            "$RES/mipmap-hdpi/ic_launcher.png"
+              resized.save(
+                  target_dir / "ic_launcher.png",
+                  "PNG"
+              )
 
-          convert /tmp/aya-icon/icon-192.png \
-            -resize 72x72 \
-            "$RES/mipmap-hdpi/ic_launcher_round.png"
+              resized.save(
+                  target_dir / "ic_launcher_round.png",
+                  "PNG"
+              )
 
-          # xhdpi = 96x96
-          convert /tmp/aya-icon/icon-192.png \
-            -resize 96x96 \
-            "$RES/mipmap-xhdpi/ic_launcher.png"
+          print("Aya icon installed successfully.")
 
-          convert /tmp/aya-icon/icon-192.png \
-            -resize 96x96 \
-            "$RES/mipmap-xhdpi/ic_launcher_round.png"
 
-          # xxhdpi = 144x144
-          convert /tmp/aya-icon/icon-192.png \
-            -resize 144x144 \
-            "$RES/mipmap-xxhdpi/ic_launcher
+      - name: Configure Android application
+        working-directory: android-app
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          manifest = Path(
+              "android/app/src/main/AndroidManifest.xml"
+          )
+
+          text = manifest.read_text(encoding="utf-8")
+
+          text = text.replace(
+              'android:icon="@mipmap/ic_launcher"',
+              'android:icon="@mipmap/ic_launcher"'
+          )
+
+          text = text.replace(
+              'android:roundIcon="@mipmap/ic_launcher_round"',
+              'android:roundIcon="@mipmap/ic_launcher_round"'
+          )
+
+          manifest.write_text(text, encoding="utf-8")
+
+          print("Android application configured.")
+          PY
+
+
+      - name: Sync Capacitor
+        working-directory: android-app
+        run: |
+          npx cap sync android
+
+
+      - name: Build APK
+        working-directory: android-app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: aya-android-apk
+          path: android-app/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
