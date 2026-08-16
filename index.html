@@ -576,8 +576,8 @@ html,body{
    بمكان الكلمات في صورة المصحف، لذلك نرفع طبقة التظليل 18px. */
 .ayah-highlight-layer polygon,
 .ayah-highlight-layer rect{
-  fill:rgba(190,240,145,.48);
-  stroke:rgba(125,185,85,.28);
+  fill:var(--ayah-highlight-fill,rgba(190,240,145,.48));
+  stroke:var(--ayah-highlight-stroke,rgba(125,185,85,.28));
   stroke-width:.8;
 }
 
@@ -630,6 +630,16 @@ html,body{
   .bottom-selection-card select{padding:8px 6px;font-size:14px;}
 }
 
+/* === ألوان تمييز الآية === */
+.highlight-color-title{margin-top:4px;font-weight:800;text-align:right;color:#555;}
+.highlight-colors{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;direction:rtl;}
+.color-choice{width:100%;height:42px;border:2px solid #ddd;background:transparent;border-radius:10px;cursor:pointer;box-sizing:border-box;font-size:17px;font-weight:900;}
+.color-choice[data-color="#168443"]{color:#168443;}
+.color-choice[data-color="#eb5757"]{color:#eb5757;}
+.color-choice[data-color="#2f80ed"]{color:#2f80ed;}
+.color-choice.active{outline:3px solid rgba(22,132,67,.25);border-color:#168443;transform:scale(1.04);}
+.night-mode .highlight-color-title{color:#ddd;}
+.night-mode .color-choice{border-color:#555;}
 </style>
 </head>
 
@@ -714,6 +724,16 @@ html,body{
 
       <button class="play-button" id="playButton">
         ▶
+      </button>
+
+      <button class="control" id="repeatAyahButton" type="button" title="تكرار الآية">
+        <span class="control-icon">🔁</span>
+        <span class="control-text" id="repeatAyahText">تكرار: إيقاف</span>
+      </button>
+
+      <button class="control" id="speedButton" type="button" title="سرعة القراءة">
+        <span class="control-icon">⚡</span>
+        <span class="control-text" id="speedText">السرعة: إيقاف</span>
       </button>
 
       <button class="control" id="backButton">
@@ -915,6 +935,12 @@ html,body{
       <button class="highlight-option" data-highlight-mode="ayah-highlight">🟨 تظليل الآية المقروءة</button>
       <button class="highlight-option" data-highlight-mode="word-color">🎨 تلوين حروف الآية المقروءة</button>
       <button class="highlight-option" data-highlight-mode="none">🚫 بدون تمييز</button>
+      <div class="highlight-color-title">لون التمييز</div>
+      <div class="highlight-colors" id="highlightColors">
+        <button type="button" class="color-choice" data-color="#168443" aria-label="أخضر">أخضر</button>
+        <button type="button" class="color-choice" data-color="#eb5757" aria-label="أحمر">أحمر</button>
+        <button type="button" class="color-choice" data-color="#2f80ed" aria-label="أزرق">أزرق</button>
+      </div>
     </div>
   </div>
 </div>
@@ -969,6 +995,7 @@ let currentPage =
   Number(localStorage.getItem("quranPage") || 3);
 
 let highlightMode = localStorage.getItem("highlightMode") || "word-color";
+let highlightColor = localStorage.getItem("highlightColor") || "#168443";
 
 let startX = 0;
 
@@ -1573,8 +1600,18 @@ function getHighlightMapping(pageNumber){
   };
 }
 
+function hexToRgb(hex){
+  const h=String(hex||"").replace("#","");
+  if(!/^[0-9a-fA-F]{6}$/.test(h)) return {r:22,g:132,b:67};
+  return {r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)};
+}
+function colorToRgba(hex,a){const c=hexToRgb(hex);return `rgba(${c.r},${c.g},${c.b},${a})`;}
+function applyHighlightColor(){document.documentElement.style.setProperty("--ayah-highlight-fill",colorToRgba(highlightColor,.48));document.documentElement.style.setProperty("--ayah-highlight-stroke",colorToRgba(highlightColor,.28));}
+applyHighlightColor();
+
 function drawAyahHighlight(item){
   clearAyahHighlight();
+  const displayColor=getAyahDisplayColor();
 
   /* الصفحتان 1 و2 تبقيان بدون أي تمييز مفروض. */
   if(currentPage < 3) return;
@@ -1600,8 +1637,8 @@ function drawAyahHighlight(item){
     poly.setAttribute("points", pts.map(p =>
       m.mapX(p[0]) + "," + m.mapY(p[1])
     ).join(" "));
-    poly.setAttribute("fill","rgba(190,240,145,.48)");
-    poly.setAttribute("stroke","rgba(125,185,85,.28)");
+    poly.setAttribute("fill",colorToRgba(displayColor,.48));
+    poly.setAttribute("stroke",colorToRgba(displayColor,.28));
     poly.setAttribute("stroke-width",".8");
     ayahHighlightLayer.appendChild(poly);
     ayahHighlightLayer.style.display = "block";
@@ -1641,14 +1678,31 @@ function drawAyahHighlight(item){
   filter.setAttribute("width","110%");
   filter.setAttribute("height","110%");
 
+  /* زيادة تشبع تلوين الحروف فقط:
+     نُغمّق درجات الحبر المتوسطة قبل تحويلها إلى اللون المختار.
+     هذا لا يؤثر إطلاقًا على وضع "تظليل الآية" لأنه يُستخدم داخل
+     فلتر تلوين الحروف فقط. */
+  const tone = document.createElementNS(ns,"feComponentTransfer");
+  tone.setAttribute("color-interpolation-filters","sRGB");
+  ["R","G","B"].forEach(ch=>{
+    const f = document.createElementNS(ns,"feFunc"+ch);
+    f.setAttribute("type","gamma");
+    f.setAttribute("amplitude","1");
+    f.setAttribute("exponent","2.8");
+    f.setAttribute("offset","0");
+    tone.appendChild(f);
+  });
+  filter.appendChild(tone);
+
   const matrix = document.createElementNS(ns,"feColorMatrix");
   matrix.setAttribute("type","matrix");
   /* luminance = 0.299R+0.587G+0.114B
-     النتيجة: الأبيض يبقى أبيض، والأسود يتحول إلى #168443 */
+     النتيجة: الأبيض يبقى أبيض، والأسود يتحول إلى اللون المختار. */
+  const ink=hexToRgb(displayColor);
   matrix.setAttribute("values",
-    "0.299 0.587 0.114 0 0.086\n"+
-    "0.299 0.587 0.114 0 0.518\n"+
-    "0.299 0.587 0.114 0 0.263\n"+
+    "0.299 0.587 0.114 0 "+(ink.r/255).toFixed(6)+"\n"+
+    "0.299 0.587 0.114 0 "+(ink.g/255).toFixed(6)+"\n"+
+    "0.299 0.587 0.114 0 "+(ink.b/255).toFixed(6)+"\n"+
     "0 0 0 1 0");
   filter.appendChild(matrix);
 
@@ -1870,6 +1924,7 @@ function updateAudioSource(keepPosition = false, options = {}){
   const wasPlaying = !audio.paused;
   const autoContinue = !!options.autoContinue;
 
+  resetRepeat();
   audio.pause();
   audio.src = url;
   audio.load();
@@ -1925,6 +1980,43 @@ readerSelect.onchange = ()=>{
 
 };
 
+
+/* =========================
+   سرعة القراءة
+   إيقاف → 0.75 → 1 → 1.25 → 1.5 → إيقاف
+========================= */
+let speedIndex=0;
+const speedValues=[1,0.75,1,1.25,1.5];
+const speedLabels=["السرعة: إيقاف","السرعة: 0.75×","السرعة: 1×","السرعة: 1.25×","السرعة: 1.5×"];
+const speedButton=document.getElementById("speedButton");
+const speedText=document.getElementById("speedText");
+function setSpeed(){audio.playbackRate=speedValues[speedIndex];if(speedText)speedText.textContent=speedLabels[speedIndex];}
+if(speedButton){speedButton.onclick=()=>{speedIndex=(speedIndex+1)%speedValues.length;setSpeed();};}
+setSpeed();
+
+/* =========================
+   تكرار الآية — النسخة المستقرة
+   إيقاف → مرتان → 3 مرات → دائم → إيقاف
+========================= */
+const repeatCycleColors=["#168443","#2f80ed","#eb5757"]; // أخضر → أزرق → أحمر
+let repeatMode=0, repeatCount=0, repeatItem=null, repeatKey=null, repeatJumping=false, repeatColorActive=false;
+function getAyahDisplayColor(){return repeatColorActive&&repeatMode!==0&&repeatCount>0?repeatCycleColors[(repeatCount-1)%repeatCycleColors.length]:highlightColor;}
+const repeatAyahButton=document.getElementById("repeatAyahButton");
+const repeatAyahText=document.getElementById("repeatAyahText");
+const repeatModes=[0,2,3,Infinity];
+const repeatLabels=["تكرار: إيقاف","تكرار: مرتان","تكرار: 3 مرات","تكرار: دائم"];
+function resetRepeat(){repeatCount=0;repeatItem=null;repeatKey=null;repeatJumping=false;repeatColorActive=false;}
+function setRepeatLabel(){const i=repeatModes.indexOf(repeatMode);if(repeatAyahText)repeatAyahText.textContent=repeatLabels[i>=0?i:0];}
+if(repeatAyahButton){repeatAyahButton.onclick=()=>{const i=repeatModes.indexOf(repeatMode);repeatMode=repeatModes[(i+1)%repeatModes.length];resetRepeat();repeatColorActive=(repeatMode!==0);setRepeatLabel();syncHighlight();};}
+setRepeatLabel();
+function repeatTick(){
+ if(repeatMode===0||audio.paused||!currentTiming.length||repeatJumping)return;
+ const now=audio.currentTime*1000;
+ if(repeatItem){const end=Number(repeatItem.end_time);if(Number.isFinite(end)&&now>=end-8){const again=repeatMode===Infinity||repeatCount<repeatMode;if(again){repeatCount++;repeatColorActive=true;repeatJumping=true;syncHighlight();const st=Number(repeatItem.start_time);if(Number.isFinite(st)){audio.currentTime=st/1000;}syncHighlight();setTimeout(()=>{repeatJumping=false;},60);return;}repeatItem=null;repeatKey=null;repeatCount=0;return;}}
+ const active=currentTiming.find(item=>now>=Number(item.start_time)&&now<Number(item.end_time));
+ if(active){const key=String(active.ayah)+":"+String(active.start_time);if(key!==repeatKey){repeatItem=active;repeatKey=key;repeatCount=1;repeatColorActive=(repeatMode!==0);syncHighlight();}}
+}
+setInterval(repeatTick,20);
 
 /* =========================
    الوقت
@@ -1991,6 +2083,8 @@ audio.addEventListener(
 audio.addEventListener(
   "ended",
   ()=>{
+
+    resetRepeat();
 
     const finishedSurah =
       currentAudioSurah ||
@@ -2090,6 +2184,7 @@ function seekToAdjacentAyah(direction){
   const target = Number(items[index].start_time);
   if(!Number.isFinite(target)) return;
 
+  resetRepeat();
   audio.currentTime = Math.max(0, target / 1000);
   syncHighlight();
 }
@@ -2133,6 +2228,9 @@ function refreshHighlightSettingsUI(){
   document.querySelectorAll("#highlightSettingsOverlay [data-highlight-mode]").forEach(btn=>{
     btn.classList.toggle("active", btn.dataset.highlightMode === highlightMode);
   });
+  document.querySelectorAll("#highlightColors .color-choice").forEach(btn=>{
+    btn.classList.toggle("active", String(btn.dataset.color).toLowerCase() === String(highlightColor).toLowerCase());
+  });
 }
 
 if(highlightSettingsButton){
@@ -2156,6 +2254,18 @@ if(highlightSettingsOverlay){
       localStorage.setItem("highlightMode", highlightMode);
       refreshHighlightSettingsUI();
       highlightSettingsOverlay.classList.remove("show");
+      syncHighlight();
+    };
+  });
+}
+
+if(highlightSettingsOverlay){
+  highlightSettingsOverlay.querySelectorAll("#highlightColors .color-choice").forEach(btn=>{
+    btn.onclick=()=>{
+      highlightColor=btn.dataset.color;
+      localStorage.setItem("highlightColor",highlightColor);
+      applyHighlightColor();
+      refreshHighlightSettingsUI();
       syncHighlight();
     };
   });
