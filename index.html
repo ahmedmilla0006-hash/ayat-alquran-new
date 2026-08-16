@@ -708,8 +708,8 @@ html,body{
       </button>
 
       <button class="control" id="forwardButton">
-        <span class="control-icon">↷</span>
-        <span class="control-text">تقدم 10 ث</span>
+        <span class="control-icon">⏭</span>
+        <span class="control-text">الآية التالية</span>
       </button>
 
       <button class="play-button" id="playButton">
@@ -717,8 +717,8 @@ html,body{
       </button>
 
       <button class="control" id="backButton">
-        <span class="control-icon">↶</span>
-        <span class="control-text">رجوع 10 ث</span>
+        <span class="control-icon">⏮</span>
+        <span class="control-text">الآية السابقة</span>
       </button>
 
       <button class="control" id="prevButton">
@@ -2058,28 +2058,52 @@ playButton.onclick = ()=>{
    التحكم بالصوت
 ========================= */
 
+function seekToAdjacentAyah(direction){
+
+  if(!audio || !currentTiming.length) return;
+
+  const items = currentTiming
+    .slice()
+    .sort((a,b)=>Number(a.start_time)-Number(b.start_time));
+
+  const t = audio.currentTime * 1000;
+
+  let index = items.findIndex(item =>
+    t >= Number(item.start_time) &&
+    t < Number(item.end_time)
+  );
+
+  if(index < 0){
+    if(direction > 0){
+      index = items.findIndex(item => Number(item.start_time) > t);
+      if(index < 0) return;
+    }else{
+      index = items.findIndex(item => Number(item.start_time) > t) - 1;
+      if(index < 0) index = 0;
+    }
+  }else{
+    index += direction;
+  }
+
+  if(index < 0 || index >= items.length) return;
+
+  const target = Number(items[index].start_time);
+  if(!Number.isFinite(target)) return;
+
+  audio.currentTime = Math.max(0, target / 1000);
+  syncHighlight();
+}
+
 document.getElementById(
   "backButton"
 ).onclick = ()=>{
-
-  audio.currentTime =
-    Math.max(
-      0,
-      audio.currentTime - 10
-    );
-
+  seekToAdjacentAyah(-1);
 };
 
 document.getElementById(
   "forwardButton"
 ).onclick = ()=>{
-
-  audio.currentTime =
-    Math.min(
-      audio.duration || Infinity,
-      audio.currentTime + 10
-    );
-
+  seekToAdjacentAyah(1);
 };
 
 
