@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="highlight-fix" content="MP3Quran coordinate mapping for pages 1-2 and 3+">
 <title>آية</title>
 
@@ -111,6 +111,7 @@ html,body{
   border-radius:24px 24px 0 0;
   box-shadow:0 -5px 20px #0002;
   padding:10px 16px 12px;
+  padding-bottom:max(12px, env(safe-area-inset-bottom, 0px));
   z-index:30;
 }
 
@@ -217,9 +218,6 @@ html,body{
   align-items:center;
   direction:rtl;
   margin-top:8px;
-  margin-bottom:18px;
-  position:relative;
-  z-index:2;
 }
 
 .control{
@@ -543,6 +541,7 @@ html,body{
 
   .player{
     padding:9px 12px 10px;
+    padding-bottom:max(44px, env(safe-area-inset-bottom, 0px));
   }
 
   .reader-select{
@@ -628,7 +627,7 @@ html,body{
   border-color:#555;
 }
 @media(max-width:600px){
-  .bottom-selection-area{gap:7px;}
+  .bottom-selection-area{gap:7px;margin-bottom:4px;}
   .bottom-selection-label{font-size:12px;}
   .bottom-selection-card select{padding:8px 6px;font-size:14px;}
 }
