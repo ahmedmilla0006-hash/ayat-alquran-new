@@ -82,12 +82,11 @@ jobs:
           python3 -m pip install pillow
 
 
-      - name: 
-        run: - name: Install Aya app icon
+      - name: Install Aya app icon
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          from PIL import Image, ImageDraw
+          from PIL import Image
 
           icon_path = Path("icon.png")
           if not icon_path.exists():
@@ -95,7 +94,7 @@ jobs:
 
           image = Image.open(icon_path).convert("RGBA")
 
-          # أحجام الأيقونات العادية
+          # Legacy icons (all densities)
           sizes = {
               "mipmap-mdpi": 48,
               "mipmap-hdpi": 72,
@@ -114,78 +113,33 @@ jobs:
               resized.save(target_dir / "ic_launcher.png", "PNG")
               resized.save(target_dir / "ic_launcher_round.png", "PNG")
 
-          # Adaptive Icon (Android 8+)
-          # نضع الأيقونة كاملة كـ foreground ونستخدم خلفية زرقاء داكنة
+          # Adaptive Icon support (Android 8.0+)
+          # Full circular icon as foreground + solid dark blue background
+          fg_size = 432  # high-res for xxxhdpi adaptive
+          fg = image.resize((fg_size, fg_size), Image.Resampling.LANCZOS)
+
+          xxx = base / "mipmap-xxxhdpi"
+          xxx.mkdir(parents=True, exist_ok=True)
+          fg.save(xxx / "ic_launcher_foreground.png", "PNG")
+
+          # Background color matching the icon's dark blue
+          bg = Image.new("RGBA", (fg_size, fg_size), (13, 27, 42, 255))
+          bg.save(xxx / "ic_launcher_background.png", "PNG")
+
+          # Adaptive Icon XML
           anydpi = base / "mipmap-anydpi-v26"
           anydpi.mkdir(parents=True, exist_ok=True)
 
-          # إنشاء foreground (الأيقونة مع شفافية)
-          fg_size = 108  # الحجم القياسي للـ adaptive
-          fg = image.resize((fg_size, fg_size), Image.Resampling.LANCZOS)
-          fg_dir = base / "mipmap-xxxhdpi"  # نستخدم أكبر حجم
-          fg.save(fg_dir / "ic_launcher_foreground.png", "PNG")
-
-          # خلفية صلبة بلون قريب من خلفية الأيقونة
-          bg = Image.new("RGBA", (fg_size, fg_size), (13, 27, 42, 255))  # أزرق داكن
-          bg.save(fg_dir / "ic_launcher_background.png", "PNG")
-
-          # ملف الـ XML للـ Adaptive Icon
-          xml_content = '''<?xml version="1.0" encoding="utf-8"?>
+          xml = '''<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@mipmap/ic_launcher_background"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
-</adaptive-icon>'''
+</adaptive-icon>
+'''
+          (anydpi / "ic_launcher.xml").write_text(xml, encoding="utf-8")
+          (anydpi / "ic_launcher_round.xml").write_text(xml, encoding="utf-8")
 
-          (anydpi / "ic_launcher.xml").write_text(xml_content, encoding="utf-8")
-          (anydpi / "ic_launcher_round.xml").write_text(xml_content, encoding="utf-8")
-
-          print("Aya icon (including Adaptive Icon) installed successfully.")
-          PY
-          python3 - <<'PY'
-          from pathlib import Path
-          from PIL import Image
-
-          icon = Path("icon.png")
-
-          if not icon.exists():
-              raise SystemExit(
-                  "ERROR: icon.png was not found in the project root."
-              )
-
-          image = Image.open(icon).convert("RGBA")
-
-          sizes = {
-              "mipmap-mdpi": 48,
-              "mipmap-hdpi": 72,
-              "mipmap-xhdpi": 96,
-              "mipmap-xxhdpi": 144,
-              "mipmap-xxxhdpi": 192,
-          }
-
-          base = Path(
-              "android-app/android/app/src/main/res"
-          )
-
-          for folder, size in sizes.items():
-              target_dir = base / folder
-              target_dir.mkdir(parents=True, exist_ok=True)
-
-              resized = image.resize(
-                  (size, size),
-                  Image.Resampling.LANCZOS
-              )
-
-              resized.save(
-                  target_dir / "ic_launcher.png",
-                  "PNG"
-              )
-
-              resized.save(
-                  target_dir / "ic_launcher_round.png",
-                  "PNG"
-              )
-
-          print("Aya icon installed successfully.")
+          print("Aya icon (Legacy + Adaptive) installed successfully.")
 
 
       - name: Configure Android application
