@@ -60,6 +60,10 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install pillow
 
+      - name: Sync Capacitor
+        working-directory: android-app
+        run: npx cap sync android
+
       - name: Install Aya app icon
         run: |
           python3 << 'PY'
@@ -113,23 +117,6 @@ jobs:
 
           print("Aya icon installed successfully.")
           PY
-
-      - name: Configure Android application
-        working-directory: android-app
-        run: |
-          python3 << 'PY'
-          from pathlib import Path
-          manifest = Path("android/app/src/main/AndroidManifest.xml")
-          text = manifest.read_text(encoding="utf-8")
-          text = text.replace('android:icon="@mipmap/ic_launcher"', 'android:icon="@mipmap/ic_launcher"')
-          text = text.replace('android:roundIcon="@mipmap/ic_launcher_round"', 'android:roundIcon="@mipmap/ic_launcher_round"')
-          manifest.write_text(text, encoding="utf-8")
-          print("Android application configured.")
-          PY
-
-      - name: Sync Capacitor
-        working-directory: android-app
-        run: npx cap sync android
 
       - name: Build APK
         working-directory: android-app/android
