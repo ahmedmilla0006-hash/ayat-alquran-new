@@ -140,6 +140,7 @@ jobs:
           (anydpi / "ic_launcher_round.xml").write_text(xml, encoding="utf-8")
 
           print("Aya icon (Legacy + Adaptive) installed successfully.")
+          PY
 
 
       - name: Configure Android application
