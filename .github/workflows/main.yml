@@ -69,6 +69,71 @@ jobs:
           python3 << 'PY'
           from pathlib import Path
           from PIL import Image
+          import shutil
+
+          icon_path = Path("icon.png")
+          if not icon_path.exists():
+              raise SystemExit("ERROR: icon.png was not found.")
+
+          image = Image.open(icon_path).convert("RGBA")
+
+          base = Path("android-app/android/app/src/main/res")
+
+          # 1. Legacy icons
+          sizes = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192,
+          }
+
+          for folder, size in sizes.items():
+              target_dir = base / folder
+              target_dir.mkdir(parents=True, exist_ok=True)
+              resized = image.resize((size, size), Image.Resampling.LANCZOS)
+              resized.save(target_dir / "ic_launcher.png", "PNG")
+              resized.save(target_dir / "ic_launcher_round.png", "PNG")
+              # حذف أي ملفات قديمة إضافية
+              for f in target_dir.glob("ic_launcher*"):
+                  if f.name not in ["ic_launcher.png", "ic_launcher_round.png"]:
+                      f.unlink(missing_ok=True)
+
+          # 2. Adaptive Icon - foreground & background
+          fg_size = 432
+          fg = image.resize((fg_size, fg_size), Image.Resampling.LANCZOS)
+
+          xxx = base / "mipmap-xxxhdpi"
+          xxx.mkdir(parents=True, exist_ok=True)
+          fg.save(xxx / "ic_launcher_foreground.png", "PNG")
+
+          bg = Image.new("RGBA", (fg_size, fg_size), (13, 27, 42, 255))
+          bg.save(xxx / "ic_launcher_background.png", "PNG")
+
+          # 3. Adaptive XML
+          anydpi = base / "mipmap-anydpi-v26"
+          if anydpi.exists():
+              shutil.rmtree(anydpi)
+          anydpi.mkdir(parents=True, exist_ok=True)
+
+          xml = '''<?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@mipmap/ic_launcher_background"/>
+              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+          </adaptive-icon>'''
+
+          (anydpi / "ic_launcher.xml").write_text(xml.strip(), encoding="utf-8")
+          (anydpi / "ic_launcher_round.xml").write_text(xml.strip(), encoding="utf-8")
+
+          print("=== Icon files after install ===")
+          for p in sorted(base.rglob("ic_launcher*")):
+              print(p)
+          print("Aya icon forced successfully.")
+          PY
+        run: |
+          python3 << 'PY'
+          from pathlib import Path
+          from PIL import Image
 
           icon_path = Path("icon.png")
           if not icon_path.exists():
