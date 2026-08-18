@@ -1,66 +1,4 @@
-name: Build Aya Android APK
-
-on:
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download project
-        uses: actions/checkout@v4
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-
-      - name: Create Android project
-        run: |
-          mkdir -p android-app
-          cd android-app
-          npm init -y
-          npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
-
-      - name: Prepare web files
-        run: |
-          mkdir -p android-app/www
-          rsync -av --exclude='.git' --exclude='.github' --exclude='android-app' ./ android-app/www/
-
-      - name: Initialize Capacitor
-        working-directory: android-app
-        run: npx cap init "آية" "com.aya.alquran" --web-dir www
-
-      - name: Add Android platform
-        working-directory: android-app
-        run: npx cap add android
-
-      - name: Configure Android app name
-        working-directory: android-app
-        run: |
-          python3 << 'PY'
-          from pathlib import Path
-          p = Path("android/app/src/main/res/values/strings.xml")
-          if p.exists():
-              text = p.read_text(encoding="utf-8")
-              text = text.replace("app_name\">App", "app_name\">آية")
-              p.write_text(text, encoding="utf-8")
-          print("Android app name configured.")
-          PY
-
-      - name: Install Pillow
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install pillow
-
-      - name: Install Aya app icon
+- name: Install Aya app icon
         run: |
           python3 << 'PY'
           from pathlib import Path
@@ -103,5 +41,14 @@ jobs:
           anydpi = base / "mipmap-anydpi-v26"
           anydpi.mkdir(parents=True, exist_ok=True)
 
-          xml = """<?xml version="1.0" encoding="utf-8"?>
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk
+          xml = '<?xml version="1.0" encoding="utf-8"?>\n'
+          xml += '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
+          xml += '    <background android:drawable="@mipmap/ic_launcher_background"/>\n'
+          xml += '    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n'
+          xml += '</adaptive-icon>'
+
+          (anydpi / "ic_launcher.xml").write_text(xml, encoding="utf-8")
+          (anydpi / "ic_launcher_round.xml").write_text(xml, encoding="utf-8")
+
+          print("Aya icon (Legacy + Adaptive) installed successfully.")
+          PY
