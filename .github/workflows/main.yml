@@ -8,16 +8,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Download project
         uses: actions/checkout@v4
-
 
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -25,66 +22,49 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-
       - name: Create Android project
         run: |
           mkdir -p android-app
           cd android-app
-
           npm init -y
-
           npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
-
 
       - name: Prepare web files
         run: |
           mkdir -p android-app/www
-
-          rsync -av \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='android-app' \
-            ./ android-app/www/
-
+          rsync -av --exclude='.git' --exclude='.github' --exclude='android-app' ./ android-app/www/
 
       - name: Initialize Capacitor
         working-directory: android-app
         run: |
           npx cap init "آية" "com.aya.alquran" --web-dir www
 
-
       - name: Add Android platform
         working-directory: android-app
         run: |
           npx cap add android
 
-
       - name: Configure Android app name
         working-directory: android-app
         run: |
-          python3 - <<'PY'
+          python3 -c '
           from pathlib import Path
-
           p = Path("android/app/src/main/res/values/strings.xml")
-
           if p.exists():
               text = p.read_text(encoding="utf-8")
               text = text.replace("app_name\">App", "app_name\">آية")
               p.write_text(text, encoding="utf-8")
-
           print("Android app name configured.")
-          PY
-
+          '
 
       - name: Install Pillow
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install pillow
 
-
       - name: Install Aya app icon
         run: |
-          python3 - <<'PY'
+          python3 -c '
           from pathlib import Path
           from PIL import Image
 
@@ -94,7 +74,6 @@ jobs:
 
           image = Image.open(icon_path).convert("RGBA")
 
-          # Legacy icons (all densities)
           sizes = {
               "mipmap-mdpi": 48,
               "mipmap-hdpi": 72,
@@ -108,85 +87,13 @@ jobs:
           for folder, size in sizes.items():
               target_dir = base / folder
               target_dir.mkdir(parents=True, exist_ok=True)
-
               resized = image.resize((size, size), Image.Resampling.LANCZOS)
               resized.save(target_dir / "ic_launcher.png", "PNG")
               resized.save(target_dir / "ic_launcher_round.png", "PNG")
 
-          # Adaptive Icon support (Android 8.0+)
-          # Full circular icon as foreground + solid dark blue background
-          fg_size = 432  # high-res for xxxhdpi adaptive
+          # Adaptive Icon
+          fg_size = 432
           fg = image.resize((fg_size, fg_size), Image.Resampling.LANCZOS)
 
           xxx = base / "mipmap-xxxhdpi"
           xxx.mkdir(parents=True, exist_ok=True)
-          fg.save(xxx / "ic_launcher_foreground.png", "PNG")
-
-          # Background color matching the icon's dark blue
-          bg = Image.new("RGBA", (fg_size, fg_size), (13, 27, 42, 255))
-          bg.save(xxx / "ic_launcher_background.png", "PNG")
-
-          # Adaptive Icon XML
-          anydpi = base / "mipmap-anydpi-v26"
-          anydpi.mkdir(parents=True, exist_ok=True)
-
-          xml = '''<?xml version="1.0" encoding="utf-8"?>
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@mipmap/ic_launcher_background"/>
-    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
-</adaptive-icon>
-'''
-          (anydpi / "ic_launcher.xml").write_text(xml, encoding="utf-8")
-          (anydpi / "ic_launcher_round.xml").write_text(xml, encoding="utf-8")
-
-          print("Aya icon (Legacy + Adaptive) installed successfully.")
-          PY
-
-
-      - name: Configure Android application
-        working-directory: android-app
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          manifest = Path(
-              "android/app/src/main/AndroidManifest.xml"
-          )
-
-          text = manifest.read_text(encoding="utf-8")
-
-          text = text.replace(
-              'android:icon="@mipmap/ic_launcher"',
-              'android:icon="@mipmap/ic_launcher"'
-          )
-
-          text = text.replace(
-              'android:roundIcon="@mipmap/ic_launcher_round"',
-              'android:roundIcon="@mipmap/ic_launcher_round"'
-          )
-
-          manifest.write_text(text, encoding="utf-8")
-
-          print("Android application configured.")
-          PY
-
-
-      - name: Sync Capacitor
-        working-directory: android-app
-        run: |
-          npx cap sync android
-
-
-      - name: Build APK
-        working-directory: android-app/android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug
-
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: aya-android-apk
-          path: android-app/android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
