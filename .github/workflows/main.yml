@@ -8,16 +8,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Download project
         uses: actions/checkout@v4
-
 
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -25,77 +22,55 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-
       - name: Create Android project
         run: |
           mkdir -p android-app
           cd android-app
-
           npm init -y
-
           npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
-
 
       - name: Prepare web files
         run: |
           mkdir -p android-app/www
-
-          rsync -av \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='android-app' \
-            ./ android-app/www/
-
+          rsync -av --exclude='.git' --exclude='.github' --exclude='android-app' ./ android-app/www/
 
       - name: Initialize Capacitor
         working-directory: android-app
-        run: |
-          npx cap init "آية" "com.aya.alquran" --web-dir www
-
+        run: npx cap init "آية" "com.aya.alquran" --web-dir www
 
       - name: Add Android platform
         working-directory: android-app
-        run: |
-          npx cap add android
-
+        run: npx cap add android
 
       - name: Configure Android app name
         working-directory: android-app
         run: |
-          python3 - <<'PY'
+          python3 << 'PY'
           from pathlib import Path
-
           p = Path("android/app/src/main/res/values/strings.xml")
-
           if p.exists():
               text = p.read_text(encoding="utf-8")
               text = text.replace("app_name\">App", "app_name\">آية")
               p.write_text(text, encoding="utf-8")
-
           print("Android app name configured.")
           PY
-
 
       - name: Install Pillow
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install pillow
 
-
       - name: Install Aya app icon
         run: |
-          python3 - <<'PY'
+          python3 << 'PY'
           from pathlib import Path
           from PIL import Image
 
-          icon = Path("icon.png")
+          icon_path = Path("icon.png")
+          if not icon_path.exists():
+              raise SystemExit("ERROR: icon.png was not found in the project root.")
 
-          if not icon.exists():
-              raise SystemExit(
-                  "ERROR: icon.png was not found in the project root."
-              )
-
-          image = Image.open(icon).convert("RGBA")
+          image = Image.open(icon_path).convert("RGBA")
 
           sizes = {
               "mipmap-mdpi": 48,
@@ -105,72 +80,62 @@ jobs:
               "mipmap-xxxhdpi": 192,
           }
 
-          base = Path(
-              "android-app/android/app/src/main/res"
-          )
+          base = Path("android-app/android/app/src/main/res")
 
           for folder, size in sizes.items():
               target_dir = base / folder
               target_dir.mkdir(parents=True, exist_ok=True)
+              resized = image.resize((size, size), Image.Resampling.LANCZOS)
+              resized.save(target_dir / "ic_launcher.png", "PNG")
+              resized.save(target_dir / "ic_launcher_round.png", "PNG")
 
-              resized = image.resize(
-                  (size, size),
-                  Image.Resampling.LANCZOS
-              )
+          fg_size = 432
+          fg = image.resize((fg_size, fg_size), Image.Resampling.LANCZOS)
 
-              resized.save(
-                  target_dir / "ic_launcher.png",
-                  "PNG"
-              )
+          xxx = base / "mipmap-xxxhdpi"
+          xxx.mkdir(parents=True, exist_ok=True)
+          fg.save(xxx / "ic_launcher_foreground.png", "PNG")
 
-              resized.save(
-                  target_dir / "ic_launcher_round.png",
-                  "PNG"
-              )
+          bg = Image.new("RGBA", (fg_size, fg_size), (13, 27, 42, 255))
+          bg.save(xxx / "ic_launcher_background.png", "PNG")
+
+          anydpi = base / "mipmap-anydpi-v26"
+          anydpi.mkdir(parents=True, exist_ok=True)
+
+          xml = '<?xml version="1.0" encoding="utf-8"?>\n'
+          xml += '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
+          xml += '    <background android:drawable="@mipmap/ic_launcher_background"/>\n'
+          xml += '    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n'
+          xml += '</adaptive-icon>'
+
+          (anydpi / "ic_launcher.xml").write_text(xml, encoding="utf-8")
+          (anydpi / "ic_launcher_round.xml").write_text(xml, encoding="utf-8")
 
           print("Aya icon installed successfully.")
-
+          PY
 
       - name: Configure Android application
         working-directory: android-app
         run: |
-          python3 - <<'PY'
+          python3 << 'PY'
           from pathlib import Path
-
-          manifest = Path(
-              "android/app/src/main/AndroidManifest.xml"
-          )
-
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
           text = manifest.read_text(encoding="utf-8")
-
-          text = text.replace(
-              'android:icon="@mipmap/ic_launcher"',
-              'android:icon="@mipmap/ic_launcher"'
-          )
-
-          text = text.replace(
-              'android:roundIcon="@mipmap/ic_launcher_round"',
-              'android:roundIcon="@mipmap/ic_launcher_round"'
-          )
-
+          text = text.replace('android:icon="@mipmap/ic_launcher"', 'android:icon="@mipmap/ic_launcher"')
+          text = text.replace('android:roundIcon="@mipmap/ic_launcher_round"', 'android:roundIcon="@mipmap/ic_launcher_round"')
           manifest.write_text(text, encoding="utf-8")
-
           print("Android application configured.")
           PY
 
-
       - name: Sync Capacitor
         working-directory: android-app
-        run: |
-          npx cap sync android
-
+        run: npx cap sync android
 
       - name: Build APK
         working-directory: android-app/android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug
-
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
