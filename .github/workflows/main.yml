@@ -36,64 +36,18 @@ jobs:
 
       - name: Initialize Capacitor
         working-directory: android-app
-        run: |
-          npx cap init "آية" "com.aya.alquran" --web-dir www
+        run: npx cap init "آية" "com.aya.alquran" --web-dir www
 
       - name: Add Android platform
         working-directory: android-app
-        run: |
-          npx cap add android
+        run: npx cap add android
 
       - name: Configure Android app name
         working-directory: android-app
         run: |
-          python3 -c '
+          python3 << 'EOF'
           from pathlib import Path
           p = Path("android/app/src/main/res/values/strings.xml")
           if p.exists():
               text = p.read_text(encoding="utf-8")
-              text = text.replace("app_name\">App", "app_name\">آية")
-              p.write_text(text, encoding="utf-8")
-          print("Android app name configured.")
-          '
-
-      - name: Install Pillow
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install pillow
-
-      - name: Install Aya app icon
-        run: |
-          python3 -c '
-          from pathlib import Path
-          from PIL import Image
-
-          icon_path = Path("icon.png")
-          if not icon_path.exists():
-              raise SystemExit("ERROR: icon.png was not found in the project root.")
-
-          image = Image.open(icon_path).convert("RGBA")
-
-          sizes = {
-              "mipmap-mdpi": 48,
-              "mipmap-hdpi": 72,
-              "mipmap-xhdpi": 96,
-              "mipmap-xxhdpi": 144,
-              "mipmap-xxxhdpi": 192,
-          }
-
-          base = Path("android-app/android/app/src/main/res")
-
-          for folder, size in sizes.items():
-              target_dir = base / folder
-              target_dir.mkdir(parents=True, exist_ok=True)
-              resized = image.resize((size, size), Image.Resampling.LANCZOS)
-              resized.save(target_dir / "ic_launcher.png", "PNG")
-              resized.save(target_dir / "ic_launcher_round.png", "PNG")
-
-          # Adaptive Icon
-          fg_size = 432
-          fg = image.resize((fg_size, fg_size), Image.Resampling.LANCZOS)
-
-          xxx = base / "mipmap-xxxhdpi"
-          xxx.mkdir(parents=True, exist_ok=True)
+              text = text.replace('
