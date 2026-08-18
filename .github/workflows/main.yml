@@ -68,18 +68,18 @@ jobs:
         run: |
           python3 << 'PY'
           from pathlib import Path
-          from PIL import Image
+          from PIL import Image, ImageDraw
           import shutil
 
           icon_path = Path("icon.png")
           if not icon_path.exists():
               raise SystemExit("ERROR: icon.png was not found.")
 
-          image = Image.open(icon_path).convert("RGBA")
+          original = Image.open(icon_path).convert("RGBA")
 
           base = Path("android-app/android/app/src/main/res")
 
-          # 1. Legacy icons
+          # === Legacy icons (دائرية كاملة) ===
           sizes = {
               "mipmap-mdpi": 48,
               "mipmap-hdpi": 72,
@@ -91,25 +91,38 @@ jobs:
           for folder, size in sizes.items():
               target_dir = base / folder
               target_dir.mkdir(parents=True, exist_ok=True)
-              resized = image.resize((size, size), Image.Resampling.LANCZOS)
+
+              # نعيد تحجيم الأيقونة مع الحفاظ على الدائرة
+              resized = original.resize((size, size), Image.Resampling.LANCZOS)
               resized.save(target_dir / "ic_launcher.png", "PNG")
               resized.save(target_dir / "ic_launcher_round.png", "PNG")
+
               for f in target_dir.glob("ic_launcher*"):
                   if f.name not in ["ic_launcher.png", "ic_launcher_round.png"]:
                       f.unlink(missing_ok=True)
 
-          # 2. Adaptive Icon
+          # === Adaptive Icon محسّن ===
+          # نستخدم حجم أكبر ونضع الأيقونة في المنتصف مع مساحة آمنة
           fg_size = 432
-          fg = image.resize((fg_size, fg_size), Image.Resampling.LANCZOS)
+          canvas = Image.new("RGBA", (fg_size, fg_size), (0, 0, 0, 0))
+
+          # نحسب حجم الأيقونة داخل الـ safe zone (حوالي 66% من المساحة)
+          icon_size = int(fg_size * 0.72)
+          icon_resized = original.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
+
+          # نوسطها
+          offset = (fg_size - icon_size) // 2
+          canvas.paste(icon_resized, (offset, offset), icon_resized)
 
           xxx = base / "mipmap-xxxhdpi"
           xxx.mkdir(parents=True, exist_ok=True)
-          fg.save(xxx / "ic_launcher_foreground.png", "PNG")
+          canvas.save(xxx / "ic_launcher_foreground.png", "PNG")
 
+          # خلفية بنفس لون الأيقونة
           bg = Image.new("RGBA", (fg_size, fg_size), (13, 27, 42, 255))
           bg.save(xxx / "ic_launcher_background.png", "PNG")
 
-          # 3. Adaptive XML
+          # Adaptive XML
           anydpi = base / "mipmap-anydpi-v26"
           if anydpi.exists():
               shutil.rmtree(anydpi)
@@ -127,7 +140,7 @@ jobs:
           print("=== Icon files after install ===")
           for p in sorted(base.rglob("ic_launcher*")):
               print(p)
-          print("Aya icon forced successfully.")
+          print("Aya icon improved successfully.")
           PY
 
       - name: Build APK
