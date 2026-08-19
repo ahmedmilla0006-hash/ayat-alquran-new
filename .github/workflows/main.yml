@@ -132,15 +132,18 @@ jobs:
 
       - name: Decode and verify keystore
         env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_B64_1: ${{ secrets.KEYSTORE_B64_1 }}
+          KEYSTORE_B64_2: ${{ secrets.KEYSTORE_B64_2 }}
+          KEYSTORE_B64_3: ${{ secrets.KEYSTORE_B64_3 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::error::KEYSTORE_BASE64 secret is missing"
+          B64="\( {KEYSTORE_B64_1} \){KEYSTORE_B64_2}${KEYSTORE_B64_3}"
+          if [ -z "$KEYSTORE_B64_1" ] || [ -z "$KEYSTORE_B64_2" ] || [ -z "$KEYSTORE_B64_3" ]; then
+            echo "::error::أضف الأسرار KEYSTORE_B64_1 و KEYSTORE_B64_2 و KEYSTORE_B64_3"
             exit 1
           fi
-          echo "$KEYSTORE_BASE64" | tr -d '\n\r ' | base64 -d > ${{ github.workspace }}/aya-release.jks
+          echo "$B64" | tr -d '\n\r ' | base64 -d > ${{ github.workspace }}/aya-release.jks
           ls -la ${{ github.workspace }}/aya-release.jks
           keytool -list -keystore ${{ github.workspace }}/aya-release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS"
 
