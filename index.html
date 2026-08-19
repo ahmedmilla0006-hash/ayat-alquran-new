@@ -834,34 +834,17 @@ body{
 
 /* === تذييل الصفحة === */
 .mushaf-page-footer{
-  position:fixed;
-  left:0;
-  right:0;
-  bottom:max(2px, env(safe-area-inset-bottom, 0px));
-  z-index:12;
-  height:24px;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  pointer-events:none;
-  color:#111;
-  font-family:Tahoma,Arial,sans-serif;
-  font-size:13px;
-  font-weight:700;
-}
-.night-mode .mushaf-page-header,
-.night-mode .mushaf-page-footer{
-  color:#111;
+  display:none !important;
 }
 
-/* مساحة أعلى النص حتى تصبح كتابة المصحف تحت السطر التعريفي */
+/* مساحة أعلى النص: نزلنا الكتابة حوالي سطر ونصف */
 .page-area{
-  padding-top:32px;
+  padding-top:60px;
   padding-bottom:28px;
 }
 .page{
-  height:calc(100% - 60px);
-  max-height:calc(100% - 60px);
+  height:calc(100% - 88px);
+  max-height:calc(100% - 88px);
 }
 
 
@@ -947,9 +930,6 @@ body{
         alt="صفحة القرآن الكريم"
         draggable="false">
 
-      <div class="mushaf-page-footer" id="mushafPageFooter">
-        <span id="pageBottomInfo">1</span>
-      </div>
     </div>
 
   </main>
