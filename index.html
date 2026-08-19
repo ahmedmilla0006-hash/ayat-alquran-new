@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="highlight-fix" content="MP3Quran coordinate mapping for pages 1-2 and 3+">
 <title>آية</title>
+<meta name="theme-color" content="#16803b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="application-name" content="آية">
+<link rel="manifest" href="manifest.webmanifest">
 
 <style>
 :root{
@@ -827,15 +832,36 @@ body{
 }
 
 
-/* مساحة أعلى النص حتى تصبح كتابة المصحف تحت السطر التعريفي
-   + إنزال نص المصحف سطراً واحداً تقريباً (~36px) مع بقاء التظليل متطابقاً */
+/* === تذييل الصفحة === */
+.mushaf-page-footer{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:max(2px, env(safe-area-inset-bottom, 0px));
+  z-index:12;
+  height:24px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  pointer-events:none;
+  color:#111;
+  font-family:Tahoma,Arial,sans-serif;
+  font-size:13px;
+  font-weight:700;
+}
+.night-mode .mushaf-page-header,
+.night-mode .mushaf-page-footer{
+  color:#111;
+}
+
+/* مساحة أعلى النص حتى تصبح كتابة المصحف تحت السطر التعريفي */
 .page-area{
-  padding-top:68px;
+  padding-top:32px;
   padding-bottom:28px;
 }
 .page{
-  height:calc(100% - 96px);
-  max-height:calc(100% - 96px);
+  height:calc(100% - 60px);
+  max-height:calc(100% - 60px);
 }
 
 
@@ -920,6 +946,10 @@ body{
         src="https://www.mp3quran.net/api/quran_pages_svg/003.svg"
         alt="صفحة القرآن الكريم"
         draggable="false">
+
+      <div class="mushaf-page-footer" id="mushafPageFooter">
+        <span id="pageBottomInfo">1</span>
+      </div>
     </div>
 
   </main>
@@ -1242,7 +1272,7 @@ body{
 
 </div>
 
-<audio id="audio"></audio>
+<audio id="audio" playsinline webkit-playsinline preload="auto"></audio>
 
 <script>
 /*
@@ -3859,7 +3889,9 @@ const surahs = [
 
 
 
-/* === تحديث معلومات المصحف (رقم الصفحة المتحرك يُحدَّث في المراقب أدناه) === */
+/* === تحديث معلومات المصحف: الجزء والسورة ورقم الصفحة === */
+const pageBottomInfoEl = document.getElementById("pageBottomInfo");
+
 function getJuzNameForPage(pageNumber){
   const p = Number(pageNumber);
   if(!Array.isArray(juz) || !juz.length) return "";
@@ -3883,7 +3915,8 @@ function getSurahNameForPage(pageNumber){
 }
 
 function updateMushafPageInfo(){
-  /* رقم الصفحة الثابت أُزيل؛ التحديث يتم عبر readerPageNumber في المراقب */
+  const p = Number(currentPage) || 1;
+  if(pageBottomInfoEl) pageBottomInfoEl.textContent = p;
 }
 
 
@@ -4889,6 +4922,245 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.addEventListener("orientationchange", updatePlayerHeight);
 
   /* معلومات الصفحة ثابتة ولا تدخل ضمن إخفاء أزرار التحكم. */
+})();
+</script>
+
+
+<script>
+/* =====================================================
+   تشغيل في الخلفية + إشعار الوسائط (Media Session)
+   للنسخة النهائية — مناسب لتغليف APK / WebView
+===================================================== */
+(function(){
+  const audio = document.getElementById("audio");
+  if(!audio) return;
+
+  audio.setAttribute("playsinline", "");
+  audio.setAttribute("webkit-playsinline", "");
+  try{ audio.preload = "auto"; }catch(e){}
+
+  let userWantsPlay = false;
+
+  function nativeBridge(cmd, payload){
+    try{
+      if(window.AndroidInterface && typeof window.AndroidInterface.postMessage === "function"){
+        window.AndroidInterface.postMessage(JSON.stringify({ cmd: cmd, data: payload || {} }));
+        return true;
+      }
+    }catch(e){}
+    try{
+      if(window.Android && typeof window.Android.onMediaEvent === "function"){
+        window.Android.onMediaEvent(cmd, JSON.stringify(payload || {}));
+        return true;
+      }
+    }catch(e){}
+    return false;
+  }
+
+  function reciterLabel(){
+    try{
+      const nameEl = document.getElementById("readerName");
+      if(nameEl && nameEl.textContent.trim()) return nameEl.textContent.trim();
+      const sel = document.getElementById("readerSelect");
+      if(sel && sel.selectedOptions && sel.selectedOptions[0]){
+        return sel.selectedOptions[0].textContent.trim();
+      }
+    }catch(e){}
+    return "قارئ القرآن";
+  }
+
+  function surahLabel(){
+    try{
+      const n = Number(
+        (typeof currentAudioSurah !== "undefined" && currentAudioSurah) ||
+        (typeof getSurahNumberForPage === "function"
+          ? getSurahNumberForPage(typeof currentPage !== "undefined" ? currentPage : 1)
+          : 1)
+      ) || 1;
+      if(typeof surahs !== "undefined" && Array.isArray(surahs) && surahs[n - 1]){
+        return "سورة " + surahs[n - 1][0];
+      }
+      return "سورة " + n;
+    }catch(e){
+      return "القرآن الكريم";
+    }
+  }
+
+  function ayahHint(){
+    try{
+      if(typeof getActiveTiming === "function"){
+        const a = getActiveTiming();
+        if(a && a.ayah != null) return "الآية " + a.ayah;
+      }
+    }catch(e){}
+    return "";
+  }
+
+  function mediaPayload(){
+    return {
+      title: surahLabel() + (ayahHint() ? " — " + ayahHint() : ""),
+      artist: reciterLabel(),
+      album: "آية",
+      playing: !audio.paused,
+      position: audio.currentTime || 0,
+      duration: audio.duration || 0
+    };
+  }
+
+  function updateMediaSession(){
+    const payload = mediaPayload();
+    nativeBridge(payload.playing ? "media-play" : "media-pause", payload);
+    nativeBridge("media-update", payload);
+
+    if(!("mediaSession" in navigator)) return;
+
+    try{
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: payload.title,
+        artist: payload.artist,
+        album: "آية — القرآن الكريم",
+        artwork: [
+          {
+            src: "https://www.mp3quran.net/images/logo.png",
+            sizes: "512x512",
+            type: "image/png"
+          }
+        ]
+      });
+    }catch(e){
+      try{
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: payload.title,
+          artist: payload.artist,
+          album: "آية"
+        });
+      }catch(e2){}
+    }
+
+    try{
+      if(payload.duration && Number.isFinite(payload.duration) && payload.duration > 0){
+        navigator.mediaSession.setPositionState({
+          duration: payload.duration,
+          playbackRate: audio.playbackRate || 1,
+          position: Math.max(0, Math.min(payload.position, payload.duration))
+        });
+      }
+    }catch(e){}
+
+    try{
+      navigator.mediaSession.playbackState = payload.playing ? "playing" : "paused";
+    }catch(e){}
+  }
+
+  function bindAction(action, fn){
+    if(!("mediaSession" in navigator)) return;
+    try{ navigator.mediaSession.setActionHandler(action, fn); }catch(e){}
+  }
+
+  function safePlay(){
+    userWantsPlay = true;
+    return audio.play().then(()=>{
+      const pb = document.getElementById("playButton");
+      if(pb) pb.textContent = "Ⅱ";
+      updateMediaSession();
+    }).catch(()=>{});
+  }
+
+  function safePause(){
+    userWantsPlay = false;
+    audio.pause();
+    const pb = document.getElementById("playButton");
+    if(pb) pb.textContent = "▶";
+    updateMediaSession();
+  }
+
+  bindAction("play", function(){ safePlay(); });
+  bindAction("pause", function(){ safePause(); });
+  bindAction("stop", function(){
+    safePause();
+    try{ audio.currentTime = 0; }catch(e){}
+  });
+  bindAction("previoustrack", function(){
+    const b = document.getElementById("backButton");
+    if(b) b.click();
+    setTimeout(updateMediaSession, 120);
+  });
+  bindAction("nexttrack", function(){
+    const b = document.getElementById("forwardButton");
+    if(b) b.click();
+    setTimeout(updateMediaSession, 120);
+  });
+  bindAction("seekbackward", function(d){
+    const off = (d && d.seekOffset) || 10;
+    try{ audio.currentTime = Math.max(0, (audio.currentTime || 0) - off); }catch(e){}
+    updateMediaSession();
+  });
+  bindAction("seekforward", function(d){
+    const off = (d && d.seekOffset) || 10;
+    try{
+      const t = (audio.currentTime || 0) + off;
+      audio.currentTime = Math.min(audio.duration || t, t);
+    }catch(e){}
+    updateMediaSession();
+  });
+  bindAction("seekto", function(d){
+    if(d && Number.isFinite(d.seekTime)){
+      try{ audio.currentTime = d.seekTime; }catch(e){}
+      updateMediaSession();
+    }
+  });
+
+  window.__ayahMediaCommand = function(cmd){
+    if(cmd === "play") safePlay();
+    else if(cmd === "pause") safePause();
+    else if(cmd === "toggle"){ if(audio.paused) safePlay(); else safePause(); }
+    else if(cmd === "next"){
+      const b = document.getElementById("forwardButton");
+      if(b) b.click();
+    }else if(cmd === "prev"){
+      const b = document.getElementById("backButton");
+      if(b) b.click();
+    }
+  };
+
+  audio.addEventListener("play", function(){
+    userWantsPlay = true;
+    updateMediaSession();
+  });
+  audio.addEventListener("pause", updateMediaSession);
+  audio.addEventListener("ended", updateMediaSession);
+  audio.addEventListener("loadedmetadata", updateMediaSession);
+  audio.addEventListener("durationchange", updateMediaSession);
+
+  setInterval(function(){
+    if(!audio.paused) updateMediaSession();
+  }, 2500);
+
+  document.addEventListener("visibilitychange", function(){
+    if(document.visibilityState === "visible"){
+      updateMediaSession();
+      if(userWantsPlay && audio.paused && audio.src) safePlay();
+    }else if(!audio.paused){
+      updateMediaSession();
+    }
+  });
+
+  window.addEventListener("pageshow", function(){
+    updateMediaSession();
+    if(userWantsPlay && audio.paused && audio.src) safePlay();
+  });
+
+  const playBtn = document.getElementById("playButton");
+  if(playBtn){
+    playBtn.addEventListener("click", function(){
+      setTimeout(function(){
+        userWantsPlay = !audio.paused;
+        updateMediaSession();
+      }, 100);
+    });
+  }
+
+  updateMediaSession();
 })();
 </script>
 
