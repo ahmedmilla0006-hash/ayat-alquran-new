@@ -47,11 +47,14 @@ jobs:
         run: |
           python3 << 'PY'
           from pathlib import Path
+
           p = Path("android/app/src/main/res/values/strings.xml")
+
           if p.exists():
               text = p.read_text(encoding="utf-8")
               text = text.replace("app_name\">App", "app_name\">آية")
               p.write_text(text, encoding="utf-8")
+
           print("Android app name configured.")
           PY
 
@@ -68,10 +71,11 @@ jobs:
         run: |
           python3 << 'PY'
           from pathlib import Path
-          from PIL import Image, ImageDraw
+          from PIL import Image
           import shutil
 
           icon_path = Path("icon.png")
+
           if not icon_path.exists():
               raise SystemExit("ERROR: icon.png was not found.")
 
@@ -79,79 +83,266 @@ jobs:
 
           base = Path("android-app/android/app/src/main/res")
 
-          # === Legacy icons (دائرية كاملة) ===
           sizes = {
               "mipmap-mdpi": 48,
               "mipmap-hdpi": 72,
               "mipmap-xhdpi": 96,
               "mipmap-xxhdpi": 144,
-              "mipmap-xxxhdpi": 192,
+              "mipmap-xxxhdpi": 192
           }
 
           for folder, size in sizes.items():
               target_dir = base / folder
               target_dir.mkdir(parents=True, exist_ok=True)
 
-              # نعيد تحجيم الأيقونة مع الحفاظ على الدائرة
-              resized = original.resize((size, size), Image.Resampling.LANCZOS)
-              resized.save(target_dir / "ic_launcher.png", "PNG")
-              resized.save(target_dir / "ic_launcher_round.png", "PNG")
+              resized = original.resize(
+                  (size, size),
+                  Image.Resampling.LANCZOS
+              )
+
+              resized.save(
+                  target_dir / "ic_launcher.png",
+                  "PNG"
+              )
+
+              resized.save(
+                  target_dir / "ic_launcher_round.png",
+                  "PNG"
+              )
 
               for f in target_dir.glob("ic_launcher*"):
-                  if f.name not in ["ic_launcher.png", "ic_launcher_round.png"]:
+                  if f.name not in [
+                      "ic_launcher.png",
+                      "ic_launcher_round.png"
+                  ]:
                       f.unlink(missing_ok=True)
 
-          # === Adaptive Icon محسّن ===
-          # نستخدم حجم أكبر ونضع الأيقونة في المنتصف مع مساحة آمنة
           fg_size = 432
-          canvas = Image.new("RGBA", (fg_size, fg_size), (0, 0, 0, 0))
 
-          # نحسب حجم الأيقونة داخل الـ safe zone (حوالي 66% من المساحة)
+          canvas = Image.new(
+              "RGBA",
+              (fg_size, fg_size),
+              (0, 0, 0, 0)
+          )
+
           icon_size = int(fg_size * 0.72)
-          icon_resized = original.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
 
-          # نوسطها
+          icon_resized = original.resize(
+              (icon_size, icon_size),
+              Image.Resampling.LANCZOS
+          )
+
           offset = (fg_size - icon_size) // 2
-          canvas.paste(icon_resized, (offset, offset), icon_resized)
+
+          canvas.paste(
+              icon_resized,
+              (offset, offset),
+              icon_resized
+          )
 
           xxx = base / "mipmap-xxxhdpi"
           xxx.mkdir(parents=True, exist_ok=True)
-          canvas.save(xxx / "ic_launcher_foreground.png", "PNG")
 
-          # خلفية بنفس لون الأيقونة
-          bg = Image.new("RGBA", (fg_size, fg_size), (13, 27, 42, 255))
-          bg.save(xxx / "ic_launcher_background.png", "PNG")
+          canvas.save(
+              xxx / "ic_launcher_foreground.png",
+              "PNG"
+          )
 
-          # Adaptive XML
+          bg = Image.new(
+              "RGBA",
+              (fg_size, fg_size),
+              (13, 27, 42, 255)
+          )
+
+          bg.save(
+              xxx / "ic_launcher_background.png",
+              "PNG"
+          )
+
           anydpi = base / "mipmap-anydpi-v26"
+
           if anydpi.exists():
               shutil.rmtree(anydpi)
-          anydpi.mkdir(parents=True, exist_ok=True)
 
-          xml = '<?xml version="1.0" encoding="utf-8"?>\n'
-          xml += '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
-          xml += '    <background android:drawable="@mipmap/ic_launcher_background"/>\n'
-          xml += '    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n'
-          xml += '</adaptive-icon>'
+          anydpi.mkdir(
+              parents=True,
+              exist_ok=True
+          )
 
-          (anydpi / "ic_launcher.xml").write_text(xml, encoding="utf-8")
-          (anydpi / "ic_launcher_round.xml").write_text(xml, encoding="utf-8")
+          xml = """<?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@mipmap/ic_launcher_background"/>
+              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+          </adaptive-icon>"""
 
-          print("=== Icon files after install ===")
-          for p in sorted(base.rglob("ic_launcher*")):
-              print(p)
-          print("Aya icon improved successfully.")
+          (anydpi / "ic_launcher.xml").write_text(
+              xml,
+              encoding="utf-8"
+          )
+
+          (anydpi / "ic_launcher_round.xml").write_text(
+              xml,
+              encoding="utf-8"
+          )
+
+          print("Aya icon installed successfully.")
           PY
 
-      - name: Build APK
+      - name: Add notification permissions
+        run: |
+          python3 << 'PY'
+          from pathlib import Path
+          import re
+
+          manifest = Path(
+              "android-app/android/app/src/main/AndroidManifest.xml"
+          )
+
+          text = manifest.read_text(encoding="utf-8")
+
+          permissions = [
+              "android.permission.POST_NOTIFICATIONS",
+              "android.permission.FOREGROUND_SERVICE",
+              "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+              "android.permission.WAKE_LOCK",
+          ]
+
+          for permission in permissions:
+              if permission not in text:
+                  text = re.sub(
+                      r"(<manifest[^>]*>)",
+                      r'\1\n    <uses-permission android:name="%s" />'
+                      % permission,
+                      text,
+                      count=1
+                  )
+
+          if "android:usesCleartextTraffic" not in text:
+              text = text.replace(
+                  "<application",
+                  '<application android:usesCleartextTraffic="true"',
+                  1
+              )
+
+          manifest.write_text(
+              text,
+              encoding="utf-8"
+          )
+
+          print("Permissions configured.")
+          PY
+
+      # ---------------------------------------------------------
+      # Decode signing keystore
+      # ---------------------------------------------------------
+      - name: Decode signing keystore
+        env:
+          KEYSTORE_B64_1: ${{ secrets.KEYSTORE_B64_1 }}
+          KEYSTORE_B64_2: ${{ secrets.KEYSTORE_B64_2 }}
+          KEYSTORE_B64_3: ${{ secrets.KEYSTORE_B64_3 }}
+        run: |
+          set -e
+
+          echo "Combining keystore Base64 parts..."
+
+          printf '%s%s%s' \
+            "$KEYSTORE_B64_1" \
+            "$KEYSTORE_B64_2" \
+            "$KEYSTORE_B64_3" \
+            > keystore.b64
+
+          # Remove accidental whitespace/newlines.
+          tr -d '[:space:]' < keystore.b64 > keystore.clean.b64
+
+          echo "Checking Base64..."
+
+          base64 -d -i keystore.clean.b64 > aya-release.jks
+
+          if [ ! -s aya-release.jks ]; then
+            echo "ERROR: Keystore file is empty."
+            exit 1
+          fi
+
+          echo "Keystore decoded successfully."
+
+      - name: Verify signing keystore
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          set -e
+
+          keytool -list \
+            -keystore aya-release.jks \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -alias "$KEY_ALIAS"
+
+          echo "Keystore verification successful."
+
+      - name: Configure release signing
         working-directory: android-app/android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          python3 << 'PY'
+          from pathlib import Path
+
+          p = Path("app/build.gradle")
+
+          text = p.read_text(encoding="utf-8")
+
+          signing = r'''
+              signingConfigs {
+                  release {
+                      storeFile file("../../../../aya-release.jks")
+                      storePassword System.getenv("KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("KEY_ALIAS")
+                      keyPassword System.getenv("KEY_PASSWORD")
+                  }
+              }
+          '''
+
+          if "signingConfigs {" not in text:
+              text = text.replace(
+                  "android {",
+                  "android {" + signing,
+                  1
+              )
+
+          if "signingConfig signingConfigs.release" not in text:
+              text = text.replace(
+                  "buildTypes {",
+                  """buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              """,
+                  1
+              )
+
+          p.write_text(
+              text,
+              encoding="utf-8"
+          )
+
+          print("Release signing configured.")
+          PY
+
+      - name: Build signed release APK
+        working-directory: android-app/android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleRelease --stacktrace
 
-      - name: Upload APK
+      - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: aya-android-apk
-          path: android-app/android/app/build/outputs/apk/debug/app-debug.apk
+          name: aya-android-release-apk
+          path: android-app/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
