@@ -8,25 +8,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ============================================================
-      # DOWNLOAD PROJECT
-      # ============================================================
-
       - name: Download project
         uses: actions/checkout@v4
-
-      # ============================================================
-      # NODE
-      # ============================================================
 
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      # ============================================================
-      # JAVA
-      # ============================================================
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -34,65 +22,29 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # ============================================================
-      # CREATE CAPACITOR PROJECT
-      # ============================================================
-
       - name: Create Android project
         run: |
-          set -e
-
           mkdir -p android-app
-
           cd android-app
-
           npm init -y
-
-          npm install \
-            @capacitor/core@7 \
-            @capacitor/cli@7 \
-            @capacitor/android@7
-
-      # ============================================================
-      # PREPARE WEB FILES
-      # ============================================================
+          npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
 
       - name: Prepare web files
         run: |
-          set -e
-
           mkdir -p android-app/www
-
           rsync -av \
             --exclude='.git' \
             --exclude='.github' \
             --exclude='android-app' \
             ./ android-app/www/
 
-      # ============================================================
-      # INITIALIZE CAPACITOR
-      # ============================================================
-
       - name: Initialize Capacitor
         working-directory: android-app
-        run: |
-          npx cap init \
-            "آية" \
-            "com.aya.alquran" \
-            --web-dir www
-
-      # ============================================================
-      # ADD ANDROID
-      # ============================================================
+        run: npx cap init "آية" "com.aya.alquran" --web-dir www
 
       - name: Add Android platform
         working-directory: android-app
-        run: |
-          npx cap add android
-
-      # ============================================================
-      # CONFIGURE APP NAME
-      # ============================================================
+        run: npx cap add android
 
       - name: Configure Android app name
         working-directory: android-app
@@ -100,55 +52,29 @@ jobs:
           python3 << 'PY'
           from pathlib import Path
 
-          p = Path(
-              "android/app/src/main/res/values/strings.xml"
-          )
+          p = Path("android/app/src/main/res/values/strings.xml")
 
           if p.exists():
-
-              text = p.read_text(
-                  encoding="utf-8"
-              )
+              text = p.read_text(encoding="utf-8")
 
               text = text.replace(
                   "app_name\">App",
                   "app_name\">آية"
               )
 
-              p.write_text(
-                  text,
-                  encoding="utf-8"
-              )
+              p.write_text(text, encoding="utf-8")
 
-          print(
-              "Android app name configured."
-          )
+          print("Android app name configured.")
           PY
-
-      # ============================================================
-      # PILLOW
-      # ============================================================
 
       - name: Install Pillow
         run: |
-          set -e
-
           python3 -m pip install --upgrade pip
-
           python3 -m pip install pillow
-
-      # ============================================================
-      # SYNC CAPACITOR
-      # ============================================================
 
       - name: Sync Capacitor
         working-directory: android-app
-        run: |
-          npx cap sync android
-
-      # ============================================================
-      # INSTALL AYA ICON
-      # ============================================================
+        run: npx cap sync android
 
       - name: Install Aya app icon
         run: |
@@ -160,13 +86,9 @@ jobs:
           icon_path = Path("icon.png")
 
           if not icon_path.exists():
-              raise SystemExit(
-                  "ERROR: icon.png was not found."
-              )
+              raise SystemExit("ERROR: icon.png was not found.")
 
-          original = Image.open(
-              icon_path
-          ).convert("RGBA")
+          original = Image.open(icon_path).convert("RGBA")
 
           base = Path(
               "android-app/android/app/src/main/res"
@@ -181,15 +103,8 @@ jobs:
           }
 
           for folder, size in sizes.items():
-
-              target_dir = (
-                  base / folder
-              )
-
-              target_dir.mkdir(
-                  parents=True,
-                  exist_ok=True
-              )
+              target_dir = base / folder
+              target_dir.mkdir(parents=True, exist_ok=True)
 
               resized = original.resize(
                   (size, size),
@@ -206,22 +121,12 @@ jobs:
                   "PNG"
               )
 
-              for f in target_dir.glob(
-                  "ic_launcher*"
-              ):
-
+              for f in target_dir.glob("ic_launcher*"):
                   if f.name not in [
                       "ic_launcher.png",
                       "ic_launcher_round.png"
                   ]:
-
-                      f.unlink(
-                          missing_ok=True
-                      )
-
-          # --------------------------------------------------------
-          # ADAPTIVE ICON
-          # --------------------------------------------------------
+                      f.unlink(missing_ok=True)
 
           fg_size = 432
 
@@ -231,9 +136,7 @@ jobs:
               (0, 0, 0, 0)
           )
 
-          icon_size = int(
-              fg_size * 0.72
-          )
+          icon_size = int(fg_size * 0.72)
 
           icon_resized = original.resize(
               (icon_size, icon_size),
@@ -250,9 +153,7 @@ jobs:
               icon_resized
           )
 
-          xxx = (
-              base / "mipmap-xxxhdpi"
-          )
+          xxx = base / "mipmap-xxxhdpi"
 
           xxx.mkdir(
               parents=True,
@@ -275,9 +176,7 @@ jobs:
               "PNG"
           )
 
-          anydpi = (
-              base / "mipmap-anydpi-v26"
-          )
+          anydpi = base / "mipmap-anydpi-v26"
 
           if anydpi.exists():
               shutil.rmtree(anydpi)
@@ -315,14 +214,8 @@ jobs:
               encoding="utf-8"
           )
 
-          print(
-              "Aya icon installed successfully."
-          )
+          print("Aya icon improved successfully.")
           PY
-
-      # ============================================================
-      # VERSION
-      # ============================================================
 
       - name: Set versionCode from run number
         id: ver
@@ -353,54 +246,35 @@ jobs:
           echo "Checking keystore parts..."
 
           for i in 1 2 3 4 5 6; do
-
             eval "v=\$K$i"
 
             if [ -z "$v" ]; then
-
               echo "::error::السر KS$i ناقص"
-
               exit 1
-
             fi
 
             echo "KS$i exists."
-
           done
 
           B64="${K1}${K2}${K3}${K4}${K5}${K6}"
 
-          B64="$(
-            printf '%s' "$B64" |
-            tr -d '[:space:]'
-          )"
+          B64="$(printf '%s' "$B64" | tr -d '[:space:]')"
 
           echo "Checking Base64..."
 
-          if ! printf '%s' "$B64" |
-              base64 --decode > /dev/null 2>&1
-          then
-
-              echo "::error::KS1-KS6 لا تحتوي على Base64 صالح"
-
-              exit 1
-
+          if ! printf '%s' "$B64" | base64 --decode > /dev/null 2>&1; then
+            echo "::error::KS1-KS6 لا تحتوي على Base64 صالح"
+            exit 1
           fi
 
           echo "Base64 is valid."
 
-          printf '%s' "$B64" |
-            base64 --decode \
+          printf '%s' "$B64" | base64 --decode \
             > "${{ github.workspace }}/aya-release.jks"
 
-          if [
-            ! -s "${{ github.workspace }}/aya-release.jks"
-          ]; then
-
+          if [ ! -s "${{ github.workspace }}/aya-release.jks" ]; then
             echo "::error::ملف keystore فارغ"
-
             exit 1
-
           fi
 
           echo "Keystore file created."
@@ -416,7 +290,7 @@ jobs:
           echo "Keystore verified successfully."
 
       # ============================================================
-      # SET VERSION IN GRADLE
+      # VERSION
       # ============================================================
 
       - name: Set version in Gradle
@@ -429,26 +303,19 @@ jobs:
           import os
           import re
 
-          vc = os.environ[
-              "VERSION_CODE"
-          ]
-
-          vn = os.environ[
-              "VERSION_NAME"
-          ]
+          vc = os.environ["VERSION_CODE"]
+          vn = os.environ["VERSION_NAME"]
 
           gradle = Path(
               "android-app/android/app/build.gradle"
           )
 
           if not gradle.exists():
-
               gradle = Path(
                   "android-app/android/app/build.gradle.kts"
               )
 
           if not gradle.exists():
-
               raise SystemExit(
                   "ERROR: Gradle file not found."
               )
@@ -495,10 +362,7 @@ jobs:
               "android-app/android/app/src/main"
           )
 
-          manifest = (
-              android_root /
-              "AndroidManifest.xml"
-          )
+          manifest = android_root / "AndroidManifest.xml"
 
           text = manifest.read_text(
               encoding="utf-8"
@@ -512,7 +376,6 @@ jobs:
           ]
 
           for permission in permissions:
-
               if permission not in text:
 
                   text = re.sub(
@@ -523,10 +386,7 @@ jobs:
                       count=1
                   )
 
-          if (
-              "android:usesCleartextTraffic"
-              not in text
-          ):
+          if "android:usesCleartextTraffic" not in text:
 
               text = text.replace(
                   "<application",
@@ -539,9 +399,8 @@ jobs:
               encoding="utf-8"
           )
 
-          # --------------------------------------------------------
-          # JAVA DIRECTORY
-          # --------------------------------------------------------
+          # إنشاء MainActivity جديدة تطلب إذن الإشعارات
+          # وتنشئ قناة إشعار وترسل إشعار آية.
 
           java_dir = (
               android_root /
@@ -553,199 +412,159 @@ jobs:
               exist_ok=True
           )
 
-          # --------------------------------------------------------
-          # MAIN ACTIVITY
-          # --------------------------------------------------------
-
-          activity = (
-              java_dir /
-              "MainActivity.java"
-          )
+          activity = java_dir / "MainActivity.java"
 
           activity_code = r'''package com.aya.alquran;
 
-import android.Manifest;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.content.pm.PackageManager;
-import android.os.Build;
-import android.os.Bundle;
+          import android.Manifest;
+          import android.app.NotificationChannel;
+          import android.app.NotificationManager;
+          import android.content.pm.PackageManager;
+          import android.os.Build;
+          import android.os.Bundle;
 
-import androidx.core.app.ActivityCompat;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
+          import androidx.core.app.ActivityCompat;
+          import androidx.core.app.NotificationCompat;
+          import androidx.core.app.NotificationManagerCompat;
 
-import com.getcapacitor.BridgeActivity;
+          import com.getcapacitor.BridgeActivity;
 
-public class MainActivity extends BridgeActivity {
+          public class MainActivity extends BridgeActivity {
 
-    private static final String CHANNEL_ID =
-            "aya_notifications";
+              private static final String CHANNEL_ID = "aya_notifications";
+              private static final int NOTIFICATION_ID = 1001;
+              private static final int REQUEST_NOTIFICATION_PERMISSION = 2001;
 
-    private static final int NOTIFICATION_ID =
-            1001;
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
 
-    private static final int REQUEST_NOTIFICATION_PERMISSION =
-            2001;
+                  createNotificationChannel();
 
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
 
-        super.onCreate(savedInstanceState);
+                      if (checkSelfPermission(
+                              Manifest.permission.POST_NOTIFICATIONS
+                      ) != PackageManager.PERMISSION_GRANTED) {
 
-        createNotificationChannel();
+                          requestPermissions(
+                              new String[]{
+                                  Manifest.permission.POST_NOTIFICATIONS
+                              },
+                              REQUEST_NOTIFICATION_PERMISSION
+                          );
 
-        requestNotificationPermission();
-    }
+                      } else {
+                          showAyaNotification();
+                      }
 
-    private void requestNotificationPermission() {
+                  } else {
+                      showAyaNotification();
+                  }
+              }
 
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.TIRAMISU
-        ) {
+              @Override
+              public void onRequestPermissionsResult(
+                      int requestCode,
+                      String[] permissions,
+                      int[] grantResults
+              ) {
+                  super.onRequestPermissionsResult(
+                          requestCode,
+                          permissions,
+                          grantResults
+                  );
 
-            if (
-                ActivityCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
+                  if (
+                      requestCode ==
+                      REQUEST_NOTIFICATION_PERMISSION
+                  ) {
 
-                ActivityCompat.requestPermissions(
-                    this,
-                    new String[]{
-                        Manifest.permission.POST_NOTIFICATIONS
-                    },
-                    REQUEST_NOTIFICATION_PERMISSION
-                );
+                      if (
+                          grantResults.length > 0 &&
+                          grantResults[0] ==
+                          PackageManager.PERMISSION_GRANTED
+                      ) {
+                          showAyaNotification();
+                      }
+                  }
+              }
 
-            } else {
+              private void createNotificationChannel() {
 
-                showAyaNotification();
-            }
+                  if (
+                      Build.VERSION.SDK_INT >=
+                      Build.VERSION_CODES.O
+                  ) {
 
-        } else {
+                      NotificationChannel channel =
+                              new NotificationChannel(
+                                      CHANNEL_ID,
+                                      "إشعارات آية",
+                                      NotificationManager.IMPORTANCE_LOW
+                              );
 
-            showAyaNotification();
-        }
-    }
+                      channel.setDescription(
+                              "إشعارات تطبيق آية"
+                      );
 
-    @Override
-    public void onRequestPermissionsResult(
-            int requestCode,
-            String[] permissions,
-            int[] grantResults
-    ) {
+                      NotificationManager manager =
+                              getSystemService(
+                                      NotificationManager.class
+                              );
 
-        super.onRequestPermissionsResult(
-                requestCode,
-                permissions,
-                grantResults
-        );
+                      if (manager != null) {
+                          manager.createNotificationChannel(
+                                  channel
+                          );
+                      }
+                  }
+              }
 
-        if (
-            requestCode ==
-            REQUEST_NOTIFICATION_PERMISSION
-        ) {
+              private void showAyaNotification() {
 
-            if (
-                grantResults.length > 0 &&
-                grantResults[0] ==
-                PackageManager.PERMISSION_GRANTED
-            ) {
+                  if (
+                      Build.VERSION.SDK_INT >=
+                      Build.VERSION_CODES.TIRAMISU
+                  ) {
 
-                showAyaNotification();
-            }
-        }
-    }
+                      if (
+                          ActivityCompat.checkSelfPermission(
+                              this,
+                              Manifest.permission.POST_NOTIFICATIONS
+                          ) != PackageManager.PERMISSION_GRANTED
+                      ) {
+                          return;
+                      }
+                  }
 
-    private void createNotificationChannel() {
+                  NotificationCompat.Builder builder =
+                          new NotificationCompat.Builder(
+                                  this,
+                                  CHANNEL_ID
+                          )
+                          .setSmallIcon(
+                                  com.aya.alquran.R.mipmap.ic_launcher
+                          )
+                          .setContentTitle("آية")
+                          .setContentText(
+                                  "تطبيق آية يعمل الآن"
+                          )
+                          .setPriority(
+                                  NotificationCompat.PRIORITY_LOW
+                          )
+                          .setOngoing(false)
+                          .setAutoCancel(false);
 
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
-        ) {
-
-            NotificationChannel channel =
-                    new NotificationChannel(
-                            CHANNEL_ID,
-                            "إشعارات آية",
-                            NotificationManager.IMPORTANCE_LOW
-                    );
-
-            channel.setDescription(
-                    "إشعارات تطبيق آية"
-            );
-
-            channel.setShowBadge(false);
-
-            NotificationManager manager =
-                    getSystemService(
-                            NotificationManager.class
-                    );
-
-            if (manager != null) {
-
-                manager.createNotificationChannel(
-                        channel
-                );
-            }
-        }
-    }
-
-    private void showAyaNotification() {
-
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.TIRAMISU
-        ) {
-
-            if (
-                ActivityCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-
-                return;
-            }
-        }
-
-        NotificationCompat.Builder builder =
-                new NotificationCompat.Builder(
-                        this,
-                        CHANNEL_ID
-                )
-                .setSmallIcon(
-                        com.aya.alquran.R.mipmap.ic_launcher
-                )
-                .setContentTitle(
-                        "آية"
-                )
-                .setContentText(
-                        "تطبيق آية يعمل الآن"
-                )
-                .setPriority(
-                        NotificationCompat.PRIORITY_LOW
-                )
-                .setCategory(
-                        NotificationCompat.CATEGORY_SERVICE
-                )
-                .setOnlyAlertOnce(true)
-                .setShowWhen(false)
-                .setOngoing(false)
-                .setAutoCancel(false);
-
-        NotificationManagerCompat
-                .from(this)
-                .notify(
-                        NOTIFICATION_ID,
-                        builder.build()
-                );
-    }
-}
-'''
+                  NotificationManagerCompat
+                          .from(this)
+                          .notify(
+                                  NOTIFICATION_ID,
+                                  builder.build()
+                          );
+              }
+          }
+          '''
 
           activity.write_text(
               activity_code,
@@ -753,7 +572,7 @@ public class MainActivity extends BridgeActivity {
           )
 
           print(
-              "Android notification system configured successfully."
+              "Android notification permission and MainActivity configured."
           )
           PY
 
@@ -775,11 +594,8 @@ public class MainActivity extends BridgeActivity {
           STORE="${{ github.workspace }}/aya-release.jks"
 
           if [ ! -f "$STORE" ]; then
-
             echo "::error::Keystore file not found."
-
             exit 1
-
           fi
 
           ./gradlew assembleRelease --stacktrace \
