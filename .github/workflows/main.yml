@@ -56,10 +56,12 @@ jobs:
 
           if p.exists():
               text = p.read_text(encoding="utf-8")
+
               text = text.replace(
                   "app_name\">App",
                   "app_name\">آية"
               )
+
               p.write_text(text, encoding="utf-8")
 
           print("Android app name configured.")
@@ -73,10 +75,6 @@ jobs:
       - name: Sync Capacitor
         working-directory: android-app
         run: npx cap sync android
-
-      # ============================================================
-      # INSTALL AYA APP ICON
-      # ============================================================
 
       - name: Install Aya app icon
         run: |
@@ -106,10 +104,7 @@ jobs:
 
           for folder, size in sizes.items():
               target_dir = base / folder
-              target_dir.mkdir(
-                  parents=True,
-                  exist_ok=True
-              )
+              target_dir.mkdir(parents=True, exist_ok=True)
 
               resized = original.resize(
                   (size, size),
@@ -219,12 +214,8 @@ jobs:
               encoding="utf-8"
           )
 
-          print("Aya icon installed.")
+          print("Aya icon improved successfully.")
           PY
-
-      # ============================================================
-      # VERSION
-      # ============================================================
 
       - name: Set versionCode from run number
         id: ver
@@ -249,7 +240,6 @@ jobs:
           K6: ${{ secrets.KS6 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-
         run: |
           set -e
 
@@ -277,6 +267,8 @@ jobs:
             exit 1
           fi
 
+          echo "Base64 is valid."
+
           printf '%s' "$B64" | base64 --decode \
             > "${{ github.workspace }}/aya-release.jks"
 
@@ -284,6 +276,11 @@ jobs:
             echo "::error::ملف keystore فارغ"
             exit 1
           fi
+
+          echo "Keystore file created."
+
+          ls -lh \
+            "${{ github.workspace }}/aya-release.jks"
 
           keytool -list \
             -keystore "${{ github.workspace }}/aya-release.jks" \
@@ -293,14 +290,13 @@ jobs:
           echo "Keystore verified successfully."
 
       # ============================================================
-      # VERSION IN GRADLE
+      # VERSION
       # ============================================================
 
       - name: Set version in Gradle
         env:
           VERSION_CODE: ${{ steps.ver.outputs.versionCode }}
           VERSION_NAME: ${{ steps.ver.outputs.versionName }}
-
         run: |
           python3 << 'PY'
           from pathlib import Path
@@ -356,15 +352,17 @@ jobs:
       # NOTIFICATIONS
       # ============================================================
 
-      - name: Add notification permissions
+      - name: Configure Android notifications
         run: |
           python3 << 'PY'
           from pathlib import Path
           import re
 
-          manifest = Path(
-              "android-app/android/app/src/main/AndroidManifest.xml"
+          android_root = Path(
+              "android-app/android/app/src/main"
           )
+
+          manifest = android_root / "AndroidManifest.xml"
 
           text = manifest.read_text(
               encoding="utf-8"
@@ -374,11 +372,10 @@ jobs:
               "android.permission.POST_NOTIFICATIONS",
               "android.permission.FOREGROUND_SERVICE",
               "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-              "android.permission.WAKE_LOCK"
+              "android.permission.WAKE_LOCK",
           ]
 
           for permission in permissions:
-
               if permission not in text:
 
                   text = re.sub(
@@ -402,7 +399,182 @@ jobs:
               encoding="utf-8"
           )
 
-          print("Notification permissions configured.")
+          # إنشاء MainActivity جديدة تطلب إذن الإشعارات
+          # وتنشئ قناة إشعار وترسل إشعار آية.
+
+          java_dir = (
+              android_root /
+              "java/com/aya/alquran"
+          )
+
+          java_dir.mkdir(
+              parents=True,
+              exist_ok=True
+          )
+
+          activity = java_dir / "MainActivity.java"
+
+          activity_code = r'''package com.aya.alquran;
+
+          import android.Manifest;
+          import android.app.NotificationChannel;
+          import android.app.NotificationManager;
+          import android.content.pm.PackageManager;
+          import android.os.Build;
+          import android.os.Bundle;
+
+          import androidx.core.app.ActivityCompat;
+          import androidx.core.app.NotificationCompat;
+          import androidx.core.app.NotificationManagerCompat;
+
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+
+              private static final String CHANNEL_ID = "aya_notifications";
+              private static final int NOTIFICATION_ID = 1001;
+              private static final int REQUEST_NOTIFICATION_PERMISSION = 2001;
+
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  createNotificationChannel();
+
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+
+                      if (checkSelfPermission(
+                              Manifest.permission.POST_NOTIFICATIONS
+                      ) != PackageManager.PERMISSION_GRANTED) {
+
+                          requestPermissions(
+                              new String[]{
+                                  Manifest.permission.POST_NOTIFICATIONS
+                              },
+                              REQUEST_NOTIFICATION_PERMISSION
+                          );
+
+                      } else {
+                          showAyaNotification();
+                      }
+
+                  } else {
+                      showAyaNotification();
+                  }
+              }
+
+              @Override
+              public void onRequestPermissionsResult(
+                      int requestCode,
+                      String[] permissions,
+                      int[] grantResults
+              ) {
+                  super.onRequestPermissionsResult(
+                          requestCode,
+                          permissions,
+                          grantResults
+                  );
+
+                  if (
+                      requestCode ==
+                      REQUEST_NOTIFICATION_PERMISSION
+                  ) {
+
+                      if (
+                          grantResults.length > 0 &&
+                          grantResults[0] ==
+                          PackageManager.PERMISSION_GRANTED
+                      ) {
+                          showAyaNotification();
+                      }
+                  }
+              }
+
+              private void createNotificationChannel() {
+
+                  if (
+                      Build.VERSION.SDK_INT >=
+                      Build.VERSION_CODES.O
+                  ) {
+
+                      NotificationChannel channel =
+                              new NotificationChannel(
+                                      CHANNEL_ID,
+                                      "إشعارات آية",
+                                      NotificationManager.IMPORTANCE_LOW
+                              );
+
+                      channel.setDescription(
+                              "إشعارات تطبيق آية"
+                      );
+
+                      NotificationManager manager =
+                              getSystemService(
+                                      NotificationManager.class
+                              );
+
+                      if (manager != null) {
+                          manager.createNotificationChannel(
+                                  channel
+                          );
+                      }
+                  }
+              }
+
+              private void showAyaNotification() {
+
+                  if (
+                      Build.VERSION.SDK_INT >=
+                      Build.VERSION_CODES.TIRAMISU
+                  ) {
+
+                      if (
+                          ActivityCompat.checkSelfPermission(
+                              this,
+                              Manifest.permission.POST_NOTIFICATIONS
+                          ) != PackageManager.PERMISSION_GRANTED
+                      ) {
+                          return;
+                      }
+                  }
+
+                  NotificationCompat.Builder builder =
+                          new NotificationCompat.Builder(
+                                  this,
+                                  CHANNEL_ID
+                          )
+                          .setSmallIcon(
+                                  com.aya.alquran.R.mipmap.ic_launcher
+                          )
+                          .setContentTitle("آية")
+                          .setContentText(
+                                  "تطبيق آية يعمل الآن"
+                          )
+                          .setPriority(
+                                  NotificationCompat.PRIORITY_LOW
+                          )
+                          .setOngoing(false)
+                          .setAutoCancel(false);
+
+                  NotificationManagerCompat
+                          .from(this)
+                          .notify(
+                                  NOTIFICATION_ID,
+                                  builder.build()
+                          );
+              }
+          }
+          '''
+
+          activity.write_text(
+              activity_code,
+              encoding="utf-8"
+          )
+
+          print(
+              "Android notification permission and MainActivity configured."
+          )
+          PY
 
       # ============================================================
       # BUILD APK
@@ -410,12 +582,10 @@ jobs:
 
       - name: Build signed release APK
         working-directory: android-app/android
-
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-
         run: |
           set -e
 
@@ -440,7 +610,6 @@ jobs:
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
-
         with:
           name: aya-android-apk-${{ steps.ver.outputs.versionName }}
           path: android-app/android/app/build/outputs/apk/release/*.apk
