@@ -32,7 +32,11 @@ jobs:
       - name: Prepare web files
         run: |
           mkdir -p android-app/www
-          rsync -av --exclude='.git' --exclude='.github' --exclude='android-app' ./ android-app/www/
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='android-app' \
+            ./ android-app/www/
 
       - name: Initialize Capacitor
         working-directory: android-app
@@ -47,11 +51,17 @@ jobs:
         run: |
           python3 << 'PY'
           from pathlib import Path
+
           p = Path("android/app/src/main/res/values/strings.xml")
+
           if p.exists():
               text = p.read_text(encoding="utf-8")
-              text = text.replace("app_name\">App", "app_name\">آية")
+              text = text.replace(
+                  "app_name\">App",
+                  "app_name\">آية"
+              )
               p.write_text(text, encoding="utf-8")
+
           print("Android app name configured.")
           PY
 
@@ -70,45 +80,134 @@ jobs:
           from pathlib import Path
           from PIL import Image
           import shutil
+
           icon_path = Path("icon.png")
+
           if not icon_path.exists():
               raise SystemExit("ERROR: icon.png was not found.")
+
           original = Image.open(icon_path).convert("RGBA")
-          base = Path("android-app/android/app/src/main/res")
-          sizes = {"mipmap-mdpi": 48, "mipmap-hdpi": 72, "mipmap-xhdpi": 96, "mipmap-xxhdpi": 144, "mipmap-xxxhdpi": 192}
+
+          base = Path(
+              "android-app/android/app/src/main/res"
+          )
+
+          sizes = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192
+          }
+
           for folder, size in sizes.items():
               target_dir = base / folder
               target_dir.mkdir(parents=True, exist_ok=True)
-              resized = original.resize((size, size), Image.Resampling.LANCZOS)
-              resized.save(target_dir / "ic_launcher.png", "PNG")
-              resized.save(target_dir / "ic_launcher_round.png", "PNG")
+
+              resized = original.resize(
+                  (size, size),
+                  Image.Resampling.LANCZOS
+              )
+
+              resized.save(
+                  target_dir / "ic_launcher.png",
+                  "PNG"
+              )
+
+              resized.save(
+                  target_dir / "ic_launcher_round.png",
+                  "PNG"
+              )
+
               for f in target_dir.glob("ic_launcher*"):
-                  if f.name not in ["ic_launcher.png", "ic_launcher_round.png"]:
+                  if f.name not in [
+                      "ic_launcher.png",
+                      "ic_launcher_round.png"
+                  ]:
                       f.unlink(missing_ok=True)
+
           fg_size = 432
-          canvas = Image.new("RGBA", (fg_size, fg_size), (0, 0, 0, 0))
+
+          canvas = Image.new(
+              "RGBA",
+              (fg_size, fg_size),
+              (0, 0, 0, 0)
+          )
+
           icon_size = int(fg_size * 0.72)
-          icon_resized = original.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
-          offset = (fg_size - icon_size) // 2
-          canvas.paste(icon_resized, (offset, offset), icon_resized)
+
+          icon_resized = original.resize(
+              (icon_size, icon_size),
+              Image.Resampling.LANCZOS
+          )
+
+          offset = (
+              (fg_size - icon_size) // 2
+          )
+
+          canvas.paste(
+              icon_resized,
+              (offset, offset),
+              icon_resized
+          )
+
           xxx = base / "mipmap-xxxhdpi"
           xxx.mkdir(parents=True, exist_ok=True)
-          canvas.save(xxx / "ic_launcher_foreground.png", "PNG")
-          bg = Image.new("RGBA", (fg_size, fg_size), (13, 27, 42, 255))
-          bg.save(xxx / "ic_launcher_background.png", "PNG")
+
+          canvas.save(
+              xxx / "ic_launcher_foreground.png",
+              "PNG"
+          )
+
+          bg = Image.new(
+              "RGBA",
+              (fg_size, fg_size),
+              (13, 27, 42, 255)
+          )
+
+          bg.save(
+              xxx / "ic_launcher_background.png",
+              "PNG"
+          )
+
           anydpi = base / "mipmap-anydpi-v26"
+
           if anydpi.exists():
               shutil.rmtree(anydpi)
-          anydpi.mkdir(parents=True, exist_ok=True)
+
+          anydpi.mkdir(
+              parents=True,
+              exist_ok=True
+          )
+
           xml = (
               '<?xml version="1.0" encoding="utf-8"?>'
-              '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">'
-              '<background android:drawable="@mipmap/ic_launcher_background"/>'
-              '<foreground android:drawable="@mipmap/ic_launcher_foreground"/>'
+              '<adaptive-icon '
+              'xmlns:android='
+              '"http://schemas.android.com/apk/res/android">'
+              '<background '
+              'android:drawable='
+              '"@mipmap/ic_launcher_background"/>'
+              '<foreground '
+              'android:drawable='
+              '"@mipmap/ic_launcher_foreground"/>'
               '</adaptive-icon>'
           )
-          (anydpi / "ic_launcher.xml").write_text(xml, encoding="utf-8")
-          (anydpi / "ic_launcher_round.xml").write_text(xml, encoding="utf-8")
+
+          (
+              anydpi / "ic_launcher.xml"
+          ).write_text(
+              xml,
+              encoding="utf-8"
+          )
+
+          (
+              anydpi / "ic_launcher_round.xml"
+          ).write_text(
+              xml,
+              encoding="utf-8"
+          )
+
           print("Aya icon improved successfully.")
           PY
 
@@ -117,8 +216,13 @@ jobs:
         run: |
           CODE="${{ github.run_number }}"
           NAME="1.0.${CODE}"
-          echo "versionCode=$CODE" >> $GITHUB_OUTPUT
-          echo "versionName=$NAME" >> $GITHUB_OUTPUT
+
+          echo "versionCode=$CODE" >> "$GITHUB_OUTPUT"
+          echo "versionName=$NAME" >> "$GITHUB_OUTPUT"
+
+      # ============================================================
+      # FIXED KEYSTORE STEP
+      # ============================================================
 
       - name: Decode and verify keystore
         env:
@@ -131,17 +235,63 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
+          set -e
+
+          echo "Checking keystore parts..."
+
           for i in 1 2 3 4 5 6; do
             eval "v=\$K$i"
+
             if [ -z "$v" ]; then
               echo "::error::السر KS$i ناقص"
               exit 1
             fi
+
+            echo "KS$i exists."
           done
-          B64="\( {K1} \){K2}\( {K3} \){K4}\( {K5} \){K6}"
-          echo -n "$B64" | tr -d '\n\r\t ' | base64 -d > ${{ github.workspace }}/aya-release.jks
-          ls -la ${{ github.workspace }}/aya-release.jks
-          keytool -list -keystore ${{ github.workspace }}/aya-release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS"
+
+          # تجميع أجزاء Base64 بالترتيب الصحيح
+          B64="${K1}${K2}${K3}${K4}${K5}${K6}"
+
+          # إزالة المسافات والأسطر الزائدة
+          B64="$(printf '%s' "$B64" | tr -d '[:space:]')"
+
+          echo "Checking Base64..."
+
+          # التحقق من Base64 قبل إنشاء ملف keystore
+          if ! printf '%s' "$B64" | base64 --decode > /dev/null 2>&1; then
+            echo "::error::KS1-KS6 لا تحتوي على Base64 صالح"
+            exit 1
+          fi
+
+          echo "Base64 is valid."
+
+          # إنشاء ملف keystore
+          printf '%s' "$B64" | base64 --decode \
+            > "${{ github.workspace }}/aya-release.jks"
+
+          # التأكد أن الملف ليس فارغًا
+          if [ ! -s "${{ github.workspace }}/aya-release.jks" ]; then
+            echo "::error::ملف keystore فارغ"
+            exit 1
+          fi
+
+          echo "Keystore file created."
+
+          ls -lh \
+            "${{ github.workspace }}/aya-release.jks"
+
+          # التحقق من keystore
+          keytool -list \
+            -keystore "${{ github.workspace }}/aya-release.jks" \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -alias "$KEY_ALIAS"
+
+          echo "Keystore verified successfully."
+
+      # ============================================================
+      # VERSION
+      # ============================================================
 
       - name: Set version in Gradle
         env:
@@ -150,44 +300,110 @@ jobs:
         run: |
           python3 << 'PY'
           from pathlib import Path
-          import os, re
+          import os
+          import re
+
           vc = os.environ["VERSION_CODE"]
           vn = os.environ["VERSION_NAME"]
-          gradle = Path("android-app/android/app/build.gradle")
+
+          gradle = Path(
+              "android-app/android/app/build.gradle"
+          )
+
           if not gradle.exists():
-              gradle = Path("android-app/android/app/build.gradle.kts")
-          text = gradle.read_text(encoding="utf-8")
-          text = re.sub(r"versionCode\s+\d+", "versionCode " + vc, text)
-          text = re.sub(r'versionName\s+"[^"]*"', 'versionName "' + vn + '"', text)
-          gradle.write_text(text, encoding="utf-8")
-          print("version set", vc, vn)
+              gradle = Path(
+                  "android-app/android/app/build.gradle.kts"
+              )
+
+          if not gradle.exists():
+              raise SystemExit(
+                  "ERROR: Gradle file not found."
+              )
+
+          text = gradle.read_text(
+              encoding="utf-8"
+          )
+
+          text = re.sub(
+              r"versionCode\s+\d+",
+              "versionCode " + vc,
+              text
+          )
+
+          text = re.sub(
+              r'versionName\s+"[^"]*"',
+              'versionName "' + vn + '"',
+              text
+          )
+
+          gradle.write_text(
+              text,
+              encoding="utf-8"
+          )
+
+          print(
+              "version set",
+              vc,
+              vn
+          )
           PY
+
+      # ============================================================
+      # NOTIFICATIONS
+      # ============================================================
 
       - name: Add notification permissions
         run: |
           python3 << 'PY'
           from pathlib import Path
           import re
-          manifest = Path("android-app/android/app/src/main/AndroidManifest.xml")
-          text = manifest.read_text(encoding="utf-8")
-          for p in [
+
+          manifest = Path(
+              "android-app/android/app/src/main/AndroidManifest.xml"
+          )
+
+          text = manifest.read_text(
+              encoding="utf-8"
+          )
+
+          permissions = [
               "android.permission.POST_NOTIFICATIONS",
               "android.permission.FOREGROUND_SERVICE",
               "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
               "android.permission.WAKE_LOCK",
-          ]:
-              if p not in text:
+          ]
+
+          for permission in permissions:
+
+              if permission not in text:
+
                   text = re.sub(
                       r"(<manifest[^>]*>)",
-                      r'\1\n    <uses-permission android:name="%s" />' % p,
+                      r'\1\n    <uses-permission android:name="%s" />'
+                      % permission,
                       text,
-                      count=1,
+                      count=1
                   )
+
           if "android:usesCleartextTraffic" not in text:
-              text = text.replace("<application", '<application android:usesCleartextTraffic="true"', 1)
-          manifest.write_text(text, encoding="utf-8")
+
+              text = text.replace(
+                  "<application",
+                  '<application android:usesCleartextTraffic="true"',
+                  1
+              )
+
+          manifest.write_text(
+              text,
+              encoding="utf-8"
+          )
+
           print("permissions ok")
           PY
+
+      # ============================================================
+      # BUILD APK
+      # ============================================================
 
       - name: Build signed release APK
         working-directory: android-app/android
@@ -196,13 +412,26 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          set -e
+
           chmod +x gradlew
+
           STORE="${{ github.workspace }}/aya-release.jks"
+
+          if [ ! -f "$STORE" ]; then
+            echo "::error::Keystore file not found."
+            exit 1
+          fi
+
           ./gradlew assembleRelease --stacktrace \
             -Pandroid.injected.signing.store.file="$STORE" \
             -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+
+      # ============================================================
+      # UPLOAD APK
+      # ============================================================
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
