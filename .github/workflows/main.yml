@@ -74,6 +74,10 @@ jobs:
         working-directory: android-app
         run: npx cap sync android
 
+      # ============================================================
+      # INSTALL AYA APP ICON
+      # ============================================================
+
       - name: Install Aya app icon
         run: |
           python3 << 'PY'
@@ -102,7 +106,10 @@ jobs:
 
           for folder, size in sizes.items():
               target_dir = base / folder
-              target_dir.mkdir(parents=True, exist_ok=True)
+              target_dir.mkdir(
+                  parents=True,
+                  exist_ok=True
+              )
 
               resized = original.resize(
                   (size, size),
@@ -152,7 +159,11 @@ jobs:
           )
 
           xxx = base / "mipmap-xxxhdpi"
-          xxx.mkdir(parents=True, exist_ok=True)
+
+          xxx.mkdir(
+              parents=True,
+              exist_ok=True
+          )
 
           canvas.save(
               xxx / "ic_launcher_foreground.png",
@@ -208,8 +219,12 @@ jobs:
               encoding="utf-8"
           )
 
-          print("Aya icon improved successfully.")
+          print("Aya icon installed.")
           PY
+
+      # ============================================================
+      # VERSION
+      # ============================================================
 
       - name: Set versionCode from run number
         id: ver
@@ -221,7 +236,7 @@ jobs:
           echo "versionName=$NAME" >> "$GITHUB_OUTPUT"
 
       # ============================================================
-      # FIXED KEYSTORE STEP
+      # KEYSTORE
       # ============================================================
 
       - name: Decode and verify keystore
@@ -234,6 +249,7 @@ jobs:
           K6: ${{ secrets.KS6 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+
         run: |
           set -e
 
@@ -250,38 +266,25 @@ jobs:
             echo "KS$i exists."
           done
 
-          # تجميع أجزاء Base64 بالترتيب الصحيح
           B64="${K1}${K2}${K3}${K4}${K5}${K6}"
 
-          # إزالة المسافات والأسطر الزائدة
           B64="$(printf '%s' "$B64" | tr -d '[:space:]')"
 
           echo "Checking Base64..."
 
-          # التحقق من Base64 قبل إنشاء ملف keystore
           if ! printf '%s' "$B64" | base64 --decode > /dev/null 2>&1; then
             echo "::error::KS1-KS6 لا تحتوي على Base64 صالح"
             exit 1
           fi
 
-          echo "Base64 is valid."
-
-          # إنشاء ملف keystore
           printf '%s' "$B64" | base64 --decode \
             > "${{ github.workspace }}/aya-release.jks"
 
-          # التأكد أن الملف ليس فارغًا
           if [ ! -s "${{ github.workspace }}/aya-release.jks" ]; then
             echo "::error::ملف keystore فارغ"
             exit 1
           fi
 
-          echo "Keystore file created."
-
-          ls -lh \
-            "${{ github.workspace }}/aya-release.jks"
-
-          # التحقق من keystore
           keytool -list \
             -keystore "${{ github.workspace }}/aya-release.jks" \
             -storepass "$KEYSTORE_PASSWORD" \
@@ -290,13 +293,14 @@ jobs:
           echo "Keystore verified successfully."
 
       # ============================================================
-      # VERSION
+      # VERSION IN GRADLE
       # ============================================================
 
       - name: Set version in Gradle
         env:
           VERSION_CODE: ${{ steps.ver.outputs.versionCode }}
           VERSION_NAME: ${{ steps.ver.outputs.versionName }}
+
         run: |
           python3 << 'PY'
           from pathlib import Path
@@ -370,7 +374,7 @@ jobs:
               "android.permission.POST_NOTIFICATIONS",
               "android.permission.FOREGROUND_SERVICE",
               "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-              "android.permission.WAKE_LOCK",
+              "android.permission.WAKE_LOCK"
           ]
 
           for permission in permissions:
@@ -398,8 +402,7 @@ jobs:
               encoding="utf-8"
           )
 
-          print("permissions ok")
-          PY
+          print("Notification permissions configured.")
 
       # ============================================================
       # BUILD APK
@@ -407,10 +410,12 @@ jobs:
 
       - name: Build signed release APK
         working-directory: android-app/android
+
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
         run: |
           set -e
 
@@ -435,6 +440,7 @@ jobs:
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
+
         with:
           name: aya-android-apk-${{ steps.ver.outputs.versionName }}
           path: android-app/android/app/build/outputs/apk/release/*.apk
