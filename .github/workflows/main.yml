@@ -349,10 +349,10 @@ jobs:
           PY
 
       # ============================================================
-      # NOTIFICATION + MEDIA CONTROLS
+      # NOTIFICATIONS
       # ============================================================
 
-      - name: Configure Android notification system
+      - name: Configure Android notifications
         run: |
           python3 << 'PY'
           from pathlib import Path
@@ -376,7 +376,9 @@ jobs:
           ]
 
           for permission in permissions:
+
               if permission not in text:
+
                   text = re.sub(
                       r"(<manifest[^>]*>)",
                       r'\1\n    <uses-permission android:name="%s" />'
@@ -386,24 +388,25 @@ jobs:
                   )
 
           if "android:usesCleartextTraffic" not in text:
+
               text = text.replace(
                   "<application",
                   '<application android:usesCleartextTraffic="true"',
                   1
               )
 
-          # Receiver الخاص بأزرار الإشعار
-          if "NotificationActionReceiver" not in text:
-
-              receiver = '''
+          receiver_tag = '''
               <receiver
                   android:name=".NotificationActionReceiver"
                   android:exported="false" />
-              '''
+          '''
+
+          if "NotificationActionReceiver" not in text:
 
               text = text.replace(
                   "</application>",
-                  receiver + "\n    </application>"
+                  receiver_tag +
+                  "\n    </application>"
               )
 
           manifest.write_text(
@@ -421,13 +424,16 @@ jobs:
               exist_ok=True
           )
 
-          # --------------------------------------------------------
+          # ========================================================
           # MainActivity.java
-          # --------------------------------------------------------
+          # ========================================================
 
-          main_activity = java_dir / "MainActivity.java"
+          activity = (
+              java_dir /
+              "MainActivity.java"
+          )
 
-          main_code = r'''package com.aya.alquran;
+          activity_code = r'''package com.aya.alquran;
 
           import android.Manifest;
           import android.app.NotificationChannel;
@@ -436,13 +442,11 @@ jobs:
           import android.content.pm.PackageManager;
           import android.os.Build;
           import android.os.Bundle;
-          import android.os.Handler;
           import android.webkit.WebView;
 
           import androidx.core.app.ActivityCompat;
           import androidx.core.app.NotificationCompat;
           import androidx.core.app.NotificationManagerCompat;
-          import androidx.core.app.PendingIntentCompat;
 
           import com.getcapacitor.BridgeActivity;
 
@@ -456,24 +460,20 @@ jobs:
 
               public static MainActivity instance;
 
-              private final Handler handler =
-                      new Handler();
-
-              private boolean notificationVisible =
-                      false;
-
               @Override
-              public void onCreate(Bundle savedInstanceState) {
+              public void onCreate(
+                      Bundle savedInstanceState
+              ) {
 
-                  super.onCreate(savedInstanceState);
+                  super.onCreate(
+                      savedInstanceState
+                  );
 
                   instance = this;
 
                   createNotificationChannel();
 
                   requestNotificationPermission();
-
-                  startNotificationUpdater();
               }
 
               private void requestNotificationPermission() {
@@ -508,24 +508,25 @@ jobs:
                   ) {
 
                       NotificationChannel channel =
-                              new NotificationChannel(
-                                  CHANNEL_ID,
-                                  "تلاوة القرآن",
-                                  NotificationManager.IMPORTANCE_LOW
-                              );
+                          new NotificationChannel(
+                              CHANNEL_ID,
+                              "تلاوة القرآن",
+                              NotificationManager.IMPORTANCE_LOW
+                          );
 
                       channel.setDescription(
-                          "إشعار تشغيل تلاوة القرآن في تطبيق آية"
+                          "إشعار تلاوة القرآن في تطبيق آية"
                       );
 
                       channel.setShowBadge(false);
 
                       NotificationManager manager =
-                              getSystemService(
-                                  NotificationManager.class
-                              );
+                          getSystemService(
+                              NotificationManager.class
+                          );
 
                       if (manager != null) {
+
                           manager.createNotificationChannel(
                               channel
                           );
@@ -542,7 +543,7 @@ jobs:
                   }
 
                   WebView webView =
-                          instance.bridge.getWebView();
+                      instance.bridge.getWebView();
 
                   if (webView == null) {
                       return;
@@ -556,112 +557,7 @@ jobs:
                   );
               }
 
-              private void startNotificationUpdater() {
-
-                  handler.postDelayed(
-                      new Runnable() {
-
-                          @Override
-                          public void run() {
-
-                              updateNotification();
-
-                              handler.postDelayed(
-                                  this,
-                                  1000
-                              );
-                          }
-                      },
-                      1500
-                  );
-              }
-
-              public void updateNotification() {
-
-                  if (
-                      Build.VERSION.SDK_INT >=
-                      Build.VERSION_CODES.TIRAMISU
-                  ) {
-
-                      if (
-                          ActivityCompat.checkSelfPermission(
-                              this,
-                              Manifest.permission.POST_NOTIFICATIONS
-                          ) != PackageManager.PERMISSION_GRANTED
-                      ) {
-                          return;
-                      }
-                  }
-
-                  String javascript =
-                      "(function(){"
-                      + "var a=document.querySelector('audio');"
-                      + "var t=document.title||'آية';"
-                      + "var p=a&&!a.paused;"
-                      + "var d={title:t,playing:p};"
-                      + "window.AndroidAyaData=JSON.stringify(d);"
-                      + "return JSON.stringify(d);"
-                      + "})()";
-
-                  WebView webView =
-                          bridge.getWebView();
-
-                  if (webView == null) {
-                      return;
-                  }
-
-                  webView.evaluateJavascript(
-                      javascript,
-                      value -> {
-
-                          String title =
-                              cleanTitle(value);
-
-                          showNotification(
-                              title,
-                              isPlayingFromValue(value)
-                          );
-                      }
-                  );
-              }
-
-              private String cleanTitle(
-                      String value
-              ) {
-
-                  if (value == null) {
-                      return "آية";
-                  }
-
-                  value = value
-                      .replace("\\\"", "\"")
-                      .replace("\"", "")
-                      .replace("{title:", "")
-                      .replace("}", "");
-
-                  if (
-                      value.length() < 2
-                  ) {
-                      return "آية";
-                  }
-
-                  return value;
-              }
-
-              private boolean isPlayingFromValue(
-                      String value
-              ) {
-
-                  if (value == null) {
-                      return false;
-                  }
-
-                  return value.contains(
-                      "\"playing\":true"
-                  );
-              }
-
-              public void showNotification(
+              public void showAyaNotification(
                       String title,
                       boolean playing
               ) {
@@ -677,6 +573,7 @@ jobs:
                               Manifest.permission.POST_NOTIFICATIONS
                           ) != PackageManager.PERMISSION_GRANTED
                       ) {
+
                           return;
                       }
                   }
@@ -711,45 +608,37 @@ jobs:
                       NotificationActionReceiver.ACTION_NEXT
                   );
 
-                  PendingIntent previous =
-                      PendingIntentCompat.getBroadcast(
+                  android.app.PendingIntent previous =
+                      android.app.PendingIntent.getBroadcast(
                           this,
                           501,
                           previousIntent,
-                          PendingIntentCompat.FLAG_UPDATE_CURRENT |
-                          PendingIntentCompat.FLAG_IMMUTABLE,
-                          false
+                          android.app.PendingIntent.FLAG_UPDATE_CURRENT |
+                          android.app.PendingIntent.FLAG_IMMUTABLE
                       );
 
-                  PendingIntent play =
-                      PendingIntentCompat.getBroadcast(
+                  android.app.PendingIntent play =
+                      android.app.PendingIntent.getBroadcast(
                           this,
                           502,
                           playIntent,
-                          PendingIntentCompat.FLAG_UPDATE_CURRENT |
-                          PendingIntentCompat.FLAG_IMMUTABLE,
-                          false
+                          android.app.PendingIntent.FLAG_UPDATE_CURRENT |
+                          android.app.PendingIntent.FLAG_IMMUTABLE
                       );
 
-                  PendingIntent next =
-                      PendingIntentCompat.getBroadcast(
+                  android.app.PendingIntent next =
+                      android.app.PendingIntent.getBroadcast(
                           this,
                           503,
                           nextIntent,
-                          PendingIntentCompat.FLAG_UPDATE_CURRENT |
-                          PendingIntentCompat.FLAG_IMMUTABLE,
-                          false
+                          android.app.PendingIntent.FLAG_UPDATE_CURRENT |
+                          android.app.PendingIntent.FLAG_IMMUTABLE
                       );
 
                   int playIcon =
                       playing
                       ? android.R.drawable.ic_media_pause
                       : android.R.drawable.ic_media_play;
-
-                  String state =
-                      playing
-                      ? "التلاوة تعمل الآن"
-                      : "التلاوة متوقفة";
 
                   NotificationCompat.Builder builder =
                       new NotificationCompat.Builder(
@@ -765,19 +654,18 @@ jobs:
                       .setContentText(
                           title
                       )
-                      .setSubText(
-                          state
-                      )
                       .setPriority(
                           NotificationCompat.PRIORITY_LOW
-                      )
-                      .setOngoing(
-                          playing
                       )
                       .setOnlyAlertOnce(
                           true
                       )
-                      .setShowWhen(false)
+                      .setShowWhen(
+                          false
+                      )
+                      .setOngoing(
+                          playing
+                      )
                       .addAction(
                           android.R.drawable.ic_media_previous,
                           "السابق",
@@ -800,16 +688,10 @@ jobs:
                           NOTIFICATION_ID,
                           builder.build()
                       );
-
-                  notificationVisible = true;
               }
 
               @Override
               protected void onDestroy() {
-
-                  handler.removeCallbacksAndMessages(
-                      null
-                  );
 
                   instance = null;
 
@@ -818,17 +700,19 @@ jobs:
           }
           '''
 
-          main_activity.write_text(
-              main_code,
+          activity.write_text(
+              activity_code,
               encoding="utf-8"
           )
 
-          # --------------------------------------------------------
+          # ========================================================
           # NotificationActionReceiver.java
-          # --------------------------------------------------------
+          # ========================================================
 
-          receiver_file =
-              java_dir / "NotificationActionReceiver.java"
+          receiver_file = (
+              java_dir /
+              "NotificationActionReceiver.java"
+          )
 
           receiver_code = r'''package com.aya.alquran;
 
@@ -859,63 +743,50 @@ jobs:
                   }
 
                   String action =
-                          intent.getAction();
+                      intent.getAction();
 
                   if (
-                      ACTION_PREVIOUS.equals(action)
+                      ACTION_PREVIOUS.equals(
+                          action
+                      )
                   ) {
 
-                      openAppAndRun(
+                      runJavaScript(
                           "previous"
                       );
 
                   } else if (
-                      ACTION_PLAY_PAUSE.equals(action)
+                      ACTION_PLAY_PAUSE.equals(
+                          action
+                      )
                   ) {
 
-                      openAppAndRun(
+                      runJavaScript(
                           "playpause"
                       );
 
                   } else if (
-                      ACTION_NEXT.equals(action)
+                      ACTION_NEXT.equals(
+                          action
+                      )
                   ) {
 
-                      openAppAndRun(
+                      runJavaScript(
                           "next"
                       );
                   }
               }
 
-              private void openAppAndRun(
-                      String action
-              ) {
-
-                  if (
-                      MainActivity.instance != null
-                  ) {
-
-                      runJavascript(action);
-
-                      return;
-                  }
-
-                  Context context =
-                          MainActivity.instance;
-
-                  if (context == null) {
-                      return;
-                  }
-              }
-
-              private void runJavascript(
+              private void runJavaScript(
                       String action
               ) {
 
                   String javascript;
 
                   if (
-                      "playpause".equals(action)
+                      "playpause".equals(
+                          action
+                      )
                   ) {
 
                       javascript =
@@ -927,13 +798,18 @@ jobs:
                           + "})()";
 
                   } else if (
-                      "next".equals(action)
+                      "next".equals(
+                          action
+                      )
                   ) {
 
                       javascript =
                           "(function(){"
                           + "var e=[...document.querySelectorAll('button')].find("
-                          + "x=>/التالي|next/i.test(x.innerText||x.getAttribute('aria-label')||''));"
+                          + "x=>/التالي|next/i.test("
+                          + "x.innerText||"
+                          + "x.getAttribute('aria-label')||''"
+                          + "));"
                           + "if(e)e.click();"
                           + "})()";
 
@@ -942,7 +818,10 @@ jobs:
                       javascript =
                           "(function(){"
                           + "var e=[...document.querySelectorAll('button')].find("
-                          + "x=>/السابق|previous|prev/i.test(x.innerText||x.getAttribute('aria-label')||''));"
+                          + "x=>/السابق|previous|prev/i.test("
+                          + "x.innerText||"
+                          + "x.getAttribute('aria-label')||''"
+                          + "));"
                           + "if(e)e.click();"
                           + "})()";
                   }
@@ -960,7 +839,7 @@ jobs:
           )
 
           print(
-              "Aya media notification system configured successfully."
+              "Notification system configured successfully."
           )
           PY
 
