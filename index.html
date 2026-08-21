@@ -1096,6 +1096,8 @@ body{
     🎧 القراء والتلاوات
   </button>
 
+  <button class="menu-item" id="downloadsButton">⬇️ تنزيل الملحقات</button>
+
   <button class="menu-item" id="aboutButton">
     ℹ️ حول
   </button>
@@ -5120,6 +5122,16 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(document.visibilityState === "visible"){
       updateMediaSession();
       if(userWantsPlay && audio.paused && audio.src) safePlay();
+      try{
+        var img = document.getElementById("page");
+        if(img && (!img.complete || !img.naturalWidth) && typeof currentPage !== "undefined"){
+          if(typeof loadPage === "function"){
+            loadPage(currentPage, { keepAudio: true });
+          }else if(typeof loadQuranPageFromInternet === "function"){
+            loadQuranPageFromInternet(currentPage);
+          }
+        }
+      }catch(e){}
     }else if(!audio.paused){
       updateMediaSession();
     }
@@ -5141,6 +5153,461 @@ document.addEventListener("DOMContentLoaded",()=>{
   }
 
   updateMediaSession();
+})();
+</script>
+
+
+<div class="popup-overlay" id="downloadsPopup" aria-hidden="true">
+  <div class="popup-box" style="max-width:min(96vw,560px)">
+    <div class="popup-header">
+      <h2>تنزيل الملحقات</h2>
+      <button type="button" class="popup-close" id="downloadsClose" aria-label="إغلاق">×</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;direction:rtl">
+      <button type="button" class="popup-item" id="dlTabPages" style="margin:0;flex:1;text-align:center">الصفحات</button>
+      <button type="button" class="popup-item" id="dlTabAudio" style="margin:0;flex:1;text-align:center;opacity:.75">التلاوات</button>
+    </div>
+    <div id="dlPanelPages">
+      <p class="search-hint" style="margin-top:0">نزّل صور المصحف لاستخدامها بدون إنترنت.</p>
+      <div style="display:flex;flex-direction:column;gap:8px;direction:rtl">
+        <button type="button" class="popup-item" data-dl-pages="juz">تنزيل الجزء الحالي</button>
+        <button type="button" class="popup-item" data-dl-pages="surah">تنزيل سور الصفحة الحالية</button>
+        <button type="button" class="popup-item" data-dl-pages="all">تنزيل كل الصفحات (604)</button>
+      </div>
+    </div>
+    <div id="dlPanelAudio" style="display:none">
+      <p class="search-hint" style="margin-top:0">اختر القارئ ونطاق السور ثم اضغط تنزيل.</p>
+      <div style="direction:rtl;display:flex;flex-direction:column;gap:10px">
+        <label style="color:#ccc;font-size:14px">القارئ
+          <select id="dlReciterSelect" class="reader-select" style="width:100%;margin-top:6px;background:#303030;color:#fff;border-color:#555"></select>
+        </label>
+        <div style="font-weight:700;color:#79d69a;margin-top:4px">تحديد البدء</div>
+        <label style="color:#ccc;font-size:14px">السورة
+          <select id="dlStartSurah" class="reader-select" style="width:100%;margin-top:6px;background:#303030;color:#fff;border-color:#555"></select>
+        </label>
+        <div style="font-weight:700;color:#79d69a;margin-top:4px">تحديد الانتهاء</div>
+        <label style="color:#ccc;font-size:14px">السورة
+          <select id="dlEndSurah" class="reader-select" style="width:100%;margin-top:6px;background:#303030;color:#fff;border-color:#555"></select>
+        </label>
+        <button type="button" class="popup-item" id="dlAudioStart" style="margin:0;text-align:center">تنزيل</button>
+        <button type="button" class="popup-item" data-dl-audio="current" style="margin:0;text-align:center;opacity:.9">تنزيل السورة الحالية فقط</button>
+      </div>
+    </div>
+    <div style="margin-top:14px;direction:rtl">
+      <div id="dlStatus" class="search-status" style="text-align:right;padding:6px 0">جاهز</div>
+      <progress id="dlProgress" max="100" value="0" class="progress" style="width:100%;height:14px;background:#444;border-radius:8px;overflow:hidden"></progress>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button type="button" class="popup-item" id="dlCancel" style="margin:0;flex:1;text-align:center;background:#666">إيقاف</button>
+        <button type="button" class="popup-item" id="dlClear" style="margin:0;flex:1;text-align:center;background:#8a3030">مسح التنزيلات</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+/* AYA_OFFLINE_DOWNLOADS_V1 */
+(function(){
+  const PAGE_CACHE = "aya-pages-v1";
+  const AUDIO_CACHE = "aya-audio-v1";
+  let cancelFlag = false;
+
+  const popup = document.getElementById("downloadsPopup");
+  const statusEl = document.getElementById("dlStatus");
+  const progressEl = document.getElementById("dlProgress");
+  const tabPages = document.getElementById("dlTabPages");
+  const tabAudio = document.getElementById("dlTabAudio");
+  const panelPages = document.getElementById("dlPanelPages");
+  const panelAudio = document.getElementById("dlPanelAudio");
+
+  function setStatus(msg){ if(statusEl) statusEl.textContent = msg; }
+  function setProgress(done, total){
+    if(!progressEl) return;
+    progressEl.max = total || 100;
+    progressEl.value = done || 0;
+  }
+  function openPopup(){
+    if(!popup) return;
+    try{ fillReciterAndSurahSelects(); }catch(e){}
+    popup.classList.add("show");
+    try{ if(typeof closeSideMenu === "function") closeSideMenu(); }catch(e){}
+  }
+  function closePopup(){
+    if(!popup) return;
+    popup.classList.remove("show");
+  }
+
+  const btn = document.getElementById("downloadsButton");
+  if(btn) btn.addEventListener("click", function(){ openPopup(); });
+  const closeBtn = document.getElementById("downloadsClose");
+  if(closeBtn) closeBtn.addEventListener("click", closePopup);
+  if(popup) popup.addEventListener("click", function(e){ if(e.target === popup) closePopup(); });
+
+  if(tabPages && tabAudio){
+    tabPages.addEventListener("click", function(){
+      panelPages.style.display = "";
+      panelAudio.style.display = "none";
+      tabPages.style.opacity = "1";
+      tabAudio.style.opacity = ".75";
+    });
+    tabAudio.addEventListener("click", function(){
+      panelPages.style.display = "none";
+      panelAudio.style.display = "";
+      tabPages.style.opacity = ".75";
+      tabAudio.style.opacity = "1";
+      try{ fillReciterAndSurahSelects(); }catch(e){}
+    });
+  }
+
+  var cancelEl = document.getElementById("dlCancel");
+  if(cancelEl) cancelEl.addEventListener("click", function(){
+    cancelFlag = true;
+    setStatus("جاري الإيقاف…");
+  });
+
+  var clearEl = document.getElementById("dlClear");
+  if(clearEl) clearEl.addEventListener("click", async function(){
+    if(!confirm("مسح كل الصفحات والتلاوات المنزّلة؟")) return;
+    try{
+      await caches.delete(PAGE_CACHE);
+      await caches.delete(AUDIO_CACHE);
+      setStatus("تم مسح التنزيلات");
+      setProgress(0, 100);
+    }catch(e){ setStatus("تعذر المسح"); }
+  });
+
+  function juzPageRange(pageNumber){
+    const starts = [1,22,42,62,82,102,122,142,162,182,202,222,242,262,282,302,322,342,362,382,402,422,442,462,482,502,522,542,562,582,605];
+    const n = Number(pageNumber) || 1;
+    let i = 0;
+    for(let k=0;k<starts.length-1;k++){ if(n >= starts[k]) i = k; }
+    return { from: starts[i], to: starts[i+1] - 1 };
+  }
+
+  function pagesForCurrentSurah(){
+    const n = Number(typeof currentPage !== "undefined" ? currentPage : 1) || 1;
+    if(typeof surahs === "undefined" || !Array.isArray(surahs)) return [n];
+    let idx = 0;
+    for(let i=0;i<surahs.length;i++){
+      if(n >= Number(surahs[i][1])) idx = i;
+      else break;
+    }
+    const start = Number(surahs[idx][1]);
+    const end = (idx + 1 < surahs.length) ? Number(surahs[idx+1][1]) - 1 : 604;
+    const list = [];
+    for(let p=start;p<=end;p++) list.push(p);
+    return list;
+  }
+
+  function surahsInJuz(pageNumber){
+    const range = juzPageRange(pageNumber);
+    const set = new Set();
+    for(let p=range.from;p<=range.to;p++){
+      if(typeof getSurahNumberForPage === "function") set.add(getSurahNumberForPage(p));
+    }
+    return Array.from(set).filter(Boolean).sort(function(a,b){ return a-b; });
+  }
+
+  async function cachePutUrl(cacheName, url){
+    const cache = await caches.open(cacheName);
+    const hit = await cache.match(url);
+    if(hit) return "cached";
+
+    /* جرّب CORS أولاً ثم no-cors (مهم لملفات mp3quran داخل WebView) */
+    var res = null;
+    try{
+      res = await fetch(url, { mode: "cors", credentials: "omit", cache: "no-store" });
+      if(!res.ok) res = null;
+    }catch(e){ res = null; }
+
+    if(!res){
+      try{
+        res = await fetch(url, { mode: "no-cors", credentials: "omit", cache: "no-store" });
+      }catch(e2){
+        throw new Error("fetch failed");
+      }
+    }
+
+    /* opaque أو ok يُحفظان في الكاش */
+    if(res && (res.ok || res.type === "opaque" || res.type === "basic" || res.type === "cors")){
+      try{
+        await cache.put(url, res.clone ? res.clone() : res);
+      }catch(e3){
+        /* بعض الاستجابات opaque قد تفشل في put — نحفظ كـ blob عبر XHR كخيار أخير */
+        await cachePutViaXHR(cache, url);
+      }
+      return "ok";
+    }
+    throw new Error("bad response");
+  }
+
+  function cachePutViaXHR(cache, url){
+    return new Promise(function(resolve, reject){
+      try{
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", url, true);
+        xhr.responseType = "blob";
+        xhr.timeout = 120000;
+        xhr.onload = function(){
+          if(xhr.status >= 200 && xhr.status < 300){
+            var resp = new Response(xhr.response, {
+              status: 200,
+              statusText: "OK",
+              headers: { "Content-Type": xhr.getResponseHeader("Content-Type") || "application/octet-stream" }
+            });
+            cache.put(url, resp).then(function(){ resolve("xhr"); }).catch(reject);
+          }else{
+            reject(new Error("xhr " + xhr.status));
+          }
+        };
+        xhr.onerror = function(){ reject(new Error("xhr error")); };
+        xhr.ontimeout = function(){ reject(new Error("xhr timeout")); };
+        xhr.send();
+      }catch(e){ reject(e); }
+    });
+  }
+
+  async function downloadList(urls, cacheName, label){
+    cancelFlag = false;
+    var done = 0;
+    var ok = 0;
+    var fail = 0;
+    var total = urls.length;
+    if(!total){
+      setStatus("لا توجد ملفات للتنزيل");
+      return;
+    }
+    setProgress(0, total);
+    setStatus(label + ": بدء 0 / " + total);
+
+    for(var i=0;i<urls.length;i++){
+      if(cancelFlag){
+        setStatus("تم الإيقاف — نجح " + ok + " / فشل " + fail + " من " + total);
+        return;
+      }
+      setStatus(label + ": جاري " + (i+1) + " / " + total + "…");
+      try{
+        var result = await cachePutUrl(cacheName, urls[i]);
+        if(result) ok++;
+        else fail++;
+      }catch(e){
+        fail++;
+      }
+      done++;
+      setProgress(done, total);
+      setStatus(label + ": " + done + " / " + total + " (نجاح " + ok + " · فشل " + fail + ")");
+      /* إتاحة تحديث الواجهة */
+      await new Promise(function(r){ setTimeout(r, 40); });
+    }
+    setStatus("اكتمل " + label + ": نجاح " + ok + " · فشل " + fail + " من " + total);
+  }
+
+  async function startPages(mode){
+    const page = Number(typeof currentPage !== "undefined" ? currentPage : 1) || 1;
+    var pages = [];
+    if(mode === "all"){ for(var i=1;i<=604;i++) pages.push(i); }
+    else if(mode === "juz"){
+      var r = juzPageRange(page);
+      for(var j=r.from;j<=r.to;j++) pages.push(j);
+    } else { pages = pagesForCurrentSurah(); }
+    var urls = pages.map(function(p){
+      if(typeof quranPageSvgUrl === "function") return quranPageSvgUrl(p);
+      return "https://www.mp3quran.net/api/quran_pages_svg/" + String(p).padStart(3,"0") + ".svg";
+    });
+    setStatus("بدء تنزيل الصفحات…");
+    await downloadList(urls, PAGE_CACHE, "الصفحات");
+  }
+
+  function fillReciterAndSurahSelects(){
+    var recSel = document.getElementById("dlReciterSelect");
+    var startSel = document.getElementById("dlStartSurah");
+    var endSel = document.getElementById("dlEndSurah");
+    if(!recSel || !startSel || !endSel) return;
+
+    /* القرّاء: من RECITERS أو من قائمة القارئ في المشغّل */
+    var cur = "";
+    try{ if(typeof selectedReader !== "undefined" && selectedReader) cur = selectedReader; }catch(e){}
+    if(!cur){
+      var rs = document.getElementById("readerSelect");
+      if(rs) cur = rs.value || "";
+    }
+    recSel.innerHTML = "";
+    var recitersObj = null;
+    try{ if(typeof RECITERS !== "undefined") recitersObj = RECITERS; }catch(e){}
+    if(recitersObj){
+      Object.keys(recitersObj).forEach(function(key){
+        var o = document.createElement("option");
+        o.value = key;
+        o.textContent = (recitersObj[key] && recitersObj[key].name) || key;
+        if(key === cur) o.selected = true;
+        recSel.appendChild(o);
+      });
+    }else{
+      var mainReader = document.getElementById("readerSelect");
+      if(mainReader){
+        for(var i=0;i<mainReader.options.length;i++){
+          var src = mainReader.options[i];
+          var o = document.createElement("option");
+          o.value = src.value;
+          o.textContent = src.textContent;
+          if(src.value === cur) o.selected = true;
+          recSel.appendChild(o);
+        }
+      }
+    }
+
+    /* السور: من surahs أو من surahSelect */
+    var surahArr = null;
+    try{ if(typeof surahs !== "undefined" && Array.isArray(surahs)) surahArr = surahs; }catch(e){}
+    function fillSurahSel(sel, defaultNum){
+      sel.innerHTML = "";
+      if(surahArr){
+        for(var i=0;i<surahArr.length;i++){
+          var o = document.createElement("option");
+          o.value = String(i + 1);
+          o.textContent = (i + 1) + ". " + (surahArr[i][0] || "");
+          if(i + 1 === defaultNum) o.selected = true;
+          sel.appendChild(o);
+        }
+      }else{
+        var ss = document.getElementById("surahSelect");
+        if(ss && ss.options.length > 1){
+          for(var j=0;j<ss.options.length;j++){
+            var src2 = ss.options[j];
+            if(!src2.value) continue;
+            var o2 = document.createElement("option");
+            o2.value = src2.value;
+            o2.textContent = src2.textContent;
+            if(Number(src2.value) === defaultNum) o2.selected = true;
+            sel.appendChild(o2);
+          }
+        }else{
+          for(var k=1;k<=114;k++){
+            var o3 = document.createElement("option");
+            o3.value = String(k);
+            o3.textContent = String(k);
+            if(k === defaultNum) o3.selected = true;
+            sel.appendChild(o3);
+          }
+        }
+      }
+    }
+    fillSurahSel(startSel, 1);
+    fillSurahSel(endSel, 114);
+  }
+
+  async function startAudioRange(readerKey, fromSurah, toSurah){
+    if(!readerKey || typeof RECITERS === "undefined" || !RECITERS[readerKey]){
+      setStatus("اختر قارئاً أولاً"); return;
+    }
+    fromSurah = Math.max(1, Math.min(114, Number(fromSurah) || 1));
+    toSurah = Math.max(1, Math.min(114, Number(toSurah) || 114));
+    if(fromSurah > toSurah){
+      var tmp = fromSurah; fromSurah = toSurah; toSurah = tmp;
+    }
+    var page = Number(typeof currentPage !== "undefined" ? currentPage : 1) || 1;
+    var surahsList = [];
+    for(var s = fromSurah; s <= toSurah; s++) surahsList.push(s);
+    var urls = surahsList.map(function(s){
+      if(typeof getAudioUrl === "function") return getAudioUrl(readerKey, page, s);
+      return RECITERS[readerKey].server + String(s).padStart(3,"0") + ".mp3";
+    }).filter(Boolean);
+    var readerName = (RECITERS[readerKey] && RECITERS[readerKey].name) || readerKey;
+    setStatus("تنزيل: " + readerName + " (" + fromSurah + " ← " + toSurah + ")");
+    await downloadList(urls, AUDIO_CACHE, "تلاوات " + readerName);
+  }
+
+  async function startAudio(mode){
+    var readerKey = (document.getElementById("dlReciterSelect") || {}).value
+      || ((typeof selectedReader !== "undefined" && selectedReader) ? selectedReader : null);
+    var page = Number(typeof currentPage !== "undefined" ? currentPage : 1) || 1;
+    if(mode === "current"){
+      var s = Number(typeof currentAudioSurah !== "undefined" && currentAudioSurah
+        ? currentAudioSurah
+        : (typeof getSurahNumberForPage === "function" ? getSurahNumberForPage(page) : 1)) || 1;
+      await startAudioRange(readerKey, s, s);
+      return;
+    }
+    var fromS = Number((document.getElementById("dlStartSurah") || {}).value) || 1;
+    var toS = Number((document.getElementById("dlEndSurah") || {}).value) || 114;
+    await startAudioRange(readerKey, fromS, toS);
+  }
+
+  document.querySelectorAll("[data-dl-pages]").forEach(function(el){
+    el.addEventListener("click", function(){ startPages(el.getAttribute("data-dl-pages")); });
+  });
+  document.querySelectorAll("[data-dl-audio]").forEach(function(el){
+    el.addEventListener("click", function(){ startAudio(el.getAttribute("data-dl-audio")); });
+  });
+  var dlAudioStart = document.getElementById("dlAudioStart");
+  if(dlAudioStart){
+    dlAudioStart.addEventListener("click", function(){ startAudio("range"); });
+  }
+
+
+
+  async function blobUrlFromCache(cacheName, url){
+    try{
+      var cache = await caches.open(cacheName);
+      var hit = await cache.match(url);
+      if(!hit) return null;
+      var blob = await hit.blob();
+      return URL.createObjectURL(blob);
+    }catch(e){ return null; }
+  }
+
+  if(typeof loadQuranPageFromInternet === "function"){
+    var _orig = loadQuranPageFromInternet;
+    window.loadQuranPageFromInternet = async function(pageNumber){
+      try{
+        var url = (typeof quranPageSvgUrl === "function") ? quranPageSvgUrl(pageNumber) : null;
+        if(url && typeof page !== "undefined" && page){
+          var local = await blobUrlFromCache(PAGE_CACHE, url);
+          if(local){
+            var token = ++pageSvgToken;
+            if(typeof clearAyahHighlight === "function") clearAyahHighlight();
+            page.src = local;
+            try{
+              if(typeof readPageSvgViewBox === "function"){
+                var vb = await readPageSvgViewBox(url).catch(function(){ return null; });
+                if(token === pageSvgToken && vb) pageSvgViewBox = vb;
+              }
+            }catch(e){}
+            if(typeof positionHighlightLayer === "function") positionHighlightLayer();
+            if(page.complete && typeof syncHighlight === "function") syncHighlight();
+            return;
+          }
+        }
+      }catch(e){}
+      return _orig.apply(this, arguments);
+    };
+  }
+
+  try{
+    var audioEl = document.getElementById("audio");
+    if(audioEl){
+      var desc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "src");
+      if(desc && desc.set){
+        Object.defineProperty(audioEl, "src", {
+          configurable: true,
+          enumerable: true,
+          get: function(){ return desc.get.call(this); },
+          set: function(v){
+            var self = this;
+            if(typeof v === "string" && v.indexOf("blob:") !== 0 && v.indexOf("http") === 0){
+              blobUrlFromCache(AUDIO_CACHE, v).then(function(local){
+                desc.set.call(self, local || v);
+              }).catch(function(){ desc.set.call(self, v); });
+            }else{
+              desc.set.call(self, v);
+            }
+          }
+        });
+      }
+    }
+  }catch(e){}
+
+  setStatus("جاهز");
 })();
 </script>
 
