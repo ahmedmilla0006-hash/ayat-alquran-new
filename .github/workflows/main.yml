@@ -256,7 +256,7 @@ jobs:
             echo "KS$i exists."
           done
 
-          B64="${K1}${K2}${K3}${K4}${K5}${K6}"
+          B64="\( {K1} \){K2}\( {K3} \){K4}\( {K5} \){K6}"
 
           B64="$(printf '%s' "$B64" | tr -d '[:space:]')"
 
@@ -349,7 +349,7 @@ jobs:
           PY
 
       # ============================================================
-      # NOTIFICATIONS
+      # NOTIFICATIONS — إشعار التلاوة (قائمة التشغيل)
       # ============================================================
 
       - name: Configure Android notifications
@@ -358,15 +358,9 @@ jobs:
           from pathlib import Path
           import re
 
-          android_root = Path(
-              "android-app/android/app/src/main"
-          )
-
+          android_root = Path("android-app/android/app/src/main")
           manifest = android_root / "AndroidManifest.xml"
-
-          text = manifest.read_text(
-              encoding="utf-8"
-          )
+          text = manifest.read_text(encoding="utf-8")
 
           permissions = [
               "android.permission.POST_NOTIFICATIONS",
@@ -374,206 +368,197 @@ jobs:
               "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
               "android.permission.WAKE_LOCK",
           ]
-
           for permission in permissions:
               if permission not in text:
-
                   text = re.sub(
                       r"(<manifest[^>]*>)",
-                      r'\1\n    <uses-permission android:name="%s" />'
-                      % permission,
+                      r'\1\n    <uses-permission android:name="%s" />' % permission,
                       text,
-                      count=1
+                      count=1,
                   )
 
           if "android:usesCleartextTraffic" not in text:
-
               text = text.replace(
                   "<application",
                   '<application android:usesCleartextTraffic="true"',
-                  1
+                  1,
               )
 
-          manifest.write_text(
-              text,
-              encoding="utf-8"
-          )
+          manifest.write_text(text, encoding="utf-8")
 
-          # إنشاء MainActivity جديدة تطلب إذن الإشعارات
-          # وتنشئ قناة إشعار وترسل إشعار آية.
-
-          java_dir = (
-              android_root /
-              "java/com/aya/alquran"
-          )
-
-          java_dir.mkdir(
-              parents=True,
-              exist_ok=True
-          )
-
+          java_dir = android_root / "java/com/aya/alquran"
+          java_dir.mkdir(parents=True, exist_ok=True)
           activity = java_dir / "MainActivity.java"
 
-          activity_code = r'''package com.aya.alquran;
+          activity_code = r"""package com.aya.alquran;
 
-          import android.Manifest;
-          import android.app.NotificationChannel;
-          import android.app.NotificationManager;
-          import android.content.pm.PackageManager;
-          import android.os.Build;
-          import android.os.Bundle;
+import android.Manifest;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.webkit.JavascriptInterface;
 
-          import androidx.core.app.ActivityCompat;
-          import androidx.core.app.NotificationCompat;
-          import androidx.core.app.NotificationManagerCompat;
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
-          import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeActivity;
 
-          public class MainActivity extends BridgeActivity {
+import org.json.JSONObject;
 
-              private static final String CHANNEL_ID = "aya_notifications";
-              private static final int NOTIFICATION_ID = 1001;
-              private static final int REQUEST_NOTIFICATION_PERMISSION = 2001;
+public class MainActivity extends BridgeActivity {
 
-              @Override
-              public void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
+    private static final String CHANNEL_ID = "aya_media";
+    private static final int NOTIFICATION_ID = 7701;
+    private static final int REQUEST_NOTIFICATION_PERMISSION = 2001;
 
-                  createNotificationChannel();
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        createNotificationChannel();
+        requestNotificationPermissionIfNeeded();
+    }
 
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    @Override
+    public void onStart() {
+        super.onStart();
+        try {
+            getBridge().getWebView().addJavascriptInterface(
+                new AyaMediaJs(),
+                "AndroidInterface"
+            );
+        } catch (Exception e) {
+        }
+    }
 
-                      if (checkSelfPermission(
-                              Manifest.permission.POST_NOTIFICATIONS
-                      ) != PackageManager.PERMISSION_GRANTED) {
+    @Override
+    public void onRequestPermissionsResult(
+            int requestCode,
+            String[] permissions,
+            int[] grantResults
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    }
 
-                          requestPermissions(
-                              new String[]{
-                                  Manifest.permission.POST_NOTIFICATIONS
-                              },
-                              REQUEST_NOTIFICATION_PERMISSION
-                          );
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                        REQUEST_NOTIFICATION_PERMISSION
+                );
+            }
+        }
+    }
 
-                      } else {
-                          showAyaNotification();
-                      }
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "تلاوة القرآن",
+                    NotificationManager.IMPORTANCE_LOW
+            );
+            channel.setDescription("إشعار تشغيل التلاوة");
+            channel.setShowBadge(false);
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+            }
+        }
+    }
 
-                  } else {
-                      showAyaNotification();
-                  }
-              }
+    private boolean canPostNotifications() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return ActivityCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED;
+        }
+        return true;
+    }
 
-              @Override
-              public void onRequestPermissionsResult(
-                      int requestCode,
-                      String[] permissions,
-                      int[] grantResults
-              ) {
-                  super.onRequestPermissionsResult(
-                          requestCode,
-                          permissions,
-                          grantResults
-                  );
+    private void showMediaNotification(String title, String artist, boolean playing) {
+        if (!canPostNotifications()) {
+            return;
+        }
 
-                  if (
-                      requestCode ==
-                      REQUEST_NOTIFICATION_PERMISSION
-                  ) {
+        Intent open = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        if (open == null) {
+            open = new Intent(this, MainActivity.class);
+        }
+        open.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
-                      if (
-                          grantResults.length > 0 &&
-                          grantResults[0] ==
-                          PackageManager.PERMISSION_GRANTED
-                      ) {
-                          showAyaNotification();
-                      }
-                  }
-              }
+        PendingIntent pi = PendingIntent.getActivity(
+                this,
+                0,
+                open,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
 
-              private void createNotificationChannel() {
+        String status = playing ? "يعمل الآن" : "متوقف";
+        String body = (artist == null || artist.isEmpty()) ? status : (artist + " — " + status);
 
-                  if (
-                      Build.VERSION.SDK_INT >=
-                      Build.VERSION_CODES.O
-                  ) {
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_media_play)
+                .setContentTitle(title == null || title.isEmpty() ? "القرآن الكريم" : title)
+                .setContentText(body)
+                .setSubText("آية")
+                .setContentIntent(pi)
+                .setOngoing(playing)
+                .setOnlyAlertOnce(true)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
+                .setAutoCancel(false);
 
-                      NotificationChannel channel =
-                              new NotificationChannel(
-                                      CHANNEL_ID,
-                                      "إشعارات آية",
-                                      NotificationManager.IMPORTANCE_LOW
-                              );
+        NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, builder.build());
+    }
 
-                      channel.setDescription(
-                              "إشعارات تطبيق آية"
-                      );
+    private void hideMediaNotification() {
+        NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID);
+    }
 
-                      NotificationManager manager =
-                              getSystemService(
-                                      NotificationManager.class
-                              );
+    public class AyaMediaJs {
+        @JavascriptInterface
+        public void postMessage(String json) {
+            try {
+                JSONObject o = new JSONObject(json);
+                String cmd = o.optString("cmd", "");
+                JSONObject data = o.optJSONObject("data");
 
-                      if (manager != null) {
-                          manager.createNotificationChannel(
-                                  channel
-                          );
-                      }
-                  }
-              }
+                String title = "القرآن الكريم";
+                String artist = "آية";
+                boolean playing = false;
 
-              private void showAyaNotification() {
+                if (data != null) {
+                    title = data.optString("title", title);
+                    artist = data.optString("artist", artist);
+                    playing = data.optBoolean("playing", playing);
+                }
 
-                  if (
-                      Build.VERSION.SDK_INT >=
-                      Build.VERSION_CODES.TIRAMISU
-                  ) {
+                if ("media-play".equals(cmd)) {
+                    showMediaNotification(title, artist, true);
+                } else if ("media-pause".equals(cmd)) {
+                    showMediaNotification(title, artist, false);
+                } else if ("media-update".equals(cmd)) {
+                    showMediaNotification(title, artist, playing);
+                } else if ("media-stop".equals(cmd) || "media-hide".equals(cmd)) {
+                    hideMediaNotification();
+                }
+            } catch (Exception e) {
+            }
+        }
+    }
+}
+"""
 
-                      if (
-                          ActivityCompat.checkSelfPermission(
-                              this,
-                              Manifest.permission.POST_NOTIFICATIONS
-                          ) != PackageManager.PERMISSION_GRANTED
-                      ) {
-                          return;
-                      }
-                  }
-
-                  NotificationCompat.Builder builder =
-                          new NotificationCompat.Builder(
-                                  this,
-                                  CHANNEL_ID
-                          )
-                          .setSmallIcon(
-                                  com.aya.alquran.R.mipmap.ic_launcher
-                          )
-                          .setContentTitle("آية")
-                          .setContentText(
-                                  "تطبيق آية يعمل الآن"
-                          )
-                          .setPriority(
-                                  NotificationCompat.PRIORITY_LOW
-                          )
-                          .setOngoing(false)
-                          .setAutoCancel(false);
-
-                  NotificationManagerCompat
-                          .from(this)
-                          .notify(
-                                  NOTIFICATION_ID,
-                                  builder.build()
-                          );
-              }
-          }
-          '''
-
-          activity.write_text(
-              activity_code,
-              encoding="utf-8"
-          )
-
-          print(
-              "Android notification permission and MainActivity configured."
-          )
+          activity.write_text(activity_code, encoding="utf-8")
+          print("Android media notification MainActivity configured.")
           PY
 
       # ============================================================
