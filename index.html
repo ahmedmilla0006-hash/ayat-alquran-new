@@ -5039,22 +5039,50 @@ document.addEventListener("DOMContentLoaded",()=>{
     try{ navigator.mediaSession.setActionHandler(action, fn); }catch(e){}
   }
 
+  var __notifPlayLockUntil = 0;
+
   function safePlay(){
     userWantsPlay = true;
+    __notifPlayLockUntil = Date.now() + 2500;
     return audio.play().then(()=>{
       const pb = document.getElementById("playButton");
       if(pb) pb.textContent = "Ⅱ";
       updateMediaSession();
+      /* إعادة تأكيد التشغيل بعد لحظة (مشكلة الإشعار في الخلفية) */
+      setTimeout(function(){
+        if(userWantsPlay && audio.paused && audio.src){
+          audio.play().catch(function(){});
+          updateMediaSession();
+        }
+      }, 400);
+      setTimeout(function(){
+        if(userWantsPlay && audio.paused && audio.src){
+          audio.play().catch(function(){});
+          updateMediaSession();
+        }
+      }, 1200);
     }).catch(()=>{});
   }
 
   function safePause(){
     userWantsPlay = false;
+    __notifPlayLockUntil = 0;
     audio.pause();
     const pb = document.getElementById("playButton");
     if(pb) pb.textContent = "▶";
     updateMediaSession();
   }
+
+  /* منع الإيقاف الفوري غير المقصود بعد تشغيل من الإشعار */
+  audio.addEventListener("pause", function(){
+    if(userWantsPlay && Date.now() < __notifPlayLockUntil && audio.src){
+      setTimeout(function(){
+        if(userWantsPlay && audio.paused){
+          audio.play().catch(function(){});
+        }
+      }, 50);
+    }
+  });
 
   bindAction("play", function(){ safePlay(); });
   bindAction("pause", function(){ safePause(); });
