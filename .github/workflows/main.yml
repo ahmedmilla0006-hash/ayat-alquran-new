@@ -241,53 +241,55 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          set -e
+          python3 << 'PY'
+          import os, re, base64, pathlib, subprocess, sys
 
-          echo "Checking keystore parts..."
+          parts = []
+          for i in range(1, 7):
+              v = os.environ.get(f"K{i}") or ""
+              print(f"KS{i} length = {len(v)}")
+              if not v:
+                  print(f"::error::السر KS{i} ناقص")
+                  sys.exit(1)
+              parts.append(v)
 
-          for i in 1 2 3 4 5 6; do
-            eval "v=\$K$i"
+          b64 = "".join(parts)
+          # إزالة أي محارف غير Base64 (مسافات، أسطر، إلخ)
+          b64 = re.sub(r"[^A-Za-z0-9+/=]", "", b64)
+          # إكمال الحشو إن نقص
+          pad = (-len(b64)) % 4
+          if pad:
+              b64 += "=" * pad
 
-            if [ -z "$v" ]; then
-              echo "::error::السر KS$i ناقص"
-              exit 1
-            fi
+          print(f"Total base64 length = {len(b64)}")
 
-            echo "KS$i exists."
-          done
+          try:
+              raw = base64.b64decode(b64, validate=False)
+          except Exception as e:
+              print(f"::error::فشل فك Base64: {e}")
+              sys.exit(1)
 
-          B64="\( {K1} \){K2}\( {K3} \){K4}\( {K5} \){K6}"
+          out = pathlib.Path(os.environ["GITHUB_WORKSPACE"]) / "aya-release.jks"
+          out.write_bytes(raw)
+          print(f"Keystore bytes = {len(raw)}")
+          if len(raw) < 100:
+              print("::error::ملف keystore صغير جداً — الأجزاء ناقصة")
+              sys.exit(1)
 
-          B64="$(printf '%s' "$B64" | tr -d '[:space:]')"
-
-          echo "Checking Base64..."
-
-          if ! printf '%s' "$B64" | base64 --decode > /dev/null 2>&1; then
-            echo "::error::KS1-KS6 لا تحتوي على Base64 صالح"
-            exit 1
-          fi
-
-          echo "Base64 is valid."
-
-          printf '%s' "$B64" | base64 --decode \
-            > "${{ github.workspace }}/aya-release.jks"
-
-          if [ ! -s "${{ github.workspace }}/aya-release.jks" ]; then
-            echo "::error::ملف keystore فارغ"
-            exit 1
-          fi
-
-          echo "Keystore file created."
-
-          ls -lh \
-            "${{ github.workspace }}/aya-release.jks"
-
-          keytool -list \
-            -keystore "${{ github.workspace }}/aya-release.jks" \
-            -storepass "$KEYSTORE_PASSWORD" \
-            -alias "$KEY_ALIAS"
-
-          echo "Keystore verified successfully."
+          pw = os.environ.get("KEYSTORE_PASSWORD") or ""
+          alias = os.environ.get("KEY_ALIAS") or ""
+          r = subprocess.run(
+              ["keytool", "-list", "-keystore", str(out), "-storepass", pw, "-alias", alias],
+              capture_output=True,
+              text=True,
+          )
+          print(r.stdout)
+          if r.returncode != 0:
+              print(r.stderr)
+              print("::error::keytool فشل — تحقق من KEYSTORE_PASSWORD و KEY_ALIAS")
+              sys.exit(1)
+          print("Keystore verified successfully.")
+          PY
 
       # ============================================================
       # VERSION
