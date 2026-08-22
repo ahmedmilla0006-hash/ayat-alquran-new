@@ -1013,11 +1013,6 @@ body{
         <span class="control-text">السابق</span>
       </button>
 
-      <button class="control" id="liveReciteBtn" type="button" title="تسميع مباشر بالذكاء الاصطناعي">
-        <span class="control-icon">🎤</span>
-        <span class="control-text" id="liveReciteText">تسميع</span>
-      </button>
-
     </div>
 
     <div class="bottom-selection-area" id="bottomSelectionArea">
@@ -5193,7 +5188,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    التحديثات — فحص update.json + تنزيل APK داخل التطبيق
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.70";
+  const APP_VERSION = "1.0.65";
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
 
@@ -5790,174 +5785,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   }catch(e){}
 
   setStatus("جاهز");
-})();
-</script>
-
-
-<script>
-/* =====================================================
-   تسميع مباشر (Live Tracking) عبر Groq Whisper API
-   أقرب ما يمكن لخاصية التتبع في ترتيل باستخدام API
-===================================================== */
-(function(){
-  /* ← ضع مفتاح Groq هنا */
-  var GROQ_API_KEY = "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";
-
-  var GROQ_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
-  var isListening = false;
-  var mediaRecorder = null;
-  var audioChunks = [];
-  var stream = null;
-  var intervalId = null;
-  var lastText = "";
-
-  var btn = document.getElementById("liveReciteBtn");
-  var btnText = document.getElementById("liveReciteText");
-  if(!btn) return;
-
-  function setBtnState(listening){
-    isListening = listening;
-    if(btnText) btnText.textContent = listening ? "إيقاف" : "تسميع";
-    var icon = btn.querySelector(".control-icon");
-    if(icon) icon.textContent = listening ? "⏹" : "🎤";
-  }
-
-  async function sendToGroq(blob){
-    if(!GROQ_API_KEY || GROQ_API_KEY.indexOf("ضع_مفتاحك") === 0){
-      console.warn("ضع مفتاح Groq أولاً في الكود");
-      return null;
-    }
-    var formData = new FormData();
-    formData.append("file", blob, "recite.webm");
-    formData.append("model", "whisper-large-v3");
-    formData.append("language", "ar");
-    formData.append("response_format", "json");
-    formData.append("temperature", "0");
-
-    try{
-      var res = await fetch(GROQ_URL, {
-        method: "POST",
-        headers: { "Authorization": "Bearer " + GROQ_API_KEY },
-        body: formData
-      });
-      if(!res.ok){
-        var errText = await res.text();
-        console.error("Groq error:", res.status, errText);
-        return null;
-      }
-      var data = await res.json();
-      return (data && data.text) ? String(data.text).trim() : null;
-    }catch(e){
-      console.error("Groq network error:", e);
-      return null;
-    }
-  }
-
-  /* محاولة إيجاد الآية من النص المنطوق والانتقال إليها */
-  function handleTranscription(text){
-    if(!text || text.length < 4) return;
-    if(text === lastText) return;
-    lastText = text;
-
-    console.log("التلاوة المكتشفة:", text);
-
-    /* محاولة بحث سريعة داخل التطبيق إن وُجدت دوال البحث */
-    try{
-      var input = document.getElementById("searchInput");
-      var form = document.getElementById("searchForm");
-      if(input && form){
-        /* نضع النص في البحث ونشغّل البحث المحلي إن أمكن */
-        input.value = text.slice(0, 80);
-        /* يمكن لاحقاً استدعاء دالة البحث مباشرة */
-      }
-    }catch(e){}
-
-    /* عرض نص قصير للمستخدم (اختياري) */
-    try{
-      if(typeof setStatus === "function"){
-        setStatus("تم التعرف: " + text.slice(0, 40) + (text.length > 40 ? "…" : ""));
-      }
-    }catch(e){}
-  }
-
-  async function startListening(){
-    try{
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          channelCount: 1
-        }
-      });
-
-      var mime = "audio/webm;codecs=opus";
-      if(!MediaRecorder.isTypeSupported(mime)){
-        mime = "audio/webm";
-      }
-      if(!MediaRecorder.isTypeSupported(mime)){
-        mime = "";
-      }
-
-      mediaRecorder = mime
-        ? new MediaRecorder(stream, { mimeType: mime })
-        : new MediaRecorder(stream);
-
-      audioChunks = [];
-
-      mediaRecorder.ondataavailable = function(e){
-        if(e.data && e.data.size > 0) audioChunks.push(e.data);
-      };
-
-      mediaRecorder.onstop = async function(){
-        if(!audioChunks.length) return;
-        var blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || "audio/webm" });
-        audioChunks = [];
-        var text = await sendToGroq(blob);
-        if(text) handleTranscription(text);
-      };
-
-      mediaRecorder.start();
-      /* كل ~2.8 ثانية نوقف ونرسل ثم نبدأ مقطعاً جديداً */
-      intervalId = setInterval(function(){
-        if(mediaRecorder && mediaRecorder.state === "recording"){
-          try{
-            mediaRecorder.stop();
-            mediaRecorder.start();
-          }catch(e){}
-        }
-      }, 2800);
-
-      setBtnState(true);
-    }catch(err){
-      console.error(err);
-      alert("تعذر فتح الميكروفون.\nتأكد من إعطاء إذن الميكروفون للتطبيق.");
-      setBtnState(false);
-    }
-  }
-
-  function stopListening(){
-    try{ clearInterval(intervalId); }catch(e){}
-    intervalId = null;
-
-    try{
-      if(mediaRecorder && mediaRecorder.state !== "inactive"){
-        mediaRecorder.stop();
-      }
-    }catch(e){}
-    mediaRecorder = null;
-
-    if(stream){
-      stream.getTracks().forEach(function(t){ try{ t.stop(); }catch(e){} });
-      stream = null;
-    }
-    audioChunks = [];
-    setBtnState(false);
-  }
-
-  btn.addEventListener("click", function(){
-    if(isListening) stopListening();
-    else startListening();
-  });
 })();
 </script>
 
