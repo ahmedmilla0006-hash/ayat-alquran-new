@@ -917,6 +917,92 @@ body{
 #updatesBanner.show{display:block}
 #updatesBanner strong{color:#9ff0c0}
 
+
+/* =====================================================
+   نظام متابعة التلاوة - المرحلة الأولى
+   ميكروفون واستماع فقط
+   لا يتدخل في مشغل الصوت أو تمييز الآيات
+===================================================== */
+
+.tilawa-monitor{
+  width:100%;
+  margin-top:10px;
+  direction:rtl;
+}
+
+.tilawa-button{
+  width:100%;
+  min-height:50px;
+  border:0;
+  border-radius:14px;
+  background:var(--green);
+  color:#fff;
+  font-family:inherit;
+  font-size:17px;
+  font-weight:bold;
+  cursor:pointer;
+  box-shadow:0 3px 8px #0002;
+  transition:background .2s ease, transform .1s ease;
+}
+
+.tilawa-button:active{
+  transform:scale(.99);
+}
+
+.tilawa-button.listening{
+  background:#b52b2b;
+}
+
+.tilawa-status{
+  display:none;
+  margin-top:8px;
+  padding:9px 12px;
+  border-radius:10px;
+  background:#f1f1f1;
+  color:#555;
+  text-align:center;
+  font-size:13px;
+}
+
+.tilawa-status.show{
+  display:block;
+}
+
+.tilawa-status.listening{
+  color:#b52b2b;
+  font-weight:bold;
+}
+
+.tilawa-level{
+  display:none;
+  width:100%;
+  height:5px;
+  margin-top:7px;
+  border-radius:10px;
+  background:#ddd;
+  overflow:hidden;
+}
+
+.tilawa-level.show{
+  display:block;
+}
+
+.tilawa-level-bar{
+  width:0%;
+  height:100%;
+  background:var(--green);
+  transition:width .08s linear;
+}
+
+.night-mode .tilawa-status{
+  background:#303030;
+  color:#ddd;
+}
+
+.night-mode .tilawa-level{
+  background:#555;
+}
+
 </style>
 </head>
 
@@ -1060,6 +1146,42 @@ body{
 </select>
   </div>
 </div>
+
+<!-- =====================================================
+     متابعة التلاوة - المرحلة الأولى
+===================================================== -->
+
+<div class="tilawa-monitor" id="tilawaMonitor">
+
+  <button
+    type="button"
+    class="tilawa-button"
+    id="tilawaButton"
+    aria-pressed="false">
+    🎙️ ابدأ التلاوة
+  </button>
+
+  <div
+    class="tilawa-status"
+    id="tilawaStatus"
+    aria-live="polite">
+    جاهز للاستماع
+  </div>
+
+  <div
+    class="tilawa-level"
+    id="tilawaLevel"
+    aria-hidden="true">
+
+    <div
+      class="tilawa-level-bar"
+      id="tilawaLevelBar">
+    </div>
+
+  </div>
+
+</div>
+
 
   </section>
 
@@ -5211,7 +5333,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.72";
+  const APP_VERSION = "1.0.71";
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
   const AUTO_CHECK_DELAY_MS = 4000;
@@ -5885,6 +6007,182 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   setStatus("جاهز");
 })();
+
+
+/* =====================================================
+   متابعة التلاوة - المرحلة الأولى
+   ميكروفون واستماع فقط
+
+   - لا تستخدم SpeechRecognition في هذه المرحلة.
+   - لا تتدخل في عنصر audio الموجود.
+   - لا تغيّر الصفحة.
+   - لا تغيّر ayahHighlightLayer.
+===================================================== */
+
+(function initTilawaMicrophone(){
+
+  const tilawaButton = document.getElementById("tilawaButton");
+  const tilawaStatus = document.getElementById("tilawaStatus");
+  const tilawaLevel = document.getElementById("tilawaLevel");
+  const tilawaLevelBar = document.getElementById("tilawaLevelBar");
+
+  if (!tilawaButton || !tilawaStatus || !tilawaLevel || !tilawaLevelBar) {
+    console.warn("نظام متابعة التلاوة: عناصر الواجهة غير موجودة.");
+    return;
+  }
+
+  let microphoneStream = null;
+  let audioContext = null;
+  let analyser = null;
+  let microphoneSource = null;
+  let levelAnimation = null;
+
+  function setStatus(text, isListening = false) {
+    tilawaStatus.textContent = text;
+    tilawaStatus.classList.toggle("show", Boolean(text));
+    tilawaStatus.classList.toggle("listening", isListening);
+
+    tilawaButton.classList.toggle("listening", isListening);
+    tilawaButton.setAttribute("aria-pressed", isListening ? "true" : "false");
+    tilawaButton.textContent = isListening
+      ? "⏹️ إيقاف التلاوة"
+      : "🎙️ ابدأ التلاوة";
+  }
+
+  function stopMicrophone() {
+    if (levelAnimation) {
+      cancelAnimationFrame(levelAnimation);
+      levelAnimation = null;
+    }
+
+    if (microphoneStream) {
+      microphoneStream.getTracks().forEach(track => track.stop());
+      microphoneStream = null;
+    }
+
+    if (audioContext) {
+      try {
+        if (audioContext.state !== "closed") {
+          audioContext.close();
+        }
+      } catch (error) {
+        console.warn("تعذر إغلاق AudioContext:", error);
+      }
+      audioContext = null;
+    }
+
+    analyser = null;
+    microphoneSource = null;
+
+    tilawaLevelBar.style.width = "0%";
+    tilawaLevel.classList.remove("show");
+  }
+
+  function monitorMicrophoneLevel() {
+    if (!analyser || !microphoneStream) return;
+
+    const data = new Uint8Array(analyser.fftSize);
+
+    function updateLevel() {
+      if (!microphoneStream || !analyser) return;
+
+      analyser.getByteTimeDomainData(data);
+
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) {
+        const value = (data[i] - 128) / 128;
+        sum += value * value;
+      }
+
+      const rms = Math.sqrt(sum / data.length);
+      const percentage = Math.min(100, Math.max(2, rms * 350));
+
+      tilawaLevelBar.style.width = percentage + "%";
+      levelAnimation = requestAnimationFrame(updateLevel);
+    }
+
+    updateLevel();
+  }
+
+  async function startMicrophone() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatus("المتصفح أو WebView الحالي لا يدعم الوصول إلى الميكروفون.");
+      return;
+    }
+
+    try {
+      setStatus("جاري طلب صلاحية الميكروفون...");
+
+      microphoneStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
+        video: false
+      });
+
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (AudioContextClass) {
+        audioContext = new AudioContextClass();
+
+        microphoneSource =
+          audioContext.createMediaStreamSource(microphoneStream);
+
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 512;
+
+        microphoneSource.connect(analyser);
+
+        tilawaLevel.classList.add("show");
+        monitorMicrophoneLevel();
+      }
+
+      setStatus("🔴 جاري الاستماع... اقرأ بصوت واضح", true);
+
+    } catch (error) {
+      console.error("خطأ في الوصول إلى الميكروفون:", error);
+
+      stopMicrophone();
+
+      if (error && error.name === "NotAllowedError") {
+        setStatus(
+          "تم رفض صلاحية الميكروفون. اسمح للتطبيق باستخدام الميكروفون ثم حاول مرة أخرى."
+        );
+      } else if (error && error.name === "NotFoundError") {
+        setStatus("لم يتم العثور على ميكروفون متاح على الجهاز.");
+      } else if (error && error.name === "SecurityError") {
+        setStatus("الوصول إلى الميكروفون غير مسموح به في بيئة التشغيل الحالية.");
+      } else {
+        setStatus(
+          "تعذر تشغيل الميكروفون. تحقق من صلاحيات التطبيق ثم حاول مرة أخرى."
+        );
+      }
+    }
+  }
+
+  tilawaButton.addEventListener("click", async function() {
+    if (microphoneStream) {
+      stopMicrophone();
+      setStatus("تم إيقاف الاستماع.");
+      return;
+    }
+
+    await startMicrophone();
+  });
+
+  window.addEventListener("pagehide", function() {
+    stopMicrophone();
+  });
+
+  window.addEventListener("beforeunload", function() {
+    stopMicrophone();
+  });
+
+})();
+
 </script>
 
 </body>
