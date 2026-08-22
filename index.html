@@ -1098,6 +1098,10 @@ body{
 
   <button class="menu-item" id="downloadsButton">⬇️ تنزيل الملحقات</button>
 
+  <button class="menu-item" id="updatesButton">
+    🔄 التحديثات
+  </button>
+
   <button class="menu-item" id="aboutButton">
     ℹ️ حول
   </button>
@@ -1209,6 +1213,27 @@ body{
         <button type="button" class="color-choice" data-color="#168443" aria-label="أخضر">أخضر</button>
         <button type="button" class="color-choice" data-color="#eb5757" aria-label="أحمر">أحمر</button>
         <button type="button" class="color-choice" data-color="#2f80ed" aria-label="أزرق">أزرق</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة التحديثات -->
+<div class="popup-overlay" id="updatesOverlay">
+  <div class="popup-box about-box">
+    <div class="popup-header">
+      <h2>التحديثات</h2>
+      <button class="popup-close" id="updatesClose">✕</button>
+    </div>
+    <div class="about-content" style="text-align:right;direction:rtl">
+      <div class="about-name" style="margin-bottom:12px">الإصدار الحالي</div>
+      <div id="updatesCurrentVersion" style="font-size:22px;font-weight:bold;color:var(--green);margin-bottom:18px">—</div>
+      <button type="button" class="popup-item" id="updatesCheckBtn" style="text-align:center;margin-bottom:14px">🔍 التحقق من وجود تحديث</button>
+      <div id="updatesStatus" class="search-status" style="text-align:right;padding:8px 0;min-height:28px">اضغط «التحقق» للبحث عن إصدار جديد.</div>
+      <div id="updatesNewBlock" style="display:none;margin-top:10px">
+        <div style="font-weight:700;color:#79d69a;margin-bottom:6px">الإصدار الجديد: <span id="updatesNewVersion"></span></div>
+        <div id="updatesNotes" style="color:#ddd;line-height:1.9;font-size:15px;margin-bottom:14px;white-space:pre-wrap"></div>
+        <button type="button" class="popup-item" id="updatesDownloadBtn" style="text-align:center;margin:0">⬇️ تحديث الآن</button>
       </div>
     </div>
   </div>
@@ -4148,6 +4173,130 @@ aboutOverlay.onclick = e=>{
 
 
 /* =====================================================
+   التحديثات — فحص update.json من GitHub
+===================================================== */
+(function(){
+  const APP_VERSION = "1.0.0";
+  const UPDATE_JSON_URL =
+    "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
+
+  const updatesButton = document.getElementById("updatesButton");
+  const updatesOverlay = document.getElementById("updatesOverlay");
+  const updatesClose = document.getElementById("updatesClose");
+  const updatesCheckBtn = document.getElementById("updatesCheckBtn");
+  const updatesStatus = document.getElementById("updatesStatus");
+  const updatesCurrentVersion = document.getElementById("updatesCurrentVersion");
+  const updatesNewBlock = document.getElementById("updatesNewBlock");
+  const updatesNewVersion = document.getElementById("updatesNewVersion");
+  const updatesNotes = document.getElementById("updatesNotes");
+  const updatesDownloadBtn = document.getElementById("updatesDownloadBtn");
+
+  let latestUpdateUrl = "";
+
+  function parseVersion(v){
+    const parts = String(v || "0").trim().replace(/^v/i, "").split(/[.+-]/).map(function(x){
+      const n = parseInt(x, 10);
+      return Number.isFinite(n) ? n : 0;
+    });
+    while(parts.length < 3) parts.push(0);
+    return parts;
+  }
+
+  function compareVersions(a, b){
+    const pa = parseVersion(a);
+    const pb = parseVersion(b);
+    const len = Math.max(pa.length, pb.length);
+    for(let i = 0; i < len; i++){
+      const x = pa[i] || 0;
+      const y = pb[i] || 0;
+      if(x > y) return 1;
+      if(x < y) return -1;
+    }
+    return 0;
+  }
+
+  function openUpdates(){
+    if(typeof closeSideMenu === "function") closeSideMenu();
+    if(updatesCurrentVersion) updatesCurrentVersion.textContent = APP_VERSION;
+    if(updatesStatus) updatesStatus.textContent = "اضغط «التحقق» للبحث عن إصدار جديد.";
+    if(updatesNewBlock) updatesNewBlock.style.display = "none";
+    latestUpdateUrl = "";
+    if(updatesOverlay) updatesOverlay.classList.add("show");
+  }
+
+  function closeUpdates(){
+    if(updatesOverlay) updatesOverlay.classList.remove("show");
+  }
+
+  if(updatesButton) updatesButton.onclick = openUpdates;
+  if(updatesClose) updatesClose.onclick = closeUpdates;
+  if(updatesOverlay){
+    updatesOverlay.onclick = function(e){
+      if(e.target === updatesOverlay) closeUpdates();
+    };
+  }
+
+  async function checkForUpdates(){
+    if(updatesStatus) updatesStatus.textContent = "جاري التحقق من التحديثات…";
+    if(updatesNewBlock) updatesNewBlock.style.display = "none";
+    if(updatesCheckBtn) updatesCheckBtn.disabled = true;
+    try{
+      const res = await fetch(UPDATE_JSON_URL + "?t=" + Date.now(), {
+        method: "GET",
+        cache: "no-store",
+        headers: { "Accept": "application/json" }
+      });
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      const remoteVersion = String((data && data.version) || "").trim();
+      const notes = String((data && (data.notes || data.changelog || data.what_new)) || "").trim();
+      const url = String((data && (data.url || data.download_url || data.link)) || "").trim();
+
+      if(!remoteVersion){
+        if(updatesStatus) updatesStatus.textContent = "تعذر قراءة رقم الإصدار من الخادم.";
+        return;
+      }
+
+      const cmp = compareVersions(remoteVersion, APP_VERSION);
+      if(cmp <= 0){
+        if(updatesStatus) updatesStatus.textContent = "✅ أنت تستخدم أحدث إصدار (" + APP_VERSION + ").";
+        return;
+      }
+
+      if(updatesStatus) updatesStatus.textContent = "🎉 يتوفر إصدار جديد!";
+      if(updatesNewVersion) updatesNewVersion.textContent = remoteVersion;
+      if(updatesNotes) updatesNotes.textContent = notes || "تحسينات وإصلاحات.";
+      latestUpdateUrl = url;
+      if(updatesNewBlock) updatesNewBlock.style.display = "block";
+      if(updatesDownloadBtn){
+        updatesDownloadBtn.style.display = url ? "" : "none";
+      }
+    }catch(err){
+      if(updatesStatus){
+        updatesStatus.textContent =
+          "تعذر الاتصال بخادم التحديثات. تأكد من اتصال الإنترنت ثم حاول مرة أخرى.";
+      }
+    }finally{
+      if(updatesCheckBtn) updatesCheckBtn.disabled = false;
+    }
+  }
+
+  if(updatesCheckBtn) updatesCheckBtn.onclick = checkForUpdates;
+
+  if(updatesDownloadBtn){
+    updatesDownloadBtn.onclick = function(){
+      if(!latestUpdateUrl) return;
+      try{
+        window.open(latestUpdateUrl, "_blank", "noopener,noreferrer");
+      }catch(e){
+        location.href = latestUpdateUrl;
+      }
+    };
+  }
+})();
+
+
+/* =====================================================
    البحث
 ===================================================== */
 
@@ -5039,50 +5188,22 @@ document.addEventListener("DOMContentLoaded",()=>{
     try{ navigator.mediaSession.setActionHandler(action, fn); }catch(e){}
   }
 
-  var __notifPlayLockUntil = 0;
-
   function safePlay(){
     userWantsPlay = true;
-    __notifPlayLockUntil = Date.now() + 2500;
     return audio.play().then(()=>{
       const pb = document.getElementById("playButton");
       if(pb) pb.textContent = "Ⅱ";
       updateMediaSession();
-      /* إعادة تأكيد التشغيل بعد لحظة (مشكلة الإشعار في الخلفية) */
-      setTimeout(function(){
-        if(userWantsPlay && audio.paused && audio.src){
-          audio.play().catch(function(){});
-          updateMediaSession();
-        }
-      }, 400);
-      setTimeout(function(){
-        if(userWantsPlay && audio.paused && audio.src){
-          audio.play().catch(function(){});
-          updateMediaSession();
-        }
-      }, 1200);
     }).catch(()=>{});
   }
 
   function safePause(){
     userWantsPlay = false;
-    __notifPlayLockUntil = 0;
     audio.pause();
     const pb = document.getElementById("playButton");
     if(pb) pb.textContent = "▶";
     updateMediaSession();
   }
-
-  /* منع الإيقاف الفوري غير المقصود بعد تشغيل من الإشعار */
-  audio.addEventListener("pause", function(){
-    if(userWantsPlay && Date.now() < __notifPlayLockUntil && audio.src){
-      setTimeout(function(){
-        if(userWantsPlay && audio.paused){
-          audio.play().catch(function(){});
-        }
-      }, 50);
-    }
-  });
 
   bindAction("play", function(){ safePlay(); });
   bindAction("pause", function(){ safePause(); });
