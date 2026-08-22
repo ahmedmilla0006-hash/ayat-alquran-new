@@ -898,6 +898,25 @@ body{
   transition:bottom .32s cubic-bezier(.4,0,.2,1);
 }
 
+
+/* شارة وشريط التحديث الجديد */
+#updatesButton{position:relative}
+#updatesButton .update-badge{
+  display:none;position:absolute;top:6px;left:10px;
+  min-width:18px;height:18px;padding:0 5px;border-radius:999px;
+  background:#e74c3c;color:#fff;font-size:11px;font-weight:700;
+  line-height:18px;text-align:center;box-shadow:0 0 0 2px rgba(0,0,0,.25)
+}
+#updatesButton.has-update .update-badge{display:inline-block}
+#updatesBanner{
+  display:none;position:fixed;top:0;left:0;right:0;z-index:12000;
+  background:linear-gradient(90deg,#0b3d2e,#145c43);color:#fff;
+  padding:10px 14px;text-align:center;font-size:14px;direction:rtl;
+  box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:pointer
+}
+#updatesBanner.show{display:block}
+#updatesBanner strong{color:#9ff0c0}
+
 </style>
 </head>
 
@@ -1100,6 +1119,7 @@ body{
 
   <button class="menu-item" id="updatesButton">
     🔄 التحديثات
+    <span class="update-badge" id="updatesBadge" aria-hidden="true">1</span>
   </button>
 
   <button class="menu-item" id="aboutButton">
@@ -1217,6 +1237,8 @@ body{
     </div>
   </div>
 </div>
+
+<div id="updatesBanner" role="button" tabindex="0">🎉 يتوفر إصدار جديد — اضغط للتحديث</div>
 
 <!-- نافذة التحديثات -->
 <div class="popup-overlay" id="updatesOverlay">
@@ -5186,11 +5208,15 @@ document.addEventListener("DOMContentLoaded",()=>{
 <script>
 /* =====================================================
    التحديثات — فحص update.json + تنزيل APK داخل التطبيق
+   + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
   const APP_VERSION = "1.0.65";
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
+  const AUTO_CHECK_DELAY_MS = 4000;
+  const AUTO_CHECK_KEY = "aya_last_update_check";
+  const DISMISS_KEY = "aya_update_dismissed_ver";
 
   const updatesButton = document.getElementById("updatesButton");
   const updatesOverlay = document.getElementById("updatesOverlay");
@@ -5202,38 +5228,100 @@ document.addEventListener("DOMContentLoaded",()=>{
   const updatesNewVersion = document.getElementById("updatesNewVersion");
   const updatesNotes = document.getElementById("updatesNotes");
   const updatesDownloadBtn = document.getElementById("updatesDownloadBtn");
+  const updatesBadge = document.getElementById("updatesBadge");
+  const updatesBanner = document.getElementById("updatesBanner");
 
   let latestUpdateUrl = "";
-
-  function parseVersion(v){
-    const parts = String(v || "0").trim().replace(/^v/i, "").split(/[.+-]/).map(function(x){
-      const n = parseInt(x, 10);
-      return Number.isFinite(n) ? n : 0;
-    });
-    while(parts.length < 3) parts.push(0);
-    return parts;
-  }
+  let latestRemoteVersion = "";
+  let latestNotes = "";
+  let updateAvailable = false;
 
   function compareVersions(a, b){
-    const pa = parseVersion(a);
-    const pb = parseVersion(b);
+    const pa = String(a || "0").split(".").map(n => parseInt(n, 10) || 0);
+    const pb = String(b || "0").split(".").map(n => parseInt(n, 10) || 0);
     const len = Math.max(pa.length, pb.length);
     for(let i = 0; i < len; i++){
-      const x = pa[i] || 0;
-      const y = pb[i] || 0;
+      const x = pa[i] || 0, y = pb[i] || 0;
       if(x > y) return 1;
       if(x < y) return -1;
     }
     return 0;
   }
 
+  function setUpdateUI(available, remoteVersion, notes, url){
+    updateAvailable = !!available;
+    latestRemoteVersion = remoteVersion || "";
+    latestNotes = notes || "";
+    latestUpdateUrl = url || "";
+
+    if(updatesButton){
+      if(available) updatesButton.classList.add("has-update");
+      else updatesButton.classList.remove("has-update");
+    }
+    if(updatesBadge){
+      updatesBadge.style.display = available ? "inline-block" : "none";
+      updatesBadge.textContent = available ? "1" : "";
+    }
+
+    let dismissed = "";
+    try{ dismissed = localStorage.getItem(DISMISS_KEY) || ""; }catch(e){}
+    if(updatesBanner){
+      if(available && dismissed !== remoteVersion){
+        updatesBanner.classList.add("show");
+        updatesBanner.innerHTML = "🎉 يتوفر إصدار جديد <strong>" + remoteVersion + "</strong> — اضغط للتحديث";
+      }else{
+        updatesBanner.classList.remove("show");
+      }
+    }
+
+    if(available){
+      if(updatesNewBlock) updatesNewBlock.style.display = "block";
+      if(updatesNewVersion) updatesNewVersion.textContent = remoteVersion || "";
+      if(updatesNotes) updatesNotes.textContent = notes || "";
+      if(updatesDownloadBtn) updatesDownloadBtn.style.display = url ? "" : "none";
+    }else{
+      if(updatesNewBlock) updatesNewBlock.style.display = "none";
+    }
+  }
+
+  function postAndroid(cmd, data){
+    try{
+      if(window.AndroidInterface && typeof window.AndroidInterface.postMessage === "function"){
+        window.AndroidInterface.postMessage(JSON.stringify({ cmd: cmd, data: data || {} }));
+        return true;
+      }
+    }catch(e){}
+    return false;
+  }
+
+  function notifyUpdateAvailable(remoteVersion, notes){
+    const title = "تحديث جديد لتطبيق آية";
+    const body = "الإصدار " + remoteVersion + " متاح الآن. اضغط للتحديث.";
+    postAndroid("notify-update", {
+      title: title,
+      body: body,
+      version: remoteVersion || ""
+    });
+    try{
+      if(typeof Notification !== "undefined" && Notification.permission === "granted"){
+        new Notification(title, { body: body, tag: "aya-update", renotify: true });
+      }else if(typeof Notification !== "undefined" && Notification.permission !== "denied"){
+        Notification.requestPermission().then(function(p){
+          if(p === "granted"){
+            new Notification(title, { body: body, tag: "aya-update", renotify: true });
+          }
+        });
+      }
+    }catch(e){}
+  }
+
   function openUpdates(){
-    if(typeof closeSideMenu === "function") closeSideMenu();
     if(updatesCurrentVersion) updatesCurrentVersion.textContent = APP_VERSION;
-    if(updatesStatus) updatesStatus.textContent = "اضغط «التحقق» للبحث عن إصدار جديد.";
-    if(updatesNewBlock) updatesNewBlock.style.display = "none";
-    latestUpdateUrl = "";
     if(updatesOverlay) updatesOverlay.classList.add("show");
+    if(updateAvailable && latestRemoteVersion){
+      if(updatesStatus) updatesStatus.textContent = "🎉 يتوفر إصدار جديد!";
+      setUpdateUI(true, latestRemoteVersion, latestNotes || "تحسينات وإصلاحات.", latestUpdateUrl);
+    }
   }
 
   function closeUpdates(){
@@ -5247,55 +5335,59 @@ document.addEventListener("DOMContentLoaded",()=>{
       if(e.target === updatesOverlay) closeUpdates();
     };
   }
+  if(updatesBanner){
+    updatesBanner.onclick = function(){ openUpdates(); };
+  }
 
-  async function checkForUpdates(){
-    if(updatesStatus) updatesStatus.textContent = "جاري التحقق من التحديثات…";
-    if(updatesNewBlock) updatesNewBlock.style.display = "none";
+  async function checkForUpdates(opts){
+    opts = opts || {};
+    const silent = !!opts.silent;
+    if(!silent && updatesStatus) updatesStatus.textContent = "جاري التحقق من التحديثات…";
     if(updatesCheckBtn) updatesCheckBtn.disabled = true;
     try{
-      const res = await fetch(UPDATE_JSON_URL + "?t=" + Date.now(), {
-        method: "GET",
-        cache: "no-store",
-        headers: { "Accept": "application/json" }
-      });
+      const res = await fetch(UPDATE_JSON_URL + "?t=" + Date.now(), { cache: "no-store" });
       if(!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
       const remoteVersion = String((data && data.version) || "").trim();
-      const notes = String((data && (data.notes || data.changelog || data.what_new)) || "").trim();
-      const url = String((data && (data.url || data.download_url || data.link)) || "").trim();
+      const url = String((data && data.url) || "").trim();
+      const notes = String((data && (data.notes || data.message)) || "").trim();
 
       if(!remoteVersion){
-        if(updatesStatus) updatesStatus.textContent = "تعذر قراءة رقم الإصدار من الخادم.";
-        return;
+        if(!silent && updatesStatus) updatesStatus.textContent = "تعذر قراءة رقم الإصدار من الخادم.";
+        return false;
       }
 
       const cmp = compareVersions(remoteVersion, APP_VERSION);
-      if(cmp <= 0){
-        if(updatesStatus) updatesStatus.textContent = "✅ أنت تستخدم أحدث إصدار (" + APP_VERSION + ").";
-        return;
+      if(cmp > 0){
+        setUpdateUI(true, remoteVersion, notes || "تحسينات وإصلاحات.", url);
+        if(!silent && updatesStatus) updatesStatus.textContent = "🎉 يتوفر إصدار جديد!";
+        let dismissed = "";
+        try{ dismissed = localStorage.getItem(DISMISS_KEY) || ""; }catch(e){}
+        if(dismissed !== remoteVersion){
+          notifyUpdateAvailable(remoteVersion, notes);
+        }
+        return true;
+      }else{
+        setUpdateUI(false, "", "", "");
+        if(!silent && updatesStatus){
+          updatesStatus.textContent = "✅ أنت تستخدم أحدث إصدار (" + APP_VERSION + ").";
+        }
+        return false;
       }
-
-      if(updatesStatus) updatesStatus.textContent = "🎉 يتوفر إصدار جديد!";
-      if(updatesNewVersion) updatesNewVersion.textContent = remoteVersion;
-      if(updatesNotes) updatesNotes.textContent = notes || "تحسينات وإصلاحات.";
-      latestUpdateUrl = url;
-      if(updatesNewBlock) updatesNewBlock.style.display = "block";
-      if(updatesDownloadBtn){
-        updatesDownloadBtn.style.display = url ? "" : "none";
-      }
-    }catch(err){
-      if(updatesStatus){
+    }catch(e){
+      if(!silent && updatesStatus){
         updatesStatus.textContent =
           "تعذر الاتصال بخادم التحديثات. تأكد من اتصال الإنترنت ثم حاول مرة أخرى.";
       }
+      return false;
     }finally{
       if(updatesCheckBtn) updatesCheckBtn.disabled = false;
+      try{ localStorage.setItem(AUTO_CHECK_KEY, String(Date.now())); }catch(e){}
     }
   }
 
-  if(updatesCheckBtn) updatesCheckBtn.onclick = checkForUpdates;
+  if(updatesCheckBtn) updatesCheckBtn.onclick = function(){ checkForUpdates({ silent: false }); };
 
-  /* استقبال تقدم/نتيجة التحميل من Android */
   window.__ayaUpdateProgress = function(percent, message){
     if(updatesStatus){
       updatesStatus.textContent = message || ("جاري التحميل… " + Math.round(percent || 0) + "%");
@@ -5311,8 +5403,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(updatesDownloadBtn){
     updatesDownloadBtn.onclick = function(){
       if(!latestUpdateUrl) return;
-
-      /* داخل تطبيق Android: تحميل داخلي + تثبيت عبر FileProvider */
       try{
         if(window.AndroidInterface && typeof window.AndroidInterface.postMessage === "function"){
           if(updatesStatus) updatesStatus.textContent = "جاري تحميل التحديث داخل التطبيق…";
@@ -5324,13 +5414,23 @@ document.addEventListener("DOMContentLoaded",()=>{
           return;
         }
       }catch(e){}
-
-      /* خارج Android (متصفح) — لا نفتح المتصفح من داخل الـ APK */
       if(updatesStatus){
         updatesStatus.textContent = "التحديث متاح داخل تطبيق Android فقط.";
       }
     };
   }
+
+  /* فحص تلقائي بعد فتح التطبيق */
+  setTimeout(function(){
+    try{
+      const last = parseInt(localStorage.getItem(AUTO_CHECK_KEY) || "0", 10) || 0;
+      if(Date.now() - last < 6 * 60 * 60 * 1000) return;
+    }catch(e){}
+    checkForUpdates({ silent: true });
+  }, AUTO_CHECK_DELAY_MS);
+
+  if(updatesCurrentVersion) updatesCurrentVersion.textContent = APP_VERSION;
+})();
 })();
 </script>
 
