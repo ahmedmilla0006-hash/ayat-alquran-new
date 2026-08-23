@@ -798,9 +798,9 @@ body{
 
 @media(max-width:600px){
   .reader-info-top{
-    top:0;
+    top:calc(7px + var(--reader-safe-top));
     padding:4px 10px;
-    font-size:14px;
+    font-size:12px;
   }
 
   .reader-page-number{
@@ -837,73 +837,13 @@ body{
   display:none !important;
 }
 
-/* شريط الجزء/السورة يملأ الفراغ تحت شريط الحالة مباشرة — بدون مسافة بيضاء */
-.reader-info-top{
-  position: absolute !important;
-  /* .reader أصلاً تحت safe-area فلا نضيفها مرة أخرى */
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  transform: none !important;
-  width: 100% !important;
-  min-width: 0 !important;
-  max-width: none !important;
-  display: flex !important;
-  flex-direction: row !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  direction: rtl !important;
-  gap: 8px !important;
-  box-sizing: border-box !important;
-  padding: 8px 16px !important;
-  font-size: 15px !important;
-  font-weight: 800 !important;
-  border-radius: 0 !important;
-  border-left: none !important;
-  border-right: none !important;
-  border-top: none !important;
-  z-index: 16 !important;
-  pointer-events: none !important;
-  background: rgba(255,255,255,.96) !important;
-}
-.night-mode .reader-info-top{
-  background: rgba(35,35,35,.96) !important;
-}
-.reader-info-top .sep{
-  display: none !important;
-}
-.reader-info-top #juzInfo,
-.reader-info-top #surahInfo{
-  text-align: start;
-  flex: 0 1 auto;
-}
-/* فراغ للمصحف تحت الشريط فقط (بدون safe-area مكررة) */
-.page-area{
-  padding-top: 40px;
-  padding-bottom: 24px;
-}
-.page{
-  height: calc(100% - 64px);
-  max-height: calc(100% - 64px);
-  object-position: top center;
-}
-@media (max-width: 600px){
-  .reader-info-top{
-    padding: 7px 14px !important;
-    font-size: 14px !important;
-  }
-  .page-area{
-    padding-top: 38px;
-  }
-}
-
 
 
 
 /* === معلومات الجزء والسورة أعلى المصحف === */
 .reader-info-top{
   position:absolute;
-  top:calc(2px + var(--reader-safe-top, 0px));
+  top:calc(7px + var(--reader-safe-top, 0px));
   left:0;
   transform:none;
   z-index:15;
@@ -913,13 +853,13 @@ body{
   gap:14px;
   min-width:0;width:100%;
   padding:5px 14px;
-  border-radius:0 0 12px 12px;
+  border-radius:10px;
   background:rgba(255,255,255,.94);
   color:#16803b;
   border:1px solid rgba(22,128,59,.18);
   box-shadow:0 2px 8px #0001;
   font-family:Tahoma,Arial,sans-serif;
-  font-size:15px;
+  font-size:14px;
   font-weight:700;
   white-space:nowrap;
   pointer-events:none;
@@ -968,6 +908,71 @@ body{
 }
 #updatesBanner.show{display:block}
 #updatesBanner strong{color:#9ff0c0}
+
+
+/* شريط الجزء والسورة — بعرض الصفحة، كل في جهة، تحت شريط الحالة مباشرة */
+.reader-info-top{
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  transform: none !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  direction: rtl !important;
+  gap: 8px;
+  box-sizing: border-box !important;
+  padding: 8px 16px !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  border-radius: 0 !important;
+  z-index: 16 !important;
+  pointer-events: none !important;
+  background: rgba(255,255,255,.96) !important;
+}
+.night-mode .reader-info-top{
+  background: rgba(35,35,35,.96) !important;
+}
+.reader-info-top .sep{
+  display: none !important;
+}
+.reader-info-top #juzInfo,
+.reader-info-top #surahInfo{
+  flex: 0 1 auto;
+  text-align: start;
+}
+/* توسيط المصحف عمودياً: مساحة بيضاء أعلى وأسفل الأسطر */
+.page-area{
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important; /* بدل flex-start */
+  padding-top: 44px !important;   /* تحت شريط الجزء/السورة */
+  padding-bottom: 36px !important; /* فوق رقم الصفحة */
+  box-sizing: border-box;
+}
+.page{
+  height: auto !important;
+  max-height: calc(100% - 12px) !important;
+  width: auto !important;
+  max-width: 100% !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+}
+@media (max-width: 600px){
+  .reader-info-top{
+    padding: 7px 14px !important;
+    font-size: 14px !important;
+  }
+  .page-area{
+    padding-top: 42px !important;
+    padding-bottom: 32px !important;
+  }
+}
 
 </style>
 </head>
@@ -5289,7 +5294,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.87";
+  const APP_VERSION = "1.0.77";
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
   const AUTO_CHECK_DELAY_MS = 4000;
