@@ -5701,7 +5701,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.96";
+  const APP_VERSION = "1.0.77";
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
   const AUTO_CHECK_DELAY_MS = 4000;
@@ -6459,8 +6459,15 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(isQibla){
       prayerOverlay && prayerOverlay.classList.add("show");
       if(prayerPopupBox) prayerPopupBox.style.maxWidth = "none";
-    }else if(prayerPopupBox){
-      prayerPopupBox.style.maxWidth = "min(96vw,520px)";
+    }else{
+      try{
+        if(window.AyaCompass && typeof window.AyaCompass.stop === "function"){
+          window.AyaCompass.stop();
+        }
+      }catch(e){}
+      orientationActive = false;
+      if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 تشغيل البوصلة";
+      if(prayerPopupBox) prayerPopupBox.style.maxWidth = "min(96vw,520px)";
     }
     if(prayerTabTimes){
       prayerTabTimes.setAttribute("aria-selected", String(!isQibla));
@@ -6513,11 +6520,24 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(cached){
       try{
         const data = JSON.parse(cached);
-        if(data && data.date === new Date().toDateString()){
+        if(data && data.date === new Date().toDateString()
+           && data.cityName && !/^Europe\/Istanbul\b/i.test(String(data.cityName))){
           renderPrayer(data);
         }
       }catch(e){}
     }
+    // If location permission is already granted, refresh from the real device location.
+    try{
+      if(navigator.permissions && navigator.permissions.query){
+        navigator.permissions.query({name:"geolocation"}).then(function(p){
+          if(p && p.state === "granted" && navigator.geolocation){
+            navigator.geolocation.getCurrentPosition(function(pos){
+              fetchPrayer(pos.coords.latitude, pos.coords.longitude).catch(function(){});
+            }, function(){}, {enableHighAccuracy:true, timeout:12000, maximumAge:300000});
+          }
+        }).catch(function(){});
+      }
+    }catch(e){}
   }
   function closePrayer(){
     if(prayerOverlay) prayerOverlay.classList.remove("show");
@@ -6542,9 +6562,9 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(!prayerTimesBox || !prayerTimesList) return;
     prayerTimesBox.style.display = "";
     if(prayerLocationLabel){
+      const displayPlace = data.cityName || data.city || "الموقع الحالي";
       prayerLocationLabel.textContent =
-        (data.city ? data.city + " — " : "") +
-        (data.dateLabel || data.date || "");
+        displayPlace + " — " + (data.dateLabel || data.date || "");
     }
     const order = ["Fajr","Sunrise","Dhuhr","Asr","Maghrib","Isha"];
     prayerTimesList.innerHTML = "";
@@ -6574,6 +6594,11 @@ document.addEventListener("DOMContentLoaded",()=>{
   }
 
   function fetchPrayer(lat, lng){
+    try{
+      if(window.AyaCompass && typeof window.AyaCompass.setLocation === "function"){
+        window.AyaCompass.setLocation(Number(lat), Number(lng));
+      }
+    }catch(e){}
     setPrayerStatus("جاري حساب الأوقات…");
     const url =
       "https://api.aladhan.com/v1/timings?latitude=" +
@@ -6612,14 +6637,27 @@ document.addEventListener("DOMContentLoaded",()=>{
               .then(function(place){
                 const a = place && place.address ? place.address : {};
                 const cityName = a.city || a.town || a.municipality || a.village || "";
+                const province = a.state || a.province || a.region || "";
                 const country = a.country || "";
-                const friendly = cityName ? (cityName + (country ? "، " + country : "")) : fallbackCity;
+                const turkey = ["تركيا","Türkiye","Turkey","Türkiye Cumhuriyeti"].includes(country);
+                const normalizedProvince = String(province || "")
+                  .replace(/^Konya$/i, "قونية")
+                  .replace(/^Karatay$/i, "قونية");
+                const normalizedCityRaw = String(cityName || "")
+                  .replace(/^Konya$/i, "قونية")
+                  .replace(/^Karatay$/i, "قونية");
+                const normalizedCity = (turkey && normalizedProvince)
+                  ? normalizedProvince
+                  : normalizedCityRaw;
+                const friendly = normalizedCity
+                  ? (normalizedCity + (turkey ? "، تركيا" : (country ? "، " + country : "")))
+                  : "الموقع الحالي";
                 const payload = {
                   date: new Date().toDateString(),
                   dateLabel: dateStr,
                   timings: timings,
                   qibla: qibla,
-                  city: fallbackCity,
+                  city: friendly,
                   cityName: friendly,
                   lat: lat,
                   lng: lng
@@ -6658,6 +6696,12 @@ document.addEventListener("DOMContentLoaded",()=>{
     });
   }
 
+  window.AYA_NATIVE_HEADING = function(heading){
+    if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;
+    const h = Number(heading);
+    if(Number.isFinite(h)) updateCompass(h);
+  };
+
   function onOrient(e){
     if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;
     let heading = null;
@@ -6671,6 +6715,17 @@ document.addEventListener("DOMContentLoaded",()=>{
   }
   async function startCompass(){
     try{
+      if(window.AyaCompass && typeof window.AyaCompass.start === "function"){
+        if(lastQiblaDeg == null){
+          setCompassStatus("حدد موقعك أولًا لحساب اتجاه القبلة.");
+          return;
+        }
+        orientationActive = true;
+        window.AyaCompass.start();
+        setCompassStatus("البوصلة تعمل… حرّك الهاتف ببطء حتى يتجه السهم إلى القبلة.");
+        if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 البوصلة مفعّلة";
+        return;
+      }
       if(!window.DeviceOrientationEvent){
         setCompassStatus("هذا الهاتف لا يدعم مستشعر اتجاه الجهاز.");
         return;
