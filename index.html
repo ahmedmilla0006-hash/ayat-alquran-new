@@ -900,14 +900,44 @@ body{
   line-height:18px;text-align:center;box-shadow:0 0 0 2px rgba(0,0,0,.25)
 }
 #updatesButton.has-update .update-badge{display:inline-block}
+/* شريط التحديث داخل التطبيق: تحت شريط الحالة، فوق منطقة الجزء/السورة، قابل للضغط */
 #updatesBanner{
-  display:none;position:fixed;top:0;left:0;right:0;z-index:12000;
-  background:linear-gradient(90deg,#0b3d2e,#145c43);color:#fff;
-  padding:10px 14px;text-align:center;font-size:14px;direction:rtl;
-  box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:pointer
+  display: none;
+  position: fixed;
+  top: var(--reader-safe-top, env(safe-area-inset-top, 0px));
+  left: 0;
+  right: 0;
+  z-index: 45;
+  background: linear-gradient(90deg, #0b3d2e, #16803b);
+  color: #fff;
+  padding: 11px 16px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  direction: rtl;
+  box-shadow: 0 4px 14px rgba(0,0,0,.28);
+  cursor: pointer;
+  pointer-events: auto !important;
+  -webkit-tap-highlight-color: rgba(255,255,255,.25);
+  touch-action: manipulation;
+  user-select: none;
+  box-sizing: border-box;
+  min-height: 42px;
+  line-height: 1.45;
 }
-#updatesBanner.show{display:block}
-#updatesBanner strong{color:#9ff0c0}
+#updatesBanner.show{
+  display: block !important;
+}
+#updatesBanner strong{
+  color: #b8f5d0;
+}
+/* عند ظهور التحديث: أنزل شريط الجزء/السورة تحت شريط التحديث */
+body.update-banner-visible .reader-info-top{
+  top: 42px !important;
+}
+body.update-banner-visible .page-area{
+  padding-top: 78px !important;
+}
 
 
 /* شريط الجزء والسورة — بعرض الصفحة، كل في جهة، تحت شريط الحالة مباشرة */
@@ -5299,7 +5329,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.90";
+  const APP_VERSION = "1.0.77";
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
   const AUTO_CHECK_DELAY_MS = 4000;
@@ -5356,9 +5386,11 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(updatesBanner){
       if(available && dismissed !== remoteVersion){
         updatesBanner.classList.add("show");
-        updatesBanner.innerHTML = "🎉 يتوفر إصدار جديد <strong>" + remoteVersion + "</strong> — اضغط للتحديث";
+        updatesBanner.innerHTML = "🎉 يتوفر إصدار جديد <strong>" + remoteVersion + "</strong> — اضغط هنا للتحديث";
+        try{ document.body.classList.add("update-banner-visible"); }catch(e){}
       }else{
         updatesBanner.classList.remove("show");
+        try{ document.body.classList.remove("update-banner-visible"); }catch(e){}
       }
     }
 
@@ -5385,7 +5417,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   function notifyUpdateAvailable(remoteVersion, notes){
     const title = "آية";
     const body = "يتوفر إصدار جديد (" + remoteVersion + ")";
-    postAndroid("notify-update", {
+    /* لا نرسل إشعار شريط الحالة — الشريط داخل التطبيق أوضح للضغط */ void 0 && postAndroid("notify-update", {
       title: title,
       body: body,
       version: remoteVersion || "",
@@ -5431,7 +5463,14 @@ document.addEventListener("DOMContentLoaded",()=>{
     };
   }
   if(updatesBanner){
-    updatesBanner.onclick = function(){ openUpdates(); };
+    updatesBanner.onclick = function(ev){
+      try{ if(ev && ev.preventDefault) ev.preventDefault(); }catch(e){}
+      openUpdates();
+    };
+    updatesBanner.ontouchend = function(ev){
+      try{ if(ev && ev.preventDefault) ev.preventDefault(); }catch(e){}
+      openUpdates();
+    };
   }
 
   async function checkForUpdates(opts){
