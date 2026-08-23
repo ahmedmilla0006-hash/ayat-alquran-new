@@ -493,20 +493,24 @@ jobs:
                 if old_render in web:
                     web = web.replace(old_render, new_render, 1)
 
-                old_place = """                const cityName = a.city || a.town || a.municipality || a.village || "";
-                                const country = a.country || "";
-                                const friendly = cityName ? (cityName + (country ? "، " + country : "")) : fallbackCity;"""
-                new_place = """                const cityName = a.city || a.town || a.municipality || a.village || "";
-                                const province = a.state || a.province || a.region || "";
-                                const country = a.country || "";
-                                const normalizedCity =
-                                  (country === "تركيا" && province) ? province : cityName;
-                                const friendly = normalizedCity
-                                  ? (normalizedCity + (country ? "، " + country : ""))
-                                  : "الموقع الحالي";"""
-                if old_place not in web:
-                    raise SystemExit("ERROR: reverse-geocoding block not found.")
-                web = web.replace(old_place, new_place, 1)
+                # Update reverse-geocoding without depending on exact indentation/text.
+                import re
+                place_pattern = re.compile(
+                    r'(?ms)^\s*const cityName = a\.city \|\| a\.town \|\| a\.municipality \|\| a\.village \|\| "";.*?^\s*const friendly = .*?;'
+                )
+                place_match = place_pattern.search(web)
+                if place_match:
+                    indent = re.match(r'^[ \t]*', place_match.group(0)).group(0)
+                    new_place = (
+                        f'{indent}const cityName = a.city || a.town || a.municipality || a.village || "";\n'
+                        f'{indent}const province = a.state || a.province || a.region || "";\n'
+                        f'{indent}const country = a.country || "";\n'
+                        f'{indent}const normalizedCity = (country === "تركيا" && province) ? province : cityName;\n'
+                        f'{indent}const friendly = normalizedCity ? (normalizedCity + (country ? "، " + country : "")) : "الموقع الحالي";'
+                    )
+                    web = web[:place_match.start()] + new_place + web[place_match.end():]
+                else:
+                    print("INFO: reverse-geocoding block not present; continuing with native compass changes.")
 
                 old_payload = """                  city: fallbackCity,
                                   cityName: friendly,"""
