@@ -6440,6 +6440,8 @@ document.addEventListener("DOMContentLoaded",()=>{
   let lastQiblaDeg = null;
   let lastHeading = null;
   let orientationActive = false;
+  let orientationEventSeen = false;
+  let orientationWatchdog = null;
 
   function setCompassStatus(msg){
     if(qiblaCompassStatus) qiblaCompassStatus.textContent = msg;
@@ -6520,24 +6522,11 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(cached){
       try{
         const data = JSON.parse(cached);
-        if(data && data.date === new Date().toDateString()
-           && data.cityName && !/^Europe\/Istanbul\b/i.test(String(data.cityName))){
+        if(data && data.date === new Date().toDateString()){
           renderPrayer(data);
         }
       }catch(e){}
     }
-    // If location permission is already granted, refresh from the real device location.
-    try{
-      if(navigator.permissions && navigator.permissions.query){
-        navigator.permissions.query({name:"geolocation"}).then(function(p){
-          if(p && p.state === "granted" && navigator.geolocation){
-            navigator.geolocation.getCurrentPosition(function(pos){
-              fetchPrayer(pos.coords.latitude, pos.coords.longitude).catch(function(){});
-            }, function(){}, {enableHighAccuracy:true, timeout:12000, maximumAge:300000});
-          }
-        }).catch(function(){});
-      }
-    }catch(e){}
   }
   function closePrayer(){
     if(prayerOverlay) prayerOverlay.classList.remove("show");
@@ -6639,18 +6628,10 @@ document.addEventListener("DOMContentLoaded",()=>{
                 const cityName = a.city || a.town || a.municipality || a.village || "";
                 const province = a.state || a.province || a.region || "";
                 const country = a.country || "";
-                const turkey = ["تركيا","Türkiye","Turkey","Türkiye Cumhuriyeti"].includes(country);
-                const normalizedProvince = String(province || "")
-                  .replace(/^Konya$/i, "قونية")
-                  .replace(/^Karatay$/i, "قونية");
-                const normalizedCityRaw = String(cityName || "")
-                  .replace(/^Konya$/i, "قونية")
-                  .replace(/^Karatay$/i, "قونية");
-                const normalizedCity = (turkey && normalizedProvince)
-                  ? normalizedProvince
-                  : normalizedCityRaw;
+                const normalizedCity =
+                  (country === "تركيا" && province) ? province : cityName;
                 const friendly = normalizedCity
-                  ? (normalizedCity + (turkey ? "، تركيا" : (country ? "، " + country : "")))
+                  ? (normalizedCity + (country ? "، " + country : ""))
                   : "الموقع الحالي";
                 const payload = {
                   date: new Date().toDateString(),
@@ -6702,6 +6683,13 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(Number.isFinite(h)) updateCompass(h);
   };
 
+  function getScreenAngle(){
+    try{
+      if(screen.orientation && Number.isFinite(Number(screen.orientation.angle))) return Number(screen.orientation.angle);
+      if(Number.isFinite(Number(window.orientation))) return Number(window.orientation);
+    }catch(e){}
+    return 0;
+  }
   function onOrient(e){
     if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;
     let heading = null;
@@ -6709,23 +6697,30 @@ document.addEventListener("DOMContentLoaded",()=>{
       heading = e.webkitCompassHeading;
     }else if(typeof e.alpha === "number" && isFinite(e.alpha)){
       heading = 360 - e.alpha;
+      // Compensate for Android screen rotation when using alpha fallback.
+      heading = normalizeDeg(heading + getScreenAngle());
     }
     if(heading == null) return;
+    orientationEventSeen = true;
     updateCompass(heading);
   }
   async function startCompass(){
     try{
+      if(lastQiblaDeg == null){
+        setCompassStatus("حدد موقعك أولًا لحساب اتجاه القبلة.");
+        return;
+      }
+      orientationEventSeen = false;
+      if(orientationWatchdog) clearTimeout(orientationWatchdog);
+
       if(window.AyaCompass && typeof window.AyaCompass.start === "function"){
-        if(lastQiblaDeg == null){
-          setCompassStatus("حدد موقعك أولًا لحساب اتجاه القبلة.");
-          return;
-        }
         orientationActive = true;
         window.AyaCompass.start();
         setCompassStatus("البوصلة تعمل… حرّك الهاتف ببطء حتى يتجه السهم إلى القبلة.");
         if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 البوصلة مفعّلة";
         return;
       }
+
       if(!window.DeviceOrientationEvent){
         setCompassStatus("هذا الهاتف لا يدعم مستشعر اتجاه الجهاز.");
         return;
@@ -6737,15 +6732,22 @@ document.addEventListener("DOMContentLoaded",()=>{
           return;
         }
       }
-      if(!orientationActive){
-        window.addEventListener("deviceorientationabsolute", onOrient, true);
-        window.addEventListener("deviceorientation", onOrient, true);
-        orientationActive = true;
-      }
+      window.removeEventListener("deviceorientationabsolute", onOrient, true);
+      window.removeEventListener("deviceorientation", onOrient, true);
+      window.addEventListener("deviceorientationabsolute", onOrient, true);
+      window.addEventListener("deviceorientation", onOrient, true);
+      orientationActive = true;
       setCompassStatus("البوصلة تعمل… حرّك الهاتف ببطء حتى يتجه السهم إلى القبلة.");
       if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 البوصلة مفعّلة";
+
+      orientationWatchdog = setTimeout(function(){
+        if(orientationActive && !orientationEventSeen){
+          setCompassStatus("لم تصل بيانات البوصلة داخل التطبيق. يحتاج هذا التطبيق إلى تفعيل مستشعر Android.");
+          if(qiblaCompassSub) qiblaCompassSub.textContent = "اتجاه القبلة 157° صحيح، لكن المستشعر الحي غير متصل";
+        }
+      }, 2500);
     }catch(err){
-      setCompassStatus("تعذر تشغيل البوصلة. جرّب تحريك الهاتف أو السماح بالمستشعرات.");
+      setCompassStatus("تعذر تشغيل البوصلة. اسمح بالمستشعرات ثم أعد المحاولة.");
     }
   }
   if(qiblaCompassBtn) qiblaCompassBtn.addEventListener("click", startCompass);
