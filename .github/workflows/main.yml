@@ -592,152 +592,116 @@ jobs:
                 bridge = java_dir / "AyaCompassBridge.java"
                 bridge.write_text("""package com.aya.alquran;
 
-import android.app.Activity;
-import android.hardware.GeomagneticField;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
-import android.view.Surface;
-import android.webkit.JavascriptInterface;
-import android.webkit.WebView;
+                import android.app.Activity;
+                import android.hardware.GeomagneticField;
+                import android.hardware.Sensor;
+                import android.hardware.SensorEvent;
+                import android.hardware.SensorEventListener;
+                import android.hardware.SensorManager;
+                import android.view.Surface;
+                import android.webkit.JavascriptInterface;
+                import android.webkit.WebView;
 
-public final class AyaCompassBridge implements SensorEventListener {
-    private final Activity activity;
-    private final WebView webView;
-    private final SensorManager sensorManager;
-    private final Sensor rotationSensor;
-    private final Sensor accelerometer;
-    private final Sensor magneticField;
-    private boolean running = false;
-    private double latitude = 0.0;
-    private double longitude = 0.0;
-    private boolean hasLocation = false;
-    private final float[] gravity = new float[3];
-    private final float[] magnetic = new float[3];
-    private boolean hasGravity = false;
-    private boolean hasMagnetic = false;
+                public final class AyaCompassBridge implements SensorEventListener {
+                    private final Activity activity;
+                    private final WebView webView;
+                    private final SensorManager sensorManager;
+                    private final Sensor rotationSensor;
+                    private boolean running = false;
+                    private boolean hasLocation = false;
+                    private double latitude = 0.0;
+                    private double longitude = 0.0;
 
-    public AyaCompassBridge(Activity activity, WebView webView) {
-        this.activity = activity;
-        this.webView = webView;
-        this.sensorManager = (SensorManager) activity.getSystemService(Activity.SENSOR_SERVICE);
-        Sensor rv = null;
-        Sensor acc = null;
-        Sensor mag = null;
-        if (sensorManager != null) {
-            rv = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-            if (rv == null) rv = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR);
-            acc = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-            mag = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-        }
-        rotationSensor = rv;
-        accelerometer = acc;
-        magneticField = mag;
-    }
+                    public AyaCompassBridge(Activity activity, WebView webView) {
+                        this.activity = activity;
+                        this.webView = webView;
+                        this.sensorManager = (SensorManager) activity.getSystemService(Activity.SENSOR_SERVICE);
+                        Sensor s = null;
+                        if (sensorManager != null) {
+                            s = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+                            if (s == null) {
+                                s = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR);
+                            }
+                        }
+                        rotationSensor = s;
+                    }
 
-    @JavascriptInterface
-    public synchronized void setLocation(double lat, double lon) {
-        if (Double.isFinite(lat) && Double.isFinite(lon)) {
-            latitude = lat;
-            longitude = lon;
-            hasLocation = true;
-        }
-    }
+                    @JavascriptInterface
+                    public synchronized void setLocation(double lat, double lon) {
+                        if (Double.isFinite(lat) && Double.isFinite(lon)) {
+                            latitude = lat;
+                            longitude = lon;
+                            hasLocation = true;
+                        }
+                    }
 
-    @JavascriptInterface
-    public synchronized boolean start() {
-        if (running) return true;
-        if (sensorManager == null) return false;
-        boolean registered = false;
-        if (rotationSensor != null) {
-            registered = sensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_GAME);
-        }
-        if (!registered && accelerometer != null && magneticField != null) {
-            boolean a = sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
-            boolean m = sensorManager.registerListener(this, magneticField, SensorManager.SENSOR_DELAY_GAME);
-            registered = a && m;
-        }
-        running = registered;
-        return registered;
-    }
+                    @JavascriptInterface
+                    public synchronized void start() {
+                        if (running || sensorManager == null || rotationSensor == null) return;
+                        sensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_GAME);
+                        running = true;
+                    }
 
-    @JavascriptInterface
-    public synchronized void stop() {
-        if (sensorManager != null) sensorManager.unregisterListener(this);
-        running = false;
-        hasGravity = false;
-        hasMagnetic = false;
-    }
+                    @JavascriptInterface
+                    public synchronized void stop() {
+                        if (!running || sensorManager == null) return;
+                        sensorManager.unregisterListener(this);
+                        running = false;
+                    }
 
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        if (!running || event == null || event.values == null) return;
-        try {
-            float[] rotation = new float[9];
-            float[] adjusted = new float[9];
-            boolean ok = false;
+                    @Override
+                    public void onSensorChanged(SensorEvent event) {
+                        if (!running || event == null || event.values == null) return;
+                        try {
+                            float[] rotation = new float[9];
+                            float[] adjusted = new float[9];
+                            SensorManager.getRotationMatrixFromVector(rotation, event.values);
 
-            if (event.sensor != null && event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
-                SensorManager.getRotationMatrixFromVector(rotation, event.values);
-                ok = true;
-            } else if (event.sensor != null && event.sensor.getType() == Sensor.TYPE_GAME_ROTATION_VECTOR) {
-                SensorManager.getRotationMatrixFromVector(rotation, event.values);
-                ok = true;
-            } else if (event.sensor != null && event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-                System.arraycopy(event.values, 0, gravity, 0, 3);
-                hasGravity = true;
-                if (hasMagnetic) ok = SensorManager.getRotationMatrix(rotation, null, gravity, magnetic);
-            } else if (event.sensor != null && event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-                System.arraycopy(event.values, 0, magnetic, 0, 3);
-                hasMagnetic = true;
-                if (hasGravity) ok = SensorManager.getRotationMatrix(rotation, null, gravity, magnetic);
-            }
+                            int r = activity.getWindowManager().getDefaultDisplay().getRotation();
+                            switch (r) {
+                                case Surface.ROTATION_90:
+                                    SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_Y,
+                                            SensorManager.AXIS_MINUS_X, adjusted);
+                                    break;
+                                case Surface.ROTATION_180:
+                                    SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_MINUS_X,
+                                            SensorManager.AXIS_MINUS_Y, adjusted);
+                                    break;
+                                case Surface.ROTATION_270:
+                                    SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_MINUS_Y,
+                                            SensorManager.AXIS_X, adjusted);
+                                    break;
+                                default:
+                                    System.arraycopy(rotation, 0, adjusted, 0, 9);
+                            }
 
-            if (!ok) return;
+                            float[] orientation = new float[3];
+                            SensorManager.getOrientation(adjusted, orientation);
+                            double heading = (Math.toDegrees(orientation[0]) + 360.0) % 360.0;
 
-            int r = activity.getWindowManager().getDefaultDisplay().getRotation();
-            switch (r) {
-                case Surface.ROTATION_90:
-                    SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_Y, SensorManager.AXIS_MINUS_X, adjusted);
-                    break;
-                case Surface.ROTATION_180:
-                    SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_MINUS_X, SensorManager.AXIS_MINUS_Y, adjusted);
-                    break;
-                case Surface.ROTATION_270:
-                    SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_MINUS_Y, SensorManager.AXIS_X, adjusted);
-                    break;
-                default:
-                    System.arraycopy(rotation, 0, adjusted, 0, 9);
-            }
+                            if (hasLocation) {
+                                GeomagneticField field = new GeomagneticField(
+                                    (float) latitude, (float) longitude, 0f, System.currentTimeMillis()
+                                );
+                                heading = (heading + field.getDeclination() + 360.0) % 360.0;
+                            }
 
-            float[] orientation = new float[3];
-            SensorManager.getOrientation(adjusted, orientation);
-            double heading = (Math.toDegrees(orientation[0]) + 360.0) % 360.0;
+                            final double result = heading;
+                            webView.post(() -> {
+                                try {
+                                    webView.evaluateJavascript(
+                                        "window.AYA_NATIVE_HEADING && window.AYA_NATIVE_HEADING(" + result + ");",
+                                        null
+                                    );
+                                } catch (Throwable ignored) {}
+                            });
+                        } catch (Throwable ignored) {}
+                    }
 
-            if (hasLocation) {
-                GeomagneticField field = new GeomagneticField(
-                    (float) latitude, (float) longitude, 0f, System.currentTimeMillis()
-                );
-                heading = (heading + field.getDeclination() + 360.0) % 360.0;
-            }
-
-            final double result = heading;
-            webView.post(() -> {
-                try {
-                    webView.evaluateJavascript(
-                        "window.AYA_NATIVE_HEADING && window.AYA_NATIVE_HEADING(" + result + ");",
-                        null
-                    );
-                } catch (Throwable ignored) {}
-            });
-        } catch (Throwable ignored) {}
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
-}
-""", encoding="utf-8")
+                    @Override
+                    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+                }
+                """, encoding="utf-8")
 
                 activity = java_dir / "MainActivity.java"
                 if not activity.exists():
