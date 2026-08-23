@@ -5086,22 +5086,48 @@ document.addEventListener("DOMContentLoaded",()=>{
     try{ navigator.mediaSession.setActionHandler(action, fn); }catch(e){}
   }
 
+  var __notifPlayLockUntil = 0;
+
   function safePlay(){
     userWantsPlay = true;
+    __notifPlayLockUntil = Date.now() + 2500;
     return audio.play().then(()=>{
       const pb = document.getElementById("playButton");
       if(pb) pb.textContent = "Ⅱ";
       updateMediaSession();
+      setTimeout(function(){
+        if(userWantsPlay && audio.paused && audio.src){
+          audio.play().catch(function(){});
+          updateMediaSession();
+        }
+      }, 400);
+      setTimeout(function(){
+        if(userWantsPlay && audio.paused && audio.src){
+          audio.play().catch(function(){});
+          updateMediaSession();
+        }
+      }, 1200);
     }).catch(()=>{});
   }
 
   function safePause(){
     userWantsPlay = false;
+    __notifPlayLockUntil = 0;
     audio.pause();
     const pb = document.getElementById("playButton");
     if(pb) pb.textContent = "▶";
     updateMediaSession();
   }
+
+  audio.addEventListener("pause", function(){
+    if(userWantsPlay && Date.now() < __notifPlayLockUntil && audio.src){
+      setTimeout(function(){
+        if(userWantsPlay && audio.paused){
+          audio.play().catch(function(){});
+        }
+      }, 50);
+    }
+  });
 
   bindAction("play", function(){ safePlay(); });
   bindAction("pause", function(){ safePause(); });
@@ -5295,12 +5321,19 @@ document.addEventListener("DOMContentLoaded",()=>{
   }
 
   function notifyUpdateAvailable(remoteVersion, notes){
-    const title = "تحديث جديد لتطبيق آية";
-    const body = "الإصدار " + remoteVersion + " متاح الآن. اضغط للتحديث.";
+    const title = "آية";
+    const body = "يتوفر إصدار جديد (" + remoteVersion + ")";
     postAndroid("notify-update", {
       title: title,
       body: body,
-      version: remoteVersion || ""
+      version: remoteVersion || "",
+      versionName: remoteVersion || "",
+      apkUrl: latestUpdateUrl || "",
+      url: latestUpdateUrl || ""
+    });
+    postAndroid("update-available", {
+      versionName: remoteVersion || "",
+      apkUrl: latestUpdateUrl || ""
     });
     try{
       if(typeof Notification !== "undefined" && Notification.permission === "granted"){
@@ -5409,7 +5442,19 @@ document.addEventListener("DOMContentLoaded",()=>{
           if(updatesDownloadBtn) updatesDownloadBtn.disabled = true;
           window.AndroidInterface.postMessage(JSON.stringify({
             cmd: "download-apk",
-            data: { url: latestUpdateUrl }
+            data: {
+              url: latestUpdateUrl,
+              apkUrl: latestUpdateUrl,
+              versionName: latestRemoteVersion || "",
+              version: latestRemoteVersion || ""
+            }
+          }));
+          window.AndroidInterface.postMessage(JSON.stringify({
+            cmd: "update-download",
+            data: {
+              apkUrl: latestUpdateUrl,
+              versionName: latestRemoteVersion || ""
+            }
           }));
           return;
         }
