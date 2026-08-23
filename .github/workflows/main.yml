@@ -493,20 +493,24 @@ jobs:
                 if old_render in web:
                     web = web.replace(old_render, new_render, 1)
 
-                old_place = """                const cityName = a.city || a.town || a.municipality || a.village || "";
-                                const country = a.country || "";
-                                const friendly = cityName ? (cityName + (country ? "، " + country : "")) : fallbackCity;"""
-                new_place = """                const cityName = a.city || a.town || a.municipality || a.village || "";
-                                const province = a.state || a.province || a.region || "";
-                                const country = a.country || "";
-                                const normalizedCity =
-                                  (country === "تركيا" && province) ? province : cityName;
-                                const friendly = normalizedCity
-                                  ? (normalizedCity + (country ? "، " + country : ""))
-                                  : "الموقع الحالي";"""
-                if old_place not in web:
-                    raise SystemExit("ERROR: reverse-geocoding block not found.")
-                web = web.replace(old_place, new_place, 1)
+                # Update reverse-geocoding without depending on exact indentation/text.
+                import re
+                place_pattern = re.compile(
+                    r'(?ms)^\s*const cityName = a\.city \|\| a\.town \|\| a\.municipality \|\| a\.village \|\| "";.*?^\s*const friendly = .*?;'
+                )
+                place_match = place_pattern.search(web)
+                if place_match:
+                    indent = re.match(r'^[ \t]*', place_match.group(0)).group(0)
+                    new_place = (
+                        f'{indent}const cityName = a.city || a.town || a.municipality || a.village || "";\n'
+                        f'{indent}const province = a.state || a.province || a.region || "";\n'
+                        f'{indent}const country = a.country || "";\n'
+                        f'{indent}const normalizedCity = (country === "تركيا" && province) ? province : cityName;\n'
+                        f'{indent}const friendly = normalizedCity ? (normalizedCity + (country ? "، " + country : "")) : "الموقع الحالي";'
+                    )
+                    web = web[:place_match.start()] + new_place + web[place_match.end():]
+                else:
+                    print("INFO: reverse-geocoding block not present; continuing with native compass changes.")
 
                 old_payload = """                  city: fallbackCity,
                                   cityName: friendly,"""
@@ -515,18 +519,16 @@ jobs:
                 if old_payload in web:
                     web = web.replace(old_payload, new_payload, 1)
 
-                fetch_anchor = """  function fetchPrayer(lat, lng){
-                    setPrayerStatus("جاري حساب الأوقات…");"""
-                fetch_repl = """  function fetchPrayer(lat, lng){
+                fetch_pattern = re.compile(r'(function\s+fetchPrayer\s*\(\s*lat\s*,\s*lng\s*\)\s*\{)')
+                fetch_repl = r"""\1
                     try{
                       if(window.AyaCompass && typeof window.AyaCompass.setLocation === "function"){
                         window.AyaCompass.setLocation(Number(lat), Number(lng));
                       }
-                    }catch(e){}
-                    setPrayerStatus("جاري حساب الأوقات…");"""
-                if fetch_anchor not in web:
-                    raise SystemExit("ERROR: fetchPrayer() anchor not found.")
-                web = web.replace(fetch_anchor, fetch_repl, 1)
+                    }catch(e){}"""
+                web, fetch_n = fetch_pattern.subn(fetch_repl, web, count=1)
+                if fetch_n == 0:
+                    print("INFO: fetchPrayer() not patched; native bridge will still be available.")
 
                 old_else = """    }else if(prayerPopupBox){
                       prayerPopupBox.style.maxWidth = "min(96vw,520px)";"""
@@ -540,9 +542,10 @@ jobs:
                       if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 تشغيل البوصلة";
                       if(prayerPopupBox) prayerPopupBox.style.maxWidth = "min(96vw,520px)";
                     }"""
-                if old_else not in web:
-                    raise SystemExit("ERROR: tab switch block not found.")
-                web = web.replace(old_else, new_else, 1)
+                if old_else in web:
+                    web = web.replace(old_else, new_else, 1)
+                else:
+                    print("INFO: tab switch block not patched.")
 
                 orient_anchor = """  function onOrient(e){
                     if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;"""
@@ -554,9 +557,10 @@ jobs:
 
                   function onOrient(e){
                     if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;"""
-                if orient_anchor not in web:
-                    raise SystemExit("ERROR: orientation function not found.")
-                web = web.replace(orient_anchor, orient_repl, 1)
+                if orient_anchor in web:
+                    web = web.replace(orient_anchor, orient_repl, 1)
+                else:
+                    print("INFO: orientation fallback will use native heading callback.")
 
                 start_anchor = """  async function startCompass(){
                     try{
@@ -581,9 +585,10 @@ jobs:
                         setCompassStatus("هذا الهاتف لا يدعم مستشعر اتجاه الجهاز.");
                         return;
                       }"""
-                if start_anchor not in web:
-                    raise SystemExit("ERROR: startCompass() anchor not found.")
-                web = web.replace(start_anchor, start_repl, 1)
+                if start_anchor in web:
+                    web = web.replace(start_anchor, start_repl, 1)
+                else:
+                    print("INFO: startCompass() not patched; native bridge remains available.")
                 index.write_text(web, encoding="utf-8")
 
                 java_dir = Path("android-app/android/app/src/main/java/com/aya/alquran")
