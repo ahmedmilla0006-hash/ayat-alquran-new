@@ -5701,7 +5701,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.98";
+  const APP_VERSION = "1.0.77";
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
   const AUTO_CHECK_DELAY_MS = 4000;
@@ -6440,8 +6440,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   let lastQiblaDeg = null;
   let lastHeading = null;
   let orientationActive = false;
-  let orientationEventSeen = false;
-  let orientationWatchdog = null;
 
   function setCompassStatus(msg){
     if(qiblaCompassStatus) qiblaCompassStatus.textContent = msg;
@@ -6678,18 +6676,12 @@ document.addEventListener("DOMContentLoaded",()=>{
   }
 
   window.AYA_NATIVE_HEADING = function(heading){
-    if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;
     const h = Number(heading);
-    if(Number.isFinite(h)) updateCompass(h);
+    if(!Number.isFinite(h)) return;
+    if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;
+    updateCompass(h);
   };
 
-  function getScreenAngle(){
-    try{
-      if(screen.orientation && Number.isFinite(Number(screen.orientation.angle))) return Number(screen.orientation.angle);
-      if(Number.isFinite(Number(window.orientation))) return Number(window.orientation);
-    }catch(e){}
-    return 0;
-  }
   function onOrient(e){
     if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;
     let heading = null;
@@ -6697,30 +6689,29 @@ document.addEventListener("DOMContentLoaded",()=>{
       heading = e.webkitCompassHeading;
     }else if(typeof e.alpha === "number" && isFinite(e.alpha)){
       heading = 360 - e.alpha;
-      // Compensate for Android screen rotation when using alpha fallback.
-      heading = normalizeDeg(heading + getScreenAngle());
     }
     if(heading == null) return;
-    orientationEventSeen = true;
     updateCompass(heading);
   }
   async function startCompass(){
     try{
-      if(lastQiblaDeg == null){
-        setCompassStatus("حدد موقعك أولًا لحساب اتجاه القبلة.");
-        return;
-      }
-      orientationEventSeen = false;
-      if(orientationWatchdog) clearTimeout(orientationWatchdog);
-
       if(window.AyaCompass && typeof window.AyaCompass.start === "function"){
+        if(lastQiblaDeg == null){
+          setCompassStatus("حدد موقعك أولًا لحساب اتجاه القبلة.");
+          return;
+        }
+        const started = window.AyaCompass.start();
+        if(started === false){
+          orientationActive = false;
+          setCompassStatus("تعذر الوصول إلى حساس الاتجاه في الهاتف.");
+          if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 تشغيل البوصلة";
+          return;
+        }
         orientationActive = true;
-        window.AyaCompass.start();
         setCompassStatus("البوصلة تعمل… حرّك الهاتف ببطء حتى يتجه السهم إلى القبلة.");
         if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 البوصلة مفعّلة";
         return;
       }
-
       if(!window.DeviceOrientationEvent){
         setCompassStatus("هذا الهاتف لا يدعم مستشعر اتجاه الجهاز.");
         return;
@@ -6732,22 +6723,15 @@ document.addEventListener("DOMContentLoaded",()=>{
           return;
         }
       }
-      window.removeEventListener("deviceorientationabsolute", onOrient, true);
-      window.removeEventListener("deviceorientation", onOrient, true);
-      window.addEventListener("deviceorientationabsolute", onOrient, true);
-      window.addEventListener("deviceorientation", onOrient, true);
-      orientationActive = true;
+      if(!orientationActive){
+        window.addEventListener("deviceorientationabsolute", onOrient, true);
+        window.addEventListener("deviceorientation", onOrient, true);
+        orientationActive = true;
+      }
       setCompassStatus("البوصلة تعمل… حرّك الهاتف ببطء حتى يتجه السهم إلى القبلة.");
       if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 البوصلة مفعّلة";
-
-      orientationWatchdog = setTimeout(function(){
-        if(orientationActive && !orientationEventSeen){
-          setCompassStatus("لم تصل بيانات البوصلة داخل التطبيق. يحتاج هذا التطبيق إلى تفعيل مستشعر Android.");
-          if(qiblaCompassSub) qiblaCompassSub.textContent = "اتجاه القبلة 157° صحيح، لكن المستشعر الحي غير متصل";
-        }
-      }, 2500);
     }catch(err){
-      setCompassStatus("تعذر تشغيل البوصلة. اسمح بالمستشعرات ثم أعد المحاولة.");
+      setCompassStatus("تعذر تشغيل البوصلة. جرّب تحريك الهاتف أو السماح بالمستشعرات.");
     }
   }
   if(qiblaCompassBtn) qiblaCompassBtn.addEventListener("click", startCompass);
