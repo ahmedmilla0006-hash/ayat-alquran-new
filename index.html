@@ -1479,13 +1479,19 @@ body.update-banner-visible .page-area{
         <div id="prayerLocationLabel" style="color:#79d69a;font-weight:700;margin-bottom:8px"></div>
         <div id="prayerTimesList" style="display:flex;flex-direction:column;gap:6px"></div>
         <div style="margin-top:16px;text-align:center">
-          <div style="color:#bbb;font-size:13px;margin-bottom:6px">اتجاه القبلة من موقعك</div>
+          <div style="color:#bbb;font-size:13px;margin-bottom:4px">اتجاه القبلة من موقعك</div>
           <div id="qiblaAngle" style="font-size:28px;font-weight:800;color:var(--green);margin-bottom:10px">—</div>
-          <div id="qiblaCompass" style="width:140px;height:140px;margin:0 auto;border-radius:50%;border:3px solid #16803b;position:relative;background:radial-gradient(circle at center,#2a2a2a,#1a1a1a)">
-            <div id="qiblaNeedle" style="position:absolute;left:50%;top:12px;width:4px;height:58px;margin-left:-2px;background:linear-gradient(#e74c3c,#e74c3c 55%,transparent 55%);transform-origin:50% 100%;border-radius:2px;transition:transform .35s ease"></div>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px">🕋</div>
+          <div id="qiblaCompass" aria-label="بوصلة القبلة" style="width:190px;height:190px;margin:0 auto;border-radius:50%;border:3px solid #16803b;position:relative;background:radial-gradient(circle at center,#303030,#151515);box-shadow:inset 0 0 0 6px rgba(22,128,59,.10),0 8px 24px rgba(0,0,0,.25);overflow:hidden">
+            <div style="position:absolute;left:50%;top:5px;transform:translateX(-50%);color:#ff6262;font-weight:900;font-size:17px">N</div>
+            <div style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:#ddd;font-weight:800;font-size:15px">E</div>
+            <div style="position:absolute;left:50%;bottom:5px;transform:translateX(-50%);color:#ddd;font-weight:800;font-size:15px">S</div>
+            <div style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:#ddd;font-weight:800;font-size:15px">W</div>
+            <div style="position:absolute;inset:24px;border-radius:50%;border:1px dashed rgba(255,255,255,.20)"></div>
+            <div id="qiblaNeedle" style="position:absolute;left:50%;top:24px;width:5px;height:68px;margin-left:-2.5px;background:linear-gradient(#e74c3c 0 62%,transparent 62%);transform-origin:50% 100%;border-radius:4px;transition:transform .12s linear;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))"></div>
+            <div style="position:absolute;left:50%;top:50%;width:30px;height:30px;margin:-15px;border-radius:50%;background:#16803b;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:17px">🕋</div>
           </div>
-          <div style="color:#999;font-size:12px;margin-top:8px">حرّك الجهاز إن ظهر سهم البوصلة؛ الرقم هو الاتجاه الجغرافي للقبلة</div>
+          <button type="button" class="popup-item" id="qiblaCompassBtn" style="text-align:center;margin:12px 0 5px;background:#2a5a3a">🧭 تشغيل البوصلة</button>
+          <div id="qiblaCompassStatus" style="color:#999;font-size:12px;margin-top:6px">وجّه الهاتف في الوضع الطبيعي ثم اضغط تشغيل البوصلة</div>
         </div>
       </div>
     </div>
@@ -5552,7 +5558,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.93";
+  const APP_VERSION = "1.0.77";
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
   const AUTO_CHECK_DELAY_MS = 4000;
@@ -6271,8 +6277,28 @@ document.addEventListener("DOMContentLoaded",()=>{
   const prayerLocationLabel = document.getElementById("prayerLocationLabel");
   const qiblaAngleEl = document.getElementById("qiblaAngle");
   const qiblaNeedle = document.getElementById("qiblaNeedle");
+  const qiblaCompassBtn = document.getElementById("qiblaCompassBtn");
+  const qiblaCompassStatus = document.getElementById("qiblaCompassStatus");
 
   let lastQiblaDeg = null;
+  let lastHeading = null;
+  let orientationActive = false;
+
+  function setCompassStatus(msg){
+    if(qiblaCompassStatus) qiblaCompassStatus.textContent = msg;
+  }
+  function normalizeDeg(v){ return (v % 360 + 360) % 360; }
+  function shortestTurn(from,to){ return ((to-from+540)%360)-180; }
+  function updateCompass(heading){
+    if(lastQiblaDeg == null || !qiblaNeedle || !Number.isFinite(heading)) return;
+    heading = normalizeDeg(heading);
+    lastHeading = heading;
+    const target = normalizeDeg(lastQiblaDeg - heading);
+    qiblaNeedle.style.transform = "rotate(" + target + "deg)";
+    const diff = Math.abs(shortestTurn(heading,lastQiblaDeg));
+    setCompassStatus("اتجاه الجهاز: " + Math.round(heading) + "° — " +
+      (diff <= 5 ? "أنت باتجاه القبلة تقريبًا ✓" : "حرّك الهاتف حتى يتجه السهم إلى القبلة"));
+  }
 
   function setPrayerStatus(msg){
     if(prayerStatus) prayerStatus.textContent = msg;
@@ -6334,6 +6360,7 @@ document.addEventListener("DOMContentLoaded",()=>{
       lastQiblaDeg = data.qibla;
       qiblaAngleEl.textContent = Math.round(data.qibla) + "°";
       qiblaNeedle.style.transform = "rotate(" + data.qibla + "deg)";
+      setCompassStatus("اتجاه القبلة الجغرافي: " + Math.round(data.qibla) + "° — شغّل البوصلة لمعرفة اتجاهها أثناء الحركة.");
     }
   }
 
@@ -6407,19 +6434,41 @@ document.addEventListener("DOMContentLoaded",()=>{
   }
 
   function onOrient(e){
-    if(lastQiblaDeg == null || !qiblaNeedle) return;
+    if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;
     let heading = null;
-    if(typeof e.webkitCompassHeading === "number"){
+    if(typeof e.webkitCompassHeading === "number" && isFinite(e.webkitCompassHeading)){
       heading = e.webkitCompassHeading;
-    }else if(typeof e.alpha === "number"){
+    }else if(typeof e.alpha === "number" && isFinite(e.alpha)){
       heading = 360 - e.alpha;
     }
     if(heading == null) return;
-    qiblaNeedle.style.transform = "rotate(" + (lastQiblaDeg - heading) + "deg)";
+    updateCompass(heading);
   }
-  if(window.DeviceOrientationEvent){
-    window.addEventListener("deviceorientation", onOrient, true);
+  async function startCompass(){
+    try{
+      if(!window.DeviceOrientationEvent){
+        setCompassStatus("هذا الهاتف لا يدعم مستشعر اتجاه الجهاز.");
+        return;
+      }
+      if(typeof DeviceOrientationEvent.requestPermission === "function"){
+        const result = await DeviceOrientationEvent.requestPermission();
+        if(result !== "granted"){
+          setCompassStatus("لم يتم السماح باستخدام مستشعر البوصلة.");
+          return;
+        }
+      }
+      if(!orientationActive){
+        window.addEventListener("deviceorientationabsolute", onOrient, true);
+        window.addEventListener("deviceorientation", onOrient, true);
+        orientationActive = true;
+      }
+      setCompassStatus("البوصلة تعمل… حرّك الهاتف ببطء حتى يتجه السهم إلى القبلة.");
+      if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 البوصلة مفعّلة";
+    }catch(err){
+      setCompassStatus("تعذر تشغيل البوصلة. جرّب تحريك الهاتف أو السماح بالمستشعرات.");
+    }
   }
+  if(qiblaCompassBtn) qiblaCompassBtn.addEventListener("click", startCompass);
 
   /* ---------- إشعار الأذان ---------- */
   const adhanNotifBtn = document.getElementById("adhanNotifBtn");
