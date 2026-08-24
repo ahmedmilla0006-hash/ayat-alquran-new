@@ -1521,12 +1521,8 @@ let currentPage = 1;
 // بدء المشروع دائمًا من الصفحة الأولى عند فتحه؛ بعد ذلك يحفظ التنقل بشكل طبيعي.
 localStorage.setItem("quranPage", "1");
 
-let highlightMode = localStorage.getItem("highlightMode") || "word-color";
-/* إزالة وضع متابعة الكلمة إن كان محفوظاً سابقاً */
-if(highlightMode === "word-by-word"){
-  highlightMode = "word-color";
-  localStorage.setItem("highlightMode", highlightMode);
-}
+let highlightMode = "word-by-word";
+localStorage.setItem("highlightMode", highlightMode);
 let highlightColor = localStorage.getItem("highlightColor") || "#168443";
 
 let startX = 0;
@@ -6849,6 +6845,43 @@ document.addEventListener("DOMContentLoaded",()=>{
     const oldSR=SR.prototype;
     // No monkey-patching of browser recognition methods: V3 remains authoritative.
   }
+})();
+</script>
+
+
+<script id="tarteel-page3-test">
+(function(){
+  function startOnPage3(){
+    try{
+      if(typeof loadPage === "function"){
+        loadPage(3);
+      }else if(typeof currentPage !== "undefined"){
+        currentPage = 3;
+      }
+    }catch(e){
+      try{
+        if(typeof currentPage !== "undefined") currentPage=3;
+      }catch(_){}
+    }
+  }
+  if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",()=>setTimeout(startOnPage3,450),{once:true});
+  }else{
+    setTimeout(startOnPage3,450);
+  }
+})();
+</script>
+
+
+<script id="tarteel-page3-label">
+(function(){
+  function label(){
+    const s=document.getElementById("tarteelStatus");
+    if(s && !s.textContent.includes("صفحة 3") && !s.textContent.includes("يستمع")){
+      s.textContent="وضع التسميع — اختبار التتبع على صفحة 3";
+    }
+  }
+  setTimeout(label,900);
 })();
 </script>
 
