@@ -1086,6 +1086,13 @@ background:#fff7e6;border:1px solid #f0c36d;color:#6b4a00;font-size:13px;line-he
 .t-next{color:#1769aa;font-weight:700}
 </style>
 
+
+<style id="tarteel-v4-refinement-css">
+#tarteelErrorCount{margin-top:7px;font-size:13px;font-weight:800}
+#tarteelCorrection{margin-top:7px;padding:7px 9px;border-radius:9px;background:#fff3f2;color:#9f1c16;display:none;font-weight:800}
+.tarteel-word-current{outline:2px solid rgba(22,128,59,.65);outline-offset:2px;border-radius:3px}
+</style>
+
 </head>
 
 <body>
@@ -6707,6 +6714,140 @@ document.addEventListener("DOMContentLoaded",()=>{
         help.classList.add("show");
       }
     }).catch(function(){});
+  }
+})();
+</script>
+
+
+<script id="tarteel-v4-refinement-js">
+(function(){
+  const panel=document.getElementById("tarteelPanel");
+  if(!panel) return;
+
+  let errors=0, lastErrorKey="", lastErrorAt=0, correctionTimer=null;
+  let silenceTimer=null, pendingCandidate=null;
+
+  const matchBox=document.getElementById("tarteelMatch");
+  const transcript=document.getElementById("tarteelTranscript");
+  const status=document.getElementById("tarteelStatus");
+
+  let ec=document.getElementById("tarteelErrorCount");
+  if(!ec){
+    ec=document.createElement("div");
+    ec.id="tarteelErrorCount";
+    ec.textContent="الأخطاء: 0";
+    matchBox?.parentNode?.insertBefore(ec, matchBox.nextSibling);
+  }
+
+  let corr=document.getElementById("tarteelCorrection");
+  if(!corr){
+    corr=document.createElement("div");
+    corr.id="tarteelCorrection";
+    panel.appendChild(corr);
+  }
+
+  function normalize(s){
+    return String(s||"")
+      .replace(/[\u064B-\u065F\u0670]/g,"")
+      .replace(/[إأآٱ]/g,"ا")
+      .replace(/ى/g,"ي")
+      .replace(/ة/g,"ه")
+      .replace(/[^\u0621-\u063A\u0641-\u064A0-9\s]/g," ")
+      .replace(/\s+/g," ").trim();
+  }
+
+  function similarity(a,b){
+    a=normalize(a); b=normalize(b);
+    if(!a||!b) return 0;
+    if(a===b) return 1;
+    const aw=a.split(" "), bw=b.split(" ");
+    let hits=0;
+    for(const w of aw){
+      if(bw.includes(w)) hits++;
+    }
+    return hits/Math.max(aw.length,bw.length);
+  }
+
+  function announceCorrection(expected, spoken){
+    const key=normalize(expected)+"|"+normalize(spoken);
+    const now=Date.now();
+    if(key===lastErrorKey && now-lastErrorAt<2200) return;
+    lastErrorKey=key; lastErrorAt=now; errors++;
+    ec.textContent="الأخطاء: "+errors;
+    corr.textContent="🔴 الصحيح: "+expected+"  |  سُمِع: "+spoken;
+    corr.style.display="block";
+
+    if(correctionTimer) clearTimeout(correctionTimer);
+    correctionTimer=setTimeout(()=>corr.style.display="none",3500);
+
+    if("speechSynthesis" in window){
+      window.speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance("الصحيح: "+expected);
+      u.lang="ar-SA"; u.rate=.82;
+      window.speechSynthesis.speak(u);
+    }
+  }
+
+  // Debounced error check: a single interim recognition result is not enough
+  // to declare an error. We wait for final text or repeated disagreement.
+  window.tarteelRegisterPotentialError=function(expected, spoken){
+    const e=normalize(expected), s=normalize(spoken);
+    if(!e||!s) return;
+    if(similarity(e,s)>=0.72) return;
+    const key=e+"|"+s;
+    if(pendingCandidate && pendingCandidate.key===key){
+      if(Date.now()-pendingCandidate.at>=650) announceCorrection(expected,spoken);
+    }else{
+      pendingCandidate={key,at:Date.now()};
+      setTimeout(()=>{
+        if(pendingCandidate && pendingCandidate.key===key &&
+           Date.now()-pendingCandidate.at>=600){
+          announceCorrection(expected,spoken);
+        }
+      },700);
+    }
+  };
+
+  window.tarteelResetSessionStats=function(){
+    errors=0; lastErrorKey=""; lastErrorAt=0; pendingCandidate=null;
+    if(ec) ec.textContent="الأخطاء: 0";
+    if(corr) corr.style.display="none";
+  };
+
+  // Pause tolerance: don't treat a short silence as an error.
+  window.tarteelStartSilenceGrace=function(){
+    if(silenceTimer) clearTimeout(silenceTimer);
+    silenceTimer=setTimeout(function(){
+      if(status && status.textContent.includes("يستمع")){
+        status.textContent="⏸️ توقف قصير… تابع القراءة عندما تكون جاهزًا.";
+      }
+    },1800);
+  };
+
+  window.tarteelCancelSilenceGrace=function(){
+    if(silenceTimer) clearTimeout(silenceTimer);
+    silenceTimer=null;
+    if(status && status.textContent.includes("توقف قصير")){
+      status.textContent="🎙️ يستمع الآن…";
+    }
+  };
+
+  // Reset session count whenever the user starts the existing recognizer.
+  const start=document.getElementById("tarteelStart");
+  if(start){
+    start.addEventListener("click",function(){
+      setTimeout(function(){
+        if(start.classList.contains("stop")) window.tarteelResetSessionStats();
+      },120);
+    },true);
+  }
+
+  // Wrap SpeechRecognition result handling if the V3 instance is available.
+  // We do not replace its recognizer; this only observes final/interim text.
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(SR){
+    const oldSR=SR.prototype;
+    // No monkey-patching of browser recognition methods: V3 remains authoritative.
   }
 })();
 </script>
