@@ -477,401 +477,236 @@ jobs:
       - name: Fix unified location display and native Android Qibla compass
         run: |
           python3 << 'PY'
-          from pathlib import Path
-          import re
-
-          index = Path("android-app/www/index.html")
-          if not index.exists():
-              raise SystemExit("ERROR: android-app/www/index.html not found.")
-          web = index.read_text(encoding="utf-8")
-
-          # --- Light, idempotent HTML fixes (never fatal) ---
-          old_render = """      prayerLocationLabel.textContent =
-                (data.city ? data.city + " — " : "") +
-                (data.dateLabel || data.date || "");"""
-          new_render = """      const displayPlace = data.cityName || data.city || "الموقع الحالي";
-                prayerLocationLabel.textContent =
-                  displayPlace + " — " + (data.dateLabel || data.date || "");"""
-          if old_render in web:
-              web = web.replace(old_render, new_render, 1)
-              print("Patched prayerLocationLabel render.")
-          else:
-              print("INFO: prayerLocationLabel already updated or absent.")
-
-          place_pattern = re.compile(
-              r'(?ms)^\s*const cityName = a\.city \|\| a\.town \|\| a\.municipality \|\| a\.village \|\| "";.*?^\s*const friendly = .*?;'
+          import base64
+          script_b64 = (
+              "CmZyb20gcGF0aGxpYiBpbXBvcnQgUGF0aAppbXBvcnQgcmUKCmluZGV4ID0gUGF0aCgiYW5kcm9pZC1h"
+              "cHAvd3d3L2luZGV4Lmh0bWwiKQppZiBub3QgaW5kZXguZXhpc3RzKCk6CiAgICByYWlzZSBTeXN0ZW1F"
+              "eGl0KCJFUlJPUjogYW5kcm9pZC1hcHAvd3d3L2luZGV4Lmh0bWwgbm90IGZvdW5kLiIpCndlYiA9IGlu"
+              "ZGV4LnJlYWRfdGV4dChlbmNvZGluZz0idXRmLTgiKQoKIyBJZGVtcG90ZW50IGxpZ2h0IEhUTUwgcGF0"
+              "Y2hlcyBvbmx5IGlmIG1pc3NpbmcKaWYgIndpbmRvdy5BeWFDb21wYXNzICYmIHR5cGVvZiB3aW5kb3cu"
+              "QXlhQ29tcGFzcy5zZXRMb2NhdGlvbiIgbm90IGluIHdlYjoKICAgIGZldGNoX3BhdHRlcm4gPSByZS5j"
+              "b21waWxlKHIiKGZ1bmN0aW9uXHMrZmV0Y2hQcmF5ZXJccypcKFxzKmxhdFxzKixccypsbmdccypcKVxz"
+              "Klx7KSIpCiAgICBpbmplY3Rpb24gPSAoCiAgICAgICAgIlxuICAgIHRyeXtcbiIKICAgICAgICAiICAg"
+              "ICAgaWYod2luZG93LkF5YUNvbXBhc3MgJiYgdHlwZW9mIHdpbmRvdy5BeWFDb21wYXNzLnNldExvY2F0"
+              "aW9uID09PSBcImZ1bmN0aW9uXCIpe1xuIgogICAgICAgICIgICAgICAgIHdpbmRvdy5BeWFDb21wYXNz"
+              "LnNldExvY2F0aW9uKE51bWJlcihsYXQpLCBOdW1iZXIobG5nKSk7XG4iCiAgICAgICAgIiAgICAgIH1c"
+              "biIKICAgICAgICAiICAgIH1jYXRjaChlKXt9IgogICAgKQogICAgd2ViLCBuID0gZmV0Y2hfcGF0dGVy"
+              "bi5zdWJuKGxhbWJkYSBtOiBtLmdyb3VwKDEpICsgaW5qZWN0aW9uLCB3ZWIsIGNvdW50PTEpCiAgICBw"
+              "cmludCgiUGF0Y2hlZCBmZXRjaFByYXllciBzZXRMb2NhdGlvbjoiLCBuKQoKaWYgIndpbmRvdy5BWUFf"
+              "TkFUSVZFX0hFQURJTkciIG5vdCBpbiB3ZWI6CiAgICBvcmllbnRfYW5jaG9yID0gKAogICAgICAgICIg"
+              "IGZ1bmN0aW9uIG9uT3JpZW50KGUpe1xuIgogICAgICAgICIgICAgaWYoIW9yaWVudGF0aW9uQWN0aXZl"
+              "IHx8IGxhc3RRaWJsYURlZyA9PSBudWxsIHx8ICFxaWJsYU5lZWRsZSkgcmV0dXJuOyIKICAgICkKICAg"
+              "IG9yaWVudF9yZXBsID0gKAogICAgICAgICIgIHdpbmRvdy5BWUFfTkFUSVZFX0hFQURJTkcgPSBmdW5j"
+              "dGlvbihoZWFkaW5nKXtcbiIKICAgICAgICAiICAgIGNvbnN0IGggPSBOdW1iZXIoaGVhZGluZyk7XG4i"
+              "CiAgICAgICAgIiAgICBpZighTnVtYmVyLmlzRmluaXRlKGgpKSByZXR1cm47XG4iCiAgICAgICAgIiAg"
+              "ICBpZighb3JpZW50YXRpb25BY3RpdmUgfHwgbGFzdFFpYmxhRGVnID09IG51bGwgfHwgIXFpYmxhTmVl"
+              "ZGxlKSByZXR1cm47XG4iCiAgICAgICAgIiAgICB1cGRhdGVDb21wYXNzKGgpO1xuIgogICAgICAgICIg"
+              "IH07XG5cbiIKICAgICAgICAiICBmdW5jdGlvbiBvbk9yaWVudChlKXtcbiIKICAgICAgICAiICAgIGlm"
+              "KCFvcmllbnRhdGlvbkFjdGl2ZSB8fCBsYXN0UWlibGFEZWcgPT0gbnVsbCB8fCAhcWlibGFOZWVkbGUp"
+              "IHJldHVybjsiCiAgICApCiAgICBpZiBvcmllbnRfYW5jaG9yIGluIHdlYjoKICAgICAgICB3ZWIgPSB3"
+              "ZWIucmVwbGFjZShvcmllbnRfYW5jaG9yLCBvcmllbnRfcmVwbCwgMSkKICAgICAgICBwcmludCgiSW5q"
+              "ZWN0ZWQgQVlBX05BVElWRV9IRUFESU5HLiIpCiAgICBlbHNlOgogICAgICAgIHByaW50KCJJTkZPOiBv"
+              "bk9yaWVudCBhbmNob3Igbm90IGZvdW5kLiIpCgppZiAid2luZG93LkF5YUNvbXBhc3MgJiYgdHlwZW9m"
+              "IHdpbmRvdy5BeWFDb21wYXNzLnN0YXJ0IiBub3QgaW4gd2ViOgogICAgc3RhcnRfYW5jaG9yID0gKAog"
+              "ICAgICAgICIgIGFzeW5jIGZ1bmN0aW9uIHN0YXJ0Q29tcGFzcygpe1xuIgogICAgICAgICIgICAgdHJ5"
+              "e1xuIgogICAgICAgICIgICAgICBpZighd2luZG93LkRldmljZU9yaWVudGF0aW9uRXZlbnQpe1xuIgog"
+              "ICAgICAgICIgICAgICAgIHNldENvbXBhc3NTdGF0dXMoXCLZh9iw2Kcg2KfZhNmH2KfYqtmBINmE2Kcg"
+              "2YrYr9i52YUg2YXYs9iq2LTYudixINin2KrYrNin2Ycg2KfZhNis2YfYp9iyLlwiKTtcbiIKICAgICAg"
+              "ICAiICAgICAgICByZXR1cm47XG4iCiAgICAgICAgIiAgICAgIH0iCiAgICApCiAgICBzdGFydF9yZXBs"
+              "ID0gKAogICAgICAgICIgIGFzeW5jIGZ1bmN0aW9uIHN0YXJ0Q29tcGFzcygpe1xuIgogICAgICAgICIg"
+              "ICAgdHJ5e1xuIgogICAgICAgICIgICAgICBpZih3aW5kb3cuQXlhQ29tcGFzcyAmJiB0eXBlb2Ygd2lu"
+              "ZG93LkF5YUNvbXBhc3Muc3RhcnQgPT09IFwiZnVuY3Rpb25cIil7XG4iCiAgICAgICAgIiAgICAgICAg"
+              "aWYobGFzdFFpYmxhRGVnID09IG51bGwpe1xuIgogICAgICAgICIgICAgICAgICAgc2V0Q29tcGFzc1N0"
+              "YXR1cyhcItit2K/YryDZhdmI2YLYudmDINij2YjZhNmL2Kcg2YTYrdiz2KfYqCDYp9iq2KzYp9mHINin"
+              "2YTZgtio2YTYqS5cIik7XG4iCiAgICAgICAgIiAgICAgICAgICByZXR1cm47XG4iCiAgICAgICAgIiAg"
+              "ICAgICAgfVxuIgogICAgICAgICIgICAgICAgIGNvbnN0IHN0YXJ0ZWQgPSB3aW5kb3cuQXlhQ29tcGFz"
+              "cy5zdGFydCgpO1xuIgogICAgICAgICIgICAgICAgIGlmKHN0YXJ0ZWQgPT09IGZhbHNlKXtcbiIKICAg"
+              "ICAgICAiICAgICAgICAgIG9yaWVudGF0aW9uQWN0aXZlID0gZmFsc2U7XG4iCiAgICAgICAgIiAgICAg"
+              "ICAgICBzZXRDb21wYXNzU3RhdHVzKFwi2KrYudiw2LEg2KfZhNmI2LXZiNmEINil2YTZiSDYrdiz2KfY"
+              "syDYp9mE2KfYqtis2KfZhyDZgdmKINin2YTZh9in2KrZgS5cIik7XG4iCiAgICAgICAgIiAgICAgICAg"
+              "ICBpZihxaWJsYUNvbXBhc3NCdG4pIHFpYmxhQ29tcGFzc0J0bi50ZXh0Q29udGVudCA9IFwi8J+nrSDY"
+              "qti02LrZitmEINin2YTYqNmI2LXZhNipXCI7XG4iCiAgICAgICAgIiAgICAgICAgICByZXR1cm47XG4i"
+              "CiAgICAgICAgIiAgICAgICAgfVxuIgogICAgICAgICIgICAgICAgIG9yaWVudGF0aW9uQWN0aXZlID0g"
+              "dHJ1ZTtcbiIKICAgICAgICAiICAgICAgICBzZXRDb21wYXNzU3RhdHVzKFwi2KfZhNio2YjYtdmE2Kkg"
+              "2KrYudmF2YTigKYg2K3YsdmR2YMg2KfZhNmH2KfYqtmBINio2KjYt9ihINit2KrZiSDZitiq2KzZhyDY"
+              "p9mE2LPZh9mFINil2YTZiSDYp9mE2YLYqNmE2KkuXCIpO1xuIgogICAgICAgICIgICAgICAgIGlmKHFp"
+              "YmxhQ29tcGFzc0J0bikgcWlibGFDb21wYXNzQnRuLnRleHRDb250ZW50ID0gXCLwn6etINin2YTYqNmI"
+              "2LXZhNipINmF2YHYudmR2YTYqVwiO1xuIgogICAgICAgICIgICAgICAgIHJldHVybjtcbiIKICAgICAg"
+              "ICAiICAgICAgfVxuIgogICAgICAgICIgICAgICBpZighd2luZG93LkRldmljZU9yaWVudGF0aW9uRXZl"
+              "bnQpe1xuIgogICAgICAgICIgICAgICAgIHNldENvbXBhc3NTdGF0dXMoXCLZh9iw2Kcg2KfZhNmH2KfY"
+              "qtmBINmE2Kcg2YrYr9i52YUg2YXYs9iq2LTYudixINin2KrYrNin2Ycg2KfZhNis2YfYp9iyLlwiKTtc"
+              "biIKICAgICAgICAiICAgICAgICByZXR1cm47XG4iCiAgICAgICAgIiAgICAgIH0iCiAgICApCiAgICBp"
+              "ZiBzdGFydF9hbmNob3IgaW4gd2ViOgogICAgICAgIHdlYiA9IHdlYi5yZXBsYWNlKHN0YXJ0X2FuY2hv"
+              "ciwgc3RhcnRfcmVwbCwgMSkKICAgICAgICBwcmludCgiUGF0Y2hlZCBzdGFydENvbXBhc3MgZm9yIG5h"
+              "dGl2ZSBicmlkZ2UuIikKICAgIGVsc2U6CiAgICAgICAgcHJpbnQoIklORk86IHN0YXJ0Q29tcGFzcyBh"
+              "bHJlYWR5IGhhcyBuYXRpdmUgcGF0aCBvciBhbmNob3IgbWlzc2luZy4iKQoKaW5kZXgud3JpdGVfdGV4"
+              "dCh3ZWIsIGVuY29kaW5nPSJ1dGYtOCIpCnByaW50KCJIVE1MIHdyaXRlIGNvbXBsZXRlLiIpCgpqYXZh"
+              "X2RpciA9IFBhdGgoImFuZHJvaWQtYXBwL2FuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvY29tL2F5YS9h"
+              "bHF1cmFuIikKamF2YV9kaXIubWtkaXIocGFyZW50cz1UcnVlLCBleGlzdF9vaz1UcnVlKQoKYnJpZGdl"
+              "X3NyYyA9IHIiIiJwYWNrYWdlIGNvbS5heWEuYWxxdXJhbjsKCmltcG9ydCBhbmRyb2lkLmFwcC5BY3Rp"
+              "dml0eTsKaW1wb3J0IGFuZHJvaWQuaGFyZHdhcmUuR2VvbWFnbmV0aWNGaWVsZDsKaW1wb3J0IGFuZHJv"
+              "aWQuaGFyZHdhcmUuU2Vuc29yOwppbXBvcnQgYW5kcm9pZC5oYXJkd2FyZS5TZW5zb3JFdmVudDsKaW1w"
+              "b3J0IGFuZHJvaWQuaGFyZHdhcmUuU2Vuc29yRXZlbnRMaXN0ZW5lcjsKaW1wb3J0IGFuZHJvaWQuaGFy"
+              "ZHdhcmUuU2Vuc29yTWFuYWdlcjsKaW1wb3J0IGFuZHJvaWQudmlldy5TdXJmYWNlOwppbXBvcnQgYW5k"
+              "cm9pZC53ZWJraXQuSmF2YXNjcmlwdEludGVyZmFjZTsKaW1wb3J0IGFuZHJvaWQud2Via2l0LldlYlZp"
+              "ZXc7CgpwdWJsaWMgZmluYWwgY2xhc3MgQXlhQ29tcGFzc0JyaWRnZSBpbXBsZW1lbnRzIFNlbnNvckV2"
+              "ZW50TGlzdGVuZXIgewogICAgcHJpdmF0ZSBmaW5hbCBBY3Rpdml0eSBhY3Rpdml0eTsKICAgIHByaXZh"
+              "dGUgZmluYWwgV2ViVmlldyB3ZWJWaWV3OwogICAgcHJpdmF0ZSBmaW5hbCBTZW5zb3JNYW5hZ2VyIHNl"
+              "bnNvck1hbmFnZXI7CiAgICBwcml2YXRlIGZpbmFsIFNlbnNvciByb3RhdGlvblNlbnNvcjsKICAgIHBy"
+              "aXZhdGUgZmluYWwgU2Vuc29yIGFjY2VsZXJvbWV0ZXI7CiAgICBwcml2YXRlIGZpbmFsIFNlbnNvciBt"
+              "YWduZXRvbWV0ZXI7CgogICAgcHJpdmF0ZSBib29sZWFuIHJ1bm5pbmcgPSBmYWxzZTsKICAgIHByaXZh"
+              "dGUgYm9vbGVhbiB1c2VSb3RhdGlvblZlY3RvciA9IGZhbHNlOwogICAgcHJpdmF0ZSBib29sZWFuIGhh"
+              "c0xvY2F0aW9uID0gZmFsc2U7CiAgICBwcml2YXRlIGRvdWJsZSBsYXRpdHVkZSA9IDAuMDsKICAgIHBy"
+              "aXZhdGUgZG91YmxlIGxvbmdpdHVkZSA9IDAuMDsKCiAgICBwcml2YXRlIGZpbmFsIGZsb2F0W10gZ3Jh"
+              "dml0eSA9IG5ldyBmbG9hdFszXTsKICAgIHByaXZhdGUgZmluYWwgZmxvYXRbXSBtYWduZXRpYyA9IG5l"
+              "dyBmbG9hdFszXTsKICAgIHByaXZhdGUgYm9vbGVhbiBoYXNHcmF2aXR5ID0gZmFsc2U7CiAgICBwcml2"
+              "YXRlIGJvb2xlYW4gaGFzTWFnbmV0aWMgPSBmYWxzZTsKCiAgICBwcml2YXRlIGRvdWJsZSBsYXN0SGVh"
+              "ZGluZyA9IERvdWJsZS5OYU47CiAgICBwcml2YXRlIGxvbmcgbGFzdEVtaXRNcyA9IDBMOwoKICAgIHB1"
+              "YmxpYyBBeWFDb21wYXNzQnJpZGdlKEFjdGl2aXR5IGFjdGl2aXR5LCBXZWJWaWV3IHdlYlZpZXcpIHsK"
+              "ICAgICAgICB0aGlzLmFjdGl2aXR5ID0gYWN0aXZpdHk7CiAgICAgICAgdGhpcy53ZWJWaWV3ID0gd2Vi"
+              "VmlldzsKICAgICAgICBTZW5zb3JNYW5hZ2VyIHNtID0gbnVsbDsKICAgICAgICB0cnkgewogICAgICAg"
+              "ICAgICBzbSA9IChTZW5zb3JNYW5hZ2VyKSBhY3Rpdml0eS5nZXRTeXN0ZW1TZXJ2aWNlKEFjdGl2aXR5"
+              "LlNFTlNPUl9TRVJWSUNFKTsKICAgICAgICB9IGNhdGNoIChUaHJvd2FibGUgaWdub3JlZCkge30KICAg"
+              "ICAgICB0aGlzLnNlbnNvck1hbmFnZXIgPSBzbTsKCiAgICAgICAgU2Vuc29yIHJvdCA9IG51bGw7CiAg"
+              "ICAgICAgU2Vuc29yIGFjYyA9IG51bGw7CiAgICAgICAgU2Vuc29yIG1hZyA9IG51bGw7CiAgICAgICAg"
+              "aWYgKHNtICE9IG51bGwpIHsKICAgICAgICAgICAgcm90ID0gc20uZ2V0RGVmYXVsdFNlbnNvcihTZW5z"
+              "b3IuVFlQRV9ST1RBVElPTl9WRUNUT1IpOwogICAgICAgICAgICBpZiAocm90ID09IG51bGwpIHsKICAg"
+              "ICAgICAgICAgICAgIHRyeSB7CiAgICAgICAgICAgICAgICAgICAgcm90ID0gc20uZ2V0RGVmYXVsdFNl"
+              "bnNvcihTZW5zb3IuVFlQRV9HRU9NQUdORVRJQ19ST1RBVElPTl9WRUNUT1IpOwogICAgICAgICAgICAg"
+              "ICAgfSBjYXRjaCAoVGhyb3dhYmxlIGlnbm9yZWQpIHt9CiAgICAgICAgICAgIH0KICAgICAgICAgICAg"
+              "YWNjID0gc20uZ2V0RGVmYXVsdFNlbnNvcihTZW5zb3IuVFlQRV9BQ0NFTEVST01FVEVSKTsKICAgICAg"
+              "ICAgICAgbWFnID0gc20uZ2V0RGVmYXVsdFNlbnNvcihTZW5zb3IuVFlQRV9NQUdORVRJQ19GSUVMRCk7"
+              "CiAgICAgICAgfQogICAgICAgIHRoaXMucm90YXRpb25TZW5zb3IgPSByb3Q7CiAgICAgICAgdGhpcy5h"
+              "Y2NlbGVyb21ldGVyID0gYWNjOwogICAgICAgIHRoaXMubWFnbmV0b21ldGVyID0gbWFnOwogICAgfQoK"
+              "ICAgIEBKYXZhc2NyaXB0SW50ZXJmYWNlCiAgICBwdWJsaWMgYm9vbGVhbiBpc0F2YWlsYWJsZSgpIHsK"
+              "ICAgICAgICByZXR1cm4gc2Vuc29yTWFuYWdlciAhPSBudWxsCiAgICAgICAgICAgICYmIChyb3RhdGlv"
+              "blNlbnNvciAhPSBudWxsIHx8IChhY2NlbGVyb21ldGVyICE9IG51bGwgJiYgbWFnbmV0b21ldGVyICE9"
+              "IG51bGwpKTsKICAgIH0KCiAgICBASmF2YXNjcmlwdEludGVyZmFjZQogICAgcHVibGljIHN5bmNocm9u"
+              "aXplZCB2b2lkIHNldExvY2F0aW9uKGRvdWJsZSBsYXQsIGRvdWJsZSBsb24pIHsKICAgICAgICBpZiAo"
+              "RG91YmxlLmlzRmluaXRlKGxhdCkgJiYgRG91YmxlLmlzRmluaXRlKGxvbikpIHsKICAgICAgICAgICAg"
+              "bGF0aXR1ZGUgPSBsYXQ7CiAgICAgICAgICAgIGxvbmdpdHVkZSA9IGxvbjsKICAgICAgICAgICAgaGFz"
+              "TG9jYXRpb24gPSB0cnVlOwogICAgICAgIH0KICAgIH0KCiAgICBASmF2YXNjcmlwdEludGVyZmFjZQog"
+              "ICAgcHVibGljIHN5bmNocm9uaXplZCBib29sZWFuIHN0YXJ0KCkgewogICAgICAgIGlmIChzZW5zb3JN"
+              "YW5hZ2VyID09IG51bGwpIHJldHVybiBmYWxzZTsKICAgICAgICBpZiAocnVubmluZykgcmV0dXJuIHRy"
+              "dWU7CgogICAgICAgIGJvb2xlYW4gcmVnaXN0ZXJlZCA9IGZhbHNlOwogICAgICAgIHVzZVJvdGF0aW9u"
+              "VmVjdG9yID0gZmFsc2U7CiAgICAgICAgaGFzR3Jhdml0eSA9IGZhbHNlOwogICAgICAgIGhhc01hZ25l"
+              "dGljID0gZmFsc2U7CgogICAgICAgIGlmIChyb3RhdGlvblNlbnNvciAhPSBudWxsKSB7CiAgICAgICAg"
+              "ICAgIHJlZ2lzdGVyZWQgPSBzZW5zb3JNYW5hZ2VyLnJlZ2lzdGVyTGlzdGVuZXIoCiAgICAgICAgICAg"
+              "ICAgICB0aGlzLCByb3RhdGlvblNlbnNvciwgU2Vuc29yTWFuYWdlci5TRU5TT1JfREVMQVlfR0FNRSk7"
+              "CiAgICAgICAgICAgIGlmIChyZWdpc3RlcmVkKSB7CiAgICAgICAgICAgICAgICB1c2VSb3RhdGlvblZl"
+              "Y3RvciA9IHRydWU7CiAgICAgICAgICAgIH0KICAgICAgICB9CgogICAgICAgIGlmICghcmVnaXN0ZXJl"
+              "ZCAmJiBhY2NlbGVyb21ldGVyICE9IG51bGwgJiYgbWFnbmV0b21ldGVyICE9IG51bGwpIHsKICAgICAg"
+              "ICAgICAgYm9vbGVhbiBhID0gc2Vuc29yTWFuYWdlci5yZWdpc3Rlckxpc3RlbmVyKAogICAgICAgICAg"
+              "ICAgICAgdGhpcywgYWNjZWxlcm9tZXRlciwgU2Vuc29yTWFuYWdlci5TRU5TT1JfREVMQVlfR0FNRSk7"
+              "CiAgICAgICAgICAgIGJvb2xlYW4gbSA9IHNlbnNvck1hbmFnZXIucmVnaXN0ZXJMaXN0ZW5lcigKICAg"
+              "ICAgICAgICAgICAgIHRoaXMsIG1hZ25ldG9tZXRlciwgU2Vuc29yTWFuYWdlci5TRU5TT1JfREVMQVlf"
+              "R0FNRSk7CiAgICAgICAgICAgIHJlZ2lzdGVyZWQgPSBhICYmIG07CiAgICAgICAgICAgIHVzZVJvdGF0"
+              "aW9uVmVjdG9yID0gZmFsc2U7CiAgICAgICAgICAgIGlmICghcmVnaXN0ZXJlZCkgewogICAgICAgICAg"
+              "ICAgICAgdHJ5IHsgc2Vuc29yTWFuYWdlci51bnJlZ2lzdGVyTGlzdGVuZXIodGhpcyk7IH0gY2F0Y2gg"
+              "KFRocm93YWJsZSBpZ25vcmVkKSB7fQogICAgICAgICAgICB9CiAgICAgICAgfQoKICAgICAgICBydW5u"
+              "aW5nID0gcmVnaXN0ZXJlZDsKICAgICAgICByZXR1cm4gcmVnaXN0ZXJlZDsKICAgIH0KCiAgICBASmF2"
+              "YXNjcmlwdEludGVyZmFjZQogICAgcHVibGljIHN5bmNocm9uaXplZCB2b2lkIHN0b3AoKSB7CiAgICAg"
+              "ICAgaWYgKCFydW5uaW5nIHx8IHNlbnNvck1hbmFnZXIgPT0gbnVsbCkgewogICAgICAgICAgICBydW5u"
+              "aW5nID0gZmFsc2U7CiAgICAgICAgICAgIHJldHVybjsKICAgICAgICB9CiAgICAgICAgdHJ5IHsKICAg"
+              "ICAgICAgICAgc2Vuc29yTWFuYWdlci51bnJlZ2lzdGVyTGlzdGVuZXIodGhpcyk7CiAgICAgICAgfSBj"
+              "YXRjaCAoVGhyb3dhYmxlIGlnbm9yZWQpIHt9CiAgICAgICAgcnVubmluZyA9IGZhbHNlOwogICAgICAg"
+              "IGhhc0dyYXZpdHkgPSBmYWxzZTsKICAgICAgICBoYXNNYWduZXRpYyA9IGZhbHNlOwogICAgfQoKICAg"
+              "IEBPdmVycmlkZQogICAgcHVibGljIHZvaWQgb25TZW5zb3JDaGFuZ2VkKFNlbnNvckV2ZW50IGV2ZW50"
+              "KSB7CiAgICAgICAgaWYgKCFydW5uaW5nIHx8IGV2ZW50ID09IG51bGwgfHwgZXZlbnQudmFsdWVzID09"
+              "IG51bGwpIHJldHVybjsKICAgICAgICB0cnkgewogICAgICAgICAgICBpbnQgdHlwZSA9IGV2ZW50LnNl"
+              "bnNvci5nZXRUeXBlKCk7CiAgICAgICAgICAgIGlmICh1c2VSb3RhdGlvblZlY3RvcgogICAgICAgICAg"
+              "ICAgICAgICAgICYmICh0eXBlID09IFNlbnNvci5UWVBFX1JPVEFUSU9OX1ZFQ1RPUgogICAgICAgICAg"
+              "ICAgICAgICAgICAgICB8fCB0eXBlID09IFNlbnNvci5UWVBFX0dFT01BR05FVElDX1JPVEFUSU9OX1ZF"
+              "Q1RPUikpIHsKICAgICAgICAgICAgICAgIGZsb2F0W10gcm90YXRpb24gPSBuZXcgZmxvYXRbOV07CiAg"
+              "ICAgICAgICAgICAgICBTZW5zb3JNYW5hZ2VyLmdldFJvdGF0aW9uTWF0cml4RnJvbVZlY3Rvcihyb3Rh"
+              "dGlvbiwgZXZlbnQudmFsdWVzKTsKICAgICAgICAgICAgICAgIGVtaXRIZWFkaW5nRnJvbVJvdGF0aW9u"
+              "TWF0cml4KHJvdGF0aW9uKTsKICAgICAgICAgICAgICAgIHJldHVybjsKICAgICAgICAgICAgfQoKICAg"
+              "ICAgICAgICAgaWYgKHR5cGUgPT0gU2Vuc29yLlRZUEVfQUNDRUxFUk9NRVRFUikgewogICAgICAgICAg"
+              "ICAgICAgbG93UGFzcyhldmVudC52YWx1ZXMsIGdyYXZpdHkpOwogICAgICAgICAgICAgICAgaGFzR3Jh"
+              "dml0eSA9IHRydWU7CiAgICAgICAgICAgIH0gZWxzZSBpZiAodHlwZSA9PSBTZW5zb3IuVFlQRV9NQUdO"
+              "RVRJQ19GSUVMRCkgewogICAgICAgICAgICAgICAgbG93UGFzcyhldmVudC52YWx1ZXMsIG1hZ25ldGlj"
+              "KTsKICAgICAgICAgICAgICAgIGhhc01hZ25ldGljID0gdHJ1ZTsKICAgICAgICAgICAgfQoKICAgICAg"
+              "ICAgICAgaWYgKCF1c2VSb3RhdGlvblZlY3RvciAmJiBoYXNHcmF2aXR5ICYmIGhhc01hZ25ldGljKSB7"
+              "CiAgICAgICAgICAgICAgICBmbG9hdFtdIFIgPSBuZXcgZmxvYXRbOV07CiAgICAgICAgICAgICAgICBm"
+              "bG9hdFtdIEkgPSBuZXcgZmxvYXRbOV07CiAgICAgICAgICAgICAgICBpZiAoIVNlbnNvck1hbmFnZXIu"
+              "Z2V0Um90YXRpb25NYXRyaXgoUiwgSSwgZ3Jhdml0eSwgbWFnbmV0aWMpKSB7CiAgICAgICAgICAgICAg"
+              "ICAgICAgcmV0dXJuOwogICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgZW1pdEhlYWRpbmdG"
+              "cm9tUm90YXRpb25NYXRyaXgoUik7CiAgICAgICAgICAgIH0KICAgICAgICB9IGNhdGNoIChUaHJvd2Fi"
+              "bGUgaWdub3JlZCkge30KICAgIH0KCiAgICBwcml2YXRlIHZvaWQgZW1pdEhlYWRpbmdGcm9tUm90YXRp"
+              "b25NYXRyaXgoZmxvYXRbXSByb3RhdGlvbikgewogICAgICAgIGZsb2F0W10gYWRqdXN0ZWQgPSBuZXcg"
+              "ZmxvYXRbOV07CiAgICAgICAgaW50IGRpc3BsYXlSb3RhdGlvbjsKICAgICAgICB0cnkgewogICAgICAg"
+              "ICAgICBkaXNwbGF5Um90YXRpb24gPSBhY3Rpdml0eS5nZXRXaW5kb3dNYW5hZ2VyKCkuZ2V0RGVmYXVs"
+              "dERpc3BsYXkoKS5nZXRSb3RhdGlvbigpOwogICAgICAgIH0gY2F0Y2ggKFRocm93YWJsZSB0KSB7CiAg"
+              "ICAgICAgICAgIGRpc3BsYXlSb3RhdGlvbiA9IFN1cmZhY2UuUk9UQVRJT05fMDsKICAgICAgICB9Cgog"
+              "ICAgICAgIHN3aXRjaCAoZGlzcGxheVJvdGF0aW9uKSB7CiAgICAgICAgICAgIGNhc2UgU3VyZmFjZS5S"
+              "T1RBVElPTl85MDoKICAgICAgICAgICAgICAgIFNlbnNvck1hbmFnZXIucmVtYXBDb29yZGluYXRlU3lz"
+              "dGVtKAogICAgICAgICAgICAgICAgICAgIHJvdGF0aW9uLCBTZW5zb3JNYW5hZ2VyLkFYSVNfWSwgU2Vu"
+              "c29yTWFuYWdlci5BWElTX01JTlVTX1gsIGFkanVzdGVkKTsKICAgICAgICAgICAgICAgIGJyZWFrOwog"
+              "ICAgICAgICAgICBjYXNlIFN1cmZhY2UuUk9UQVRJT05fMTgwOgogICAgICAgICAgICAgICAgU2Vuc29y"
+              "TWFuYWdlci5yZW1hcENvb3JkaW5hdGVTeXN0ZW0oCiAgICAgICAgICAgICAgICAgICAgcm90YXRpb24s"
+              "IFNlbnNvck1hbmFnZXIuQVhJU19NSU5VU19YLCBTZW5zb3JNYW5hZ2VyLkFYSVNfTUlOVVNfWSwgYWRq"
+              "dXN0ZWQpOwogICAgICAgICAgICAgICAgYnJlYWs7CiAgICAgICAgICAgIGNhc2UgU3VyZmFjZS5ST1RB"
+              "VElPTl8yNzA6CiAgICAgICAgICAgICAgICBTZW5zb3JNYW5hZ2VyLnJlbWFwQ29vcmRpbmF0ZVN5c3Rl"
+              "bSgKICAgICAgICAgICAgICAgICAgICByb3RhdGlvbiwgU2Vuc29yTWFuYWdlci5BWElTX01JTlVTX1ks"
+              "IFNlbnNvck1hbmFnZXIuQVhJU19YLCBhZGp1c3RlZCk7CiAgICAgICAgICAgICAgICBicmVhazsKICAg"
+              "ICAgICAgICAgY2FzZSBTdXJmYWNlLlJPVEFUSU9OXzA6CiAgICAgICAgICAgIGRlZmF1bHQ6CiAgICAg"
+              "ICAgICAgICAgICBTeXN0ZW0uYXJyYXljb3B5KHJvdGF0aW9uLCAwLCBhZGp1c3RlZCwgMCwgOSk7CiAg"
+              "ICAgICAgICAgICAgICBicmVhazsKICAgICAgICB9CgogICAgICAgIGZsb2F0W10gb3JpZW50YXRpb24g"
+              "PSBuZXcgZmxvYXRbM107CiAgICAgICAgU2Vuc29yTWFuYWdlci5nZXRPcmllbnRhdGlvbihhZGp1c3Rl"
+              "ZCwgb3JpZW50YXRpb24pOwogICAgICAgIGRvdWJsZSBoZWFkaW5nID0gTWF0aC50b0RlZ3JlZXMob3Jp"
+              "ZW50YXRpb25bMF0pOwogICAgICAgIGhlYWRpbmcgPSAoaGVhZGluZyArIDM2MC4wKSAlIDM2MC4wOwoK"
+              "ICAgICAgICBpZiAoaGFzTG9jYXRpb24pIHsKICAgICAgICAgICAgdHJ5IHsKICAgICAgICAgICAgICAg"
+              "IEdlb21hZ25ldGljRmllbGQgZmllbGQgPSBuZXcgR2VvbWFnbmV0aWNGaWVsZCgKICAgICAgICAgICAg"
+              "ICAgICAgICAoZmxvYXQpIGxhdGl0dWRlLCAoZmxvYXQpIGxvbmdpdHVkZSwgMGYsIFN5c3RlbS5jdXJy"
+              "ZW50VGltZU1pbGxpcygpKTsKICAgICAgICAgICAgICAgIGhlYWRpbmcgPSAoaGVhZGluZyArIGZpZWxk"
+              "LmdldERlY2xpbmF0aW9uKCkgKyAzNjAuMCkgJSAzNjAuMDsKICAgICAgICAgICAgfSBjYXRjaCAoVGhy"
+              "b3dhYmxlIGlnbm9yZWQpIHt9CiAgICAgICAgfQoKICAgICAgICBsb25nIG5vdyA9IFN5c3RlbS5jdXJy"
+              "ZW50VGltZU1pbGxpcygpOwogICAgICAgIGlmICghRG91YmxlLmlzTmFOKGxhc3RIZWFkaW5nKSkgewog"
+              "ICAgICAgICAgICBkb3VibGUgZGVsdGEgPSBNYXRoLmFicyhoZWFkaW5nIC0gbGFzdEhlYWRpbmcpOwog"
+              "ICAgICAgICAgICBpZiAoZGVsdGEgPiAxODAuMCkgZGVsdGEgPSAzNjAuMCAtIGRlbHRhOwogICAgICAg"
+              "ICAgICBpZiAoZGVsdGEgPCAwLjQgJiYgKG5vdyAtIGxhc3RFbWl0TXMpIDwgNTApIHsKICAgICAgICAg"
+              "ICAgICAgIHJldHVybjsKICAgICAgICAgICAgfQogICAgICAgIH0KICAgICAgICBsYXN0SGVhZGluZyA9"
+              "IGhlYWRpbmc7CiAgICAgICAgbGFzdEVtaXRNcyA9IG5vdzsKCiAgICAgICAgZmluYWwgZG91YmxlIHJl"
+              "c3VsdCA9IGhlYWRpbmc7CiAgICAgICAgZmluYWwgV2ViVmlldyB3diA9IHdlYlZpZXc7CiAgICAgICAg"
+              "aWYgKHd2ID09IG51bGwpIHJldHVybjsKICAgICAgICB3di5wb3N0KG5ldyBSdW5uYWJsZSgpIHsKICAg"
+              "ICAgICAgICAgQE92ZXJyaWRlCiAgICAgICAgICAgIHB1YmxpYyB2b2lkIHJ1bigpIHsKICAgICAgICAg"
+              "ICAgICAgIHRyeSB7CiAgICAgICAgICAgICAgICAgICAgd3YuZXZhbHVhdGVKYXZhc2NyaXB0KAogICAg"
+              "ICAgICAgICAgICAgICAgICAgICAid2luZG93LkFZQV9OQVRJVkVfSEVBRElORyYmd2luZG93LkFZQV9O"
+              "QVRJVkVfSEVBRElORygiICsgcmVzdWx0ICsgIik7IiwKICAgICAgICAgICAgICAgICAgICAgICAgbnVs"
+              "bAogICAgICAgICAgICAgICAgICAgICk7CiAgICAgICAgICAgICAgICB9IGNhdGNoIChUaHJvd2FibGUg"
+              "aWdub3JlZCkge30KICAgICAgICAgICAgfQogICAgICAgIH0pOwogICAgfQoKICAgIHByaXZhdGUgc3Rh"
+              "dGljIHZvaWQgbG93UGFzcyhmbG9hdFtdIGlucHV0LCBmbG9hdFtdIG91dHB1dCkgewogICAgICAgIGZp"
+              "bmFsIGZsb2F0IGFscGhhID0gMC4xOGY7CiAgICAgICAgZm9yIChpbnQgaSA9IDA7IGkgPCAzOyBpKysp"
+              "IHsKICAgICAgICAgICAgb3V0cHV0W2ldID0gb3V0cHV0W2ldICsgYWxwaGEgKiAoaW5wdXRbaV0gLSBv"
+              "dXRwdXRbaV0pOwogICAgICAgIH0KICAgIH0KCiAgICBAT3ZlcnJpZGUKICAgIHB1YmxpYyB2b2lkIG9u"
+              "QWNjdXJhY3lDaGFuZ2VkKFNlbnNvciBzZW5zb3IsIGludCBhY2N1cmFjeSkge30KfQoiIiIKCihqYXZh"
+              "X2RpciAvICJBeWFDb21wYXNzQnJpZGdlLmphdmEiKS53cml0ZV90ZXh0KGJyaWRnZV9zcmMsIGVuY29k"
+              "aW5nPSJ1dGYtOCIpCnByaW50KCJXcm90ZSBBeWFDb21wYXNzQnJpZGdlLmphdmEiKQoKYWN0aXZpdHkg"
+              "PSBqYXZhX2RpciAvICJNYWluQWN0aXZpdHkuamF2YSIKaWYgbm90IGFjdGl2aXR5LmV4aXN0cygpOgog"
+              "ICAgcmFpc2UgU3lzdGVtRXhpdCgiRVJST1I6IE1haW5BY3Rpdml0eS5qYXZhIG5vdCBmb3VuZC4iKQpz"
+              "cmMgPSBhY3Rpdml0eS5yZWFkX3RleHQoZW5jb2Rpbmc9InV0Zi04IikKCmlmICJuZXcgQXlhQ29tcGFz"
+              "c0JyaWRnZSIgbm90IGluIHNyYzoKICAgIG5lZWRsZSA9ICdnZXRCcmlkZ2UoKS5nZXRXZWJWaWV3KCku"
+              "YWRkSmF2YXNjcmlwdEludGVyZmFjZShuZXcgQXlhTWVkaWFKcygpLCAiQW5kcm9pZEludGVyZmFjZSIp"
+              "OycKICAgIGlmIG5lZWRsZSBpbiBzcmM6CiAgICAgICAgbGluZSA9IG5lZWRsZSArICJcbiAgICAgICAg"
+              "ICAgIGdldEJyaWRnZSgpLmdldFdlYlZpZXcoKS5hZGRKYXZhc2NyaXB0SW50ZXJmYWNlKG5ldyBBeWFD"
+              "b21wYXNzQnJpZGdlKHRoaXMsIGdldEJyaWRnZSgpLmdldFdlYlZpZXcoKSksIFwiQXlhQ29tcGFzc1wi"
+              "KTsiCiAgICAgICAgc3JjID0gc3JjLnJlcGxhY2UobmVlZGxlLCBsaW5lLCAxKQogICAgICAgIGFjdGl2"
+              "aXR5LndyaXRlX3RleHQoc3JjLCBlbmNvZGluZz0idXRmLTgiKQogICAgICAgIHByaW50KCJJbmplY3Rl"
+              "ZCBBeWFDb21wYXNzIGludG8gTWFpbkFjdGl2aXR5LiIpCiAgICBlbHNlOgogICAgICAgIG0gPSByZS5z"
+              "ZWFyY2gociJhZGRKYXZhc2NyaXB0SW50ZXJmYWNlXChbXjtdKzsiLCBzcmMpCiAgICAgICAgaWYgbToK"
+              "ICAgICAgICAgICAgYWRkaXRpb24gPSAiXG4gICAgICAgICAgICBnZXRCcmlkZ2UoKS5nZXRXZWJWaWV3"
+              "KCkuYWRkSmF2YXNjcmlwdEludGVyZmFjZShuZXcgQXlhQ29tcGFzc0JyaWRnZSh0aGlzLCBnZXRCcmlk"
+              "Z2UoKS5nZXRXZWJWaWV3KCkpLCBcIkF5YUNvbXBhc3NcIik7IgogICAgICAgICAgICBzcmMgPSBzcmNb"
+              "OiBtLmVuZCgpXSArIGFkZGl0aW9uICsgc3JjW20uZW5kKCkgOl0KICAgICAgICAgICAgYWN0aXZpdHku"
+              "d3JpdGVfdGV4dChzcmMsIGVuY29kaW5nPSJ1dGYtOCIpCiAgICAgICAgICAgIHByaW50KCJJbmplY3Rl"
+              "ZCBBeWFDb21wYXNzIGludG8gTWFpbkFjdGl2aXR5IChmYWxsYmFjaykuIikKICAgICAgICBlbHNlOgog"
+              "ICAgICAgICAgICByYWlzZSBTeXN0ZW1FeGl0KCJFUlJPUjogTWFpbkFjdGl2aXR5IFdlYlZpZXcgaW50"
+              "ZXJmYWNlIGFuY2hvciBub3QgZm91bmQuIikKZWxzZToKICAgIHByaW50KCJBeWFDb21wYXNzIGFscmVh"
+              "ZHkgcmVnaXN0ZXJlZCBpbiBNYWluQWN0aXZpdHkuIikKCnByaW50KCJVbmlmaWVkIGxvY2F0aW9uIGFu"
+              "ZCBuYXRpdmUgQW5kcm9pZCBjb21wYXNzIGJyaWRnZSBpbnN0YWxsZWQuIikK"
           )
-          place_match = place_pattern.search(web)
-          if place_match and "normalizedCity" not in place_match.group(0):
-              indent = re.match(r'^[ \t]*', place_match.group(0)).group(0)
-              new_place = (
-                  f'{indent}const cityName = a.city || a.town || a.municipality || a.village || "";\n'
-                  f'{indent}const province = a.state || a.province || a.region || "";\n'
-                  f'{indent}const country = a.country || "";\n'
-                  f'{indent}const normalizedCity = (country === "تركيا" && province) ? province : cityName;\n'
-                  f'{indent}const friendly = normalizedCity ? (normalizedCity + (country ? "، " + country : "")) : "الموقع الحالي";'
-              )
-              web = web[:place_match.start()] + new_place + web[place_match.end():]
-              print("Patched reverse-geocoding block.")
-          else:
-              print("INFO: reverse-geocoding block already OK or not present; continuing.")
-
-          old_payload = """                  city: fallbackCity,
-                                  cityName: friendly,"""
-          new_payload = """                  city: friendly,
-                                  cityName: friendly,"""
-          if old_payload in web:
-              web = web.replace(old_payload, new_payload, 1)
-              print("Patched prayer payload city fields.")
-
-          if "window.AyaCompass && typeof window.AyaCompass.setLocation" not in web:
-              fetch_pattern = re.compile(r'(function\s+fetchPrayer\s*\(\s*lat\s*,\s*lng\s*\)\s*\{)')
-              def fetch_repl(m):
-                  return m.group(1) + """
-    try{
-      if(window.AyaCompass && typeof window.AyaCompass.setLocation === "function"){
-        window.AyaCompass.setLocation(Number(lat), Number(lng));
-      }
-    }catch(e){}"""
-              web, n = fetch_pattern.subn(fetch_repl, web, count=1)
-              print("Patched fetchPrayer setLocation:", n)
-
-          if "window.AYA_NATIVE_HEADING" not in web:
-              orient_anchor = """  function onOrient(e){
-    if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;"""
-              orient_repl = """  window.AYA_NATIVE_HEADING = function(heading){
-    const h = Number(heading);
-    if(!Number.isFinite(h)) return;
-    if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;
-    updateCompass(h);
-  };
-
-  function onOrient(e){
-    if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;"""
-              if orient_anchor in web:
-                  web = web.replace(orient_anchor, orient_repl, 1)
-                  print("Injected AYA_NATIVE_HEADING.")
-              else:
-                  print("INFO: onOrient anchor not found; AYA_NATIVE_HEADING may already exist.")
-
-          if "window.AyaCompass && typeof window.AyaCompass.start" not in web:
-              start_anchor = """  async function startCompass(){
-    try{
-      if(!window.DeviceOrientationEvent){
-        setCompassStatus("هذا الهاتف لا يدعم مستشعر اتجاه الجهاز.");
-        return;
-      }"""
-              start_repl = """  async function startCompass(){
-    try{
-      if(window.AyaCompass && typeof window.AyaCompass.start === "function"){
-        if(lastQiblaDeg == null){
-          setCompassStatus("حدد موقعك أولًا لحساب اتجاه القبلة.");
-          return;
-        }
-        const started = window.AyaCompass.start();
-        if(started === false){
-          orientationActive = false;
-          setCompassStatus("تعذر الوصول إلى حساس الاتجاه في الهاتف.");
-          if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 تشغيل البوصلة";
-          return;
-        }
-        orientationActive = true;
-        setCompassStatus("البوصلة تعمل… حرّك الهاتف ببطء حتى يتجه السهم إلى القبلة.");
-        if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 البوصلة مفعّلة";
-        return;
-      }
-      if(!window.DeviceOrientationEvent){
-        setCompassStatus("هذا الهاتف لا يدعم مستشعر اتجاه الجهاز.");
-        return;
-      }"""
-              if start_anchor in web:
-                  web = web.replace(start_anchor, start_repl, 1)
-                  print("Patched startCompass for native bridge.")
-              else:
-                  print("INFO: startCompass already has native path or anchor missing.")
-
-          index.write_text(web, encoding="utf-8")
-          print("HTML write complete.")
-
-          java_dir = Path("android-app/android/app/src/main/java/com/aya/alquran")
-          java_dir.mkdir(parents=True, exist_ok=True)
-
-          bridge_src = r"""package com.aya.alquran;
-
-import android.app.Activity;
-import android.hardware.GeomagneticField;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
-import android.view.Surface;
-import android.webkit.JavascriptInterface;
-import android.webkit.WebView;
-
-/**
- * Native device heading for Qibla compass.
- * Prefers TYPE_ROTATION_VECTOR; falls back to accelerometer + magnetic field.
- * Reports true-north degrees [0,360) to window.AYA_NATIVE_HEADING from JS.
- */
-public final class AyaCompassBridge implements SensorEventListener {
-    private final Activity activity;
-    private final WebView webView;
-    private final SensorManager sensorManager;
-    private final Sensor rotationSensor;
-    private final Sensor accelerometer;
-    private final Sensor magnetometer;
-
-    private boolean running = false;
-    private boolean useRotationVector = false;
-    private boolean hasLocation = false;
-    private double latitude = 0.0;
-    private double longitude = 0.0;
-
-    private final float[] gravity = new float[3];
-    private final float[] magnetic = new float[3];
-    private boolean hasGravity = false;
-    private boolean hasMagnetic = false;
-
-    private double lastHeading = Double.NaN;
-    private long lastEmitMs = 0L;
-
-    public AyaCompassBridge(Activity activity, WebView webView) {
-        this.activity = activity;
-        this.webView = webView;
-        SensorManager sm = null;
-        try {
-            sm = (SensorManager) activity.getSystemService(Activity.SENSOR_SERVICE);
-        } catch (Throwable ignored) {}
-        this.sensorManager = sm;
-
-        Sensor rot = null;
-        Sensor acc = null;
-        Sensor mag = null;
-        if (sm != null) {
-            // Absolute orientation only (not GAME_ROTATION_VECTOR — no magnetometer).
-            rot = sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-            if (rot == null) {
-                try {
-                    rot = sm.getDefaultSensor(Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR);
-                } catch (Throwable ignored) {}
-            }
-            acc = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-            mag = sm.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-        }
-        this.rotationSensor = rot;
-        this.accelerometer = acc;
-        this.magnetometer = mag;
-    }
-
-    @JavascriptInterface
-    public boolean isAvailable() {
-        return sensorManager != null
-            && (rotationSensor != null || (accelerometer != null && magnetometer != null));
-    }
-
-    @JavascriptInterface
-    public synchronized void setLocation(double lat, double lon) {
-        if (Double.isFinite(lat) && Double.isFinite(lon)) {
-            latitude = lat;
-            longitude = lon;
-            hasLocation = true;
-        }
-    }
-
-    /** @return true if sensors registered successfully. */
-    @JavascriptInterface
-    public synchronized boolean start() {
-        if (sensorManager == null) return false;
-        if (running) return true;
-
-        boolean registered = false;
-        useRotationVector = false;
-        hasGravity = false;
-        hasMagnetic = false;
-
-        if (rotationSensor != null) {
-            registered = sensorManager.registerListener(
-                this, rotationSensor, SensorManager.SENSOR_DELAY_GAME);
-            if (registered) {
-                useRotationVector = true;
-            }
-        }
-
-        if (!registered && accelerometer != null && magnetometer != null) {
-            boolean a = sensorManager.registerListener(
-                this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
-            boolean m = sensorManager.registerListener(
-                this, magnetometer, SensorManager.SENSOR_DELAY_GAME);
-            registered = a && m;
-            useRotationVector = false;
-            if (!registered) {
-                try { sensorManager.unregisterListener(this); } catch (Throwable ignored) {}
-            }
-        }
-
-        running = registered;
-        return registered;
-    }
-
-    @JavascriptInterface
-    public synchronized void stop() {
-        if (!running || sensorManager == null) {
-            running = false;
-            return;
-        }
-        try {
-            sensorManager.unregisterListener(this);
-        } catch (Throwable ignored) {}
-        running = false;
-        hasGravity = false;
-        hasMagnetic = false;
-    }
-
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        if (!running || event == null || event.values == null) return;
-        try {
-            int type = event.sensor.getType();
-            if (useRotationVector
-                    && (type == Sensor.TYPE_ROTATION_VECTOR
-                        || type == Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR)) {
-                float[] rotation = new float[9];
-                SensorManager.getRotationMatrixFromVector(rotation, event.values);
-                emitHeadingFromRotationMatrix(rotation);
-                return;
-            }
-
-            if (type == Sensor.TYPE_ACCELEROMETER) {
-                lowPass(event.values, gravity);
-                hasGravity = true;
-            } else if (type == Sensor.TYPE_MAGNETIC_FIELD) {
-                lowPass(event.values, magnetic);
-                hasMagnetic = true;
-            }
-
-            if (!useRotationVector && hasGravity && hasMagnetic) {
-                float[] R = new float[9];
-                float[] I = new float[9];
-                if (!SensorManager.getRotationMatrix(R, I, gravity, magnetic)) {
-                    return;
-                }
-                emitHeadingFromRotationMatrix(R);
-            }
-        } catch (Throwable ignored) {}
-    }
-
-    private void emitHeadingFromRotationMatrix(float[] rotation) {
-        float[] adjusted = new float[9];
-        int displayRotation;
-        try {
-            displayRotation = activity.getWindowManager().getDefaultDisplay().getRotation();
-        } catch (Throwable t) {
-            displayRotation = Surface.ROTATION_0;
-        }
-
-        // Remap so azimuth is relative to the screen's "up" in the current orientation.
-        switch (displayRotation) {
-            case Surface.ROTATION_90:
-                SensorManager.remapCoordinateSystem(
-                    rotation, SensorManager.AXIS_Y, SensorManager.AXIS_MINUS_X, adjusted);
-                break;
-            case Surface.ROTATION_180:
-                SensorManager.remapCoordinateSystem(
-                    rotation, SensorManager.AXIS_MINUS_X, SensorManager.AXIS_MINUS_Y, adjusted);
-                break;
-            case Surface.ROTATION_270:
-                SensorManager.remapCoordinateSystem(
-                    rotation, SensorManager.AXIS_MINUS_Y, SensorManager.AXIS_X, adjusted);
-                break;
-            case Surface.ROTATION_0:
-            default:
-                // Portrait: device Y points toward top of screen.
-                System.arraycopy(rotation, 0, adjusted, 0, 9);
-                break;
-        }
-
-        float[] orientation = new float[3];
-        SensorManager.getOrientation(adjusted, orientation);
-        // azimuth around -Z; 0 = magnetic north, increases toward east
-        double heading = Math.toDegrees(orientation[0]);
-        heading = (heading + 360.0) % 360.0;
-
-        // magnetic north → true north (Qibla bearing from Aladhan is true north)
-        if (hasLocation) {
-            try {
-                GeomagneticField field = new GeomagneticField(
-                    (float) latitude, (float) longitude, 0f, System.currentTimeMillis());
-                heading = (heading + field.getDeclination() + 360.0) % 360.0;
-            } catch (Throwable ignored) {}
-        }
-
-        long now = System.currentTimeMillis();
-        if (!Double.isNaN(lastHeading)) {
-            double delta = Math.abs(heading - lastHeading);
-            if (delta > 180.0) delta = 360.0 - delta;
-            if (delta < 0.4 && (now - lastEmitMs) < 50) {
-                return;
-            }
-        }
-        lastHeading = heading;
-        lastEmitMs = now;
-
-        final double result = heading;
-        final WebView wv = webView;
-        if (wv == null) return;
-        wv.post(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    wv.evaluateJavascript(
-                        "window.AYA_NATIVE_HEADING&&window.AYA_NATIVE_HEADING(" + result + ");",
-                        null
-                    );
-                } catch (Throwable ignored) {}
-            }
-        });
-    }
-
-    private static void lowPass(float[] input, float[] output) {
-        final float alpha = 0.18f;
-        for (int i = 0; i < 3; i++) {
-            output[i] = output[i] + alpha * (input[i] - output[i]);
-        }
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
-}
-"""
-          (java_dir / "AyaCompassBridge.java").write_text(bridge_src, encoding="utf-8")
-          print("Wrote AyaCompassBridge.java")
-
-          activity = java_dir / "MainActivity.java"
-          if not activity.exists():
-              raise SystemExit("ERROR: MainActivity.java not found.")
-          src = activity.read_text(encoding="utf-8")
-
-          if "new AyaCompassBridge" not in src:
-              needle = 'getBridge().getWebView().addJavascriptInterface(new AyaMediaJs(), "AndroidInterface");'
-              if needle in src:
-                  line = needle + '\n            getBridge().getWebView().addJavascriptInterface(new AyaCompassBridge(this, getBridge().getWebView()), "AyaCompass");'
-                  src = src.replace(needle, line, 1)
-                  activity.write_text(src, encoding="utf-8")
-                  print("Injected AyaCompass into MainActivity.")
-              else:
-                  m = re.search(r'addJavascriptInterface\([^;]+;', src)
-                  if m:
-                      insert_at = m.end()
-                      addition = '\n            getBridge().getWebView().addJavascriptInterface(new AyaCompassBridge(this, getBridge().getWebView()), "AyaCompass");'
-                      src = src[:insert_at] + addition + src[insert_at:]
-                      activity.write_text(src, encoding="utf-8")
-                      print("Injected AyaCompass into MainActivity (fallback anchor).")
-                  else:
-                      raise SystemExit("ERROR: MainActivity WebView interface anchor not found.")
-          else:
-              print("AyaCompass already registered in MainActivity.")
-
-          print("Unified location and native Android compass bridge installed.")
+          code = base64.b64decode("".join(script_b64)).decode("utf-8")
+          exec(compile(code, "aya_compass_fix.py", "exec"))
           PY
 
       - name: Copy final web changes to Android
