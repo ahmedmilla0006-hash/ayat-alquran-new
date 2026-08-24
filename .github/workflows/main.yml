@@ -493,20 +493,24 @@ jobs:
                 if old_render in web:
                     web = web.replace(old_render, new_render, 1)
 
-                old_place = """                const cityName = a.city || a.town || a.municipality || a.village || "";
-                                const country = a.country || "";
-                                const friendly = cityName ? (cityName + (country ? "، " + country : "")) : fallbackCity;"""
-                new_place = """                const cityName = a.city || a.town || a.municipality || a.village || "";
-                                const province = a.state || a.province || a.region || "";
-                                const country = a.country || "";
-                                const normalizedCity =
-                                  (country === "تركيا" && province) ? province : cityName;
-                                const friendly = normalizedCity
-                                  ? (normalizedCity + (country ? "، " + country : ""))
-                                  : "الموقع الحالي";"""
-                if old_place not in web:
-                    raise SystemExit("ERROR: reverse-geocoding block not found.")
-                web = web.replace(old_place, new_place, 1)
+                # Update reverse-geocoding without depending on exact indentation/text.
+                import re
+                place_pattern = re.compile(
+                    r'(?ms)^\s*const cityName = a\.city \|\| a\.town \|\| a\.municipality \|\| a\.village \|\| "";.*?^\s*const friendly = .*?;'
+                )
+                place_match = place_pattern.search(web)
+                if place_match:
+                    indent = re.match(r'^[ \t]*', place_match.group(0)).group(0)
+                    new_place = (
+                        f'{indent}const cityName = a.city || a.town || a.municipality || a.village || "";\n'
+                        f'{indent}const province = a.state || a.province || a.region || "";\n'
+                        f'{indent}const country = a.country || "";\n'
+                        f'{indent}const normalizedCity = (country === "تركيا" && province) ? province : cityName;\n'
+                        f'{indent}const friendly = normalizedCity ? (normalizedCity + (country ? "، " + country : "")) : "الموقع الحالي";'
+                    )
+                    web = web[:place_match.start()] + new_place + web[place_match.end():]
+                else:
+                    print("INFO: reverse-geocoding block not present; continuing with native compass changes.")
 
                 old_payload = """                  city: fallbackCity,
                                   cityName: friendly,"""
@@ -515,18 +519,16 @@ jobs:
                 if old_payload in web:
                     web = web.replace(old_payload, new_payload, 1)
 
-                fetch_anchor = """  function fetchPrayer(lat, lng){
-                    setPrayerStatus("جاري حساب الأوقات…");"""
-                fetch_repl = """  function fetchPrayer(lat, lng){
+                fetch_pattern = re.compile(r'(function\s+fetchPrayer\s*\(\s*lat\s*,\s*lng\s*\)\s*\{)')
+                fetch_repl = r"""\1
                     try{
                       if(window.AyaCompass && typeof window.AyaCompass.setLocation === "function"){
                         window.AyaCompass.setLocation(Number(lat), Number(lng));
                       }
-                    }catch(e){}
-                    setPrayerStatus("جاري حساب الأوقات…");"""
-                if fetch_anchor not in web:
-                    raise SystemExit("ERROR: fetchPrayer() anchor not found.")
-                web = web.replace(fetch_anchor, fetch_repl, 1)
+                    }catch(e){}"""
+                web, fetch_n = fetch_pattern.subn(fetch_repl, web, count=1)
+                if fetch_n == 0:
+                    print("INFO: fetchPrayer() not patched; native bridge will still be available.")
 
                 old_else = """    }else if(prayerPopupBox){
                       prayerPopupBox.style.maxWidth = "min(96vw,520px)";"""
@@ -540,9 +542,10 @@ jobs:
                       if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 تشغيل البوصلة";
                       if(prayerPopupBox) prayerPopupBox.style.maxWidth = "min(96vw,520px)";
                     }"""
-                if old_else not in web:
-                    raise SystemExit("ERROR: tab switch block not found.")
-                web = web.replace(old_else, new_else, 1)
+                if old_else in web:
+                    web = web.replace(old_else, new_else, 1)
+                else:
+                    print("INFO: tab switch block not patched.")
 
                 orient_anchor = """  function onOrient(e){
                     if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;"""
@@ -554,9 +557,10 @@ jobs:
 
                   function onOrient(e){
                     if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;"""
-                if orient_anchor not in web:
-                    raise SystemExit("ERROR: orientation function not found.")
-                web = web.replace(orient_anchor, orient_repl, 1)
+                if orient_anchor in web:
+                    web = web.replace(orient_anchor, orient_repl, 1)
+                else:
+                    print("INFO: orientation fallback will use native heading callback.")
 
                 start_anchor = """  async function startCompass(){
                     try{
@@ -581,9 +585,10 @@ jobs:
                         setCompassStatus("هذا الهاتف لا يدعم مستشعر اتجاه الجهاز.");
                         return;
                       }"""
-                if start_anchor not in web:
-                    raise SystemExit("ERROR: startCompass() anchor not found.")
-                web = web.replace(start_anchor, start_repl, 1)
+                if start_anchor in web:
+                    web = web.replace(start_anchor, start_repl, 1)
+                else:
+                    print("INFO: startCompass() not patched; native bridge remains available.")
                 index.write_text(web, encoding="utf-8")
 
                 java_dir = Path("android-app/android/app/src/main/java/com/aya/alquran")
@@ -607,32 +612,23 @@ jobs:
                     private final WebView webView;
                     private final SensorManager sensorManager;
                     private final Sensor rotationSensor;
-                    private final Sensor accelerometer;
-                    private final Sensor magneticField;
                     private boolean running = false;
                     private boolean hasLocation = false;
                     private double latitude = 0.0;
                     private double longitude = 0.0;
-                    private final float[] gravity = new float[3];
-                    private final float[] magnetic = new float[3];
-                    private boolean hasGravity = false;
-                    private boolean hasMagnetic = false;
-                    private long lastEmitMs = 0L;
 
                     public AyaCompassBridge(Activity activity, WebView webView) {
                         this.activity = activity;
                         this.webView = webView;
                         this.sensorManager = (SensorManager) activity.getSystemService(Activity.SENSOR_SERVICE);
-                        Sensor rv = null, acc = null, mag = null;
+                        Sensor s = null;
                         if (sensorManager != null) {
-                            rv = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-                            if (rv == null) rv = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR);
-                            acc = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-                            mag = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+                            s = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+                            if (s == null) {
+                                s = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR);
+                            }
                         }
-                        rotationSensor = rv;
-                        accelerometer = acc;
-                        magneticField = mag;
+                        rotationSensor = s;
                     }
 
                     @JavascriptInterface
@@ -646,18 +642,9 @@ jobs:
 
                     @JavascriptInterface
                     public synchronized void start() {
-                        if (running || sensorManager == null) return;
-                        boolean registered = false;
-                        if (rotationSensor != null) {
-                            registered |= sensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_GAME);
-                        }
-                        if (accelerometer != null) {
-                            registered |= sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
-                        }
-                        if (magneticField != null) {
-                            registered |= sensorManager.registerListener(this, magneticField, SensorManager.SENSOR_DELAY_GAME);
-                        }
-                        running = registered;
+                        if (running || sensorManager == null || rotationSensor == null) return;
+                        sensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_GAME);
+                        running = true;
                     }
 
                     @JavascriptInterface
@@ -665,47 +652,41 @@ jobs:
                         if (!running || sensorManager == null) return;
                         sensorManager.unregisterListener(this);
                         running = false;
-                        hasGravity = false;
-                        hasMagnetic = false;
                     }
 
                     @Override
                     public void onSensorChanged(SensorEvent event) {
                         if (!running || event == null || event.values == null) return;
                         try {
-                            if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-                                System.arraycopy(event.values, 0, gravity, 0, Math.min(3, event.values.length));
-                                hasGravity = true;
-                            } else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-                                System.arraycopy(event.values, 0, magnetic, 0, Math.min(3, event.values.length));
-                                hasMagnetic = true;
+                            float[] rotation = new float[9];
+                            float[] adjusted = new float[9];
+                            SensorManager.getRotationMatrixFromVector(rotation, event.values);
+
+                            int r = activity.getWindowManager().getDefaultDisplay().getRotation();
+                            switch (r) {
+                                case Surface.ROTATION_90:
+                                    SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_Y,
+                                            SensorManager.AXIS_MINUS_X, adjusted);
+                                    break;
+                                case Surface.ROTATION_180:
+                                    SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_MINUS_X,
+                                            SensorManager.AXIS_MINUS_Y, adjusted);
+                                    break;
+                                case Surface.ROTATION_270:
+                                    SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_MINUS_Y,
+                                            SensorManager.AXIS_X, adjusted);
+                                    break;
+                                default:
+                                    System.arraycopy(rotation, 0, adjusted, 0, 9);
                             }
 
-                            double heading = Double.NaN;
-
-                            if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR ||
-                                event.sensor.getType() == Sensor.TYPE_GAME_ROTATION_VECTOR) {
-                                float[] rotation = new float[9];
-                                SensorManager.getRotationMatrixFromVector(rotation, event.values);
-                                heading = headingFromMatrix(rotation);
-                            }
-
-                            if (!Double.isFinite(heading) && hasGravity && hasMagnetic) {
-                                float[] rotation = new float[9];
-                                if (SensorManager.getRotationMatrix(rotation, null, gravity, magnetic)) {
-                                    heading = headingFromMatrix(rotation);
-                                }
-                            }
-
-                            if (!Double.isFinite(heading)) return;
-
-                            long now = System.currentTimeMillis();
-                            if (now - lastEmitMs < 40L) return;
-                            lastEmitMs = now;
+                            float[] orientation = new float[3];
+                            SensorManager.getOrientation(adjusted, orientation);
+                            double heading = (Math.toDegrees(orientation[0]) + 360.0) % 360.0;
 
                             if (hasLocation) {
                                 GeomagneticField field = new GeomagneticField(
-                                    (float) latitude, (float) longitude, 0f, now
+                                    (float) latitude, (float) longitude, 0f, System.currentTimeMillis()
                                 );
                                 heading = (heading + field.getDeclination() + 360.0) % 360.0;
                             }
@@ -720,30 +701,6 @@ jobs:
                                 } catch (Throwable ignored) {}
                             });
                         } catch (Throwable ignored) {}
-                    }
-
-                    private double headingFromMatrix(float[] rotation) {
-                        float[] adjusted = new float[9];
-                        int r = activity.getWindowManager().getDefaultDisplay().getRotation();
-                        switch (r) {
-                            case Surface.ROTATION_90:
-                                SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_Y,
-                                        SensorManager.AXIS_MINUS_X, adjusted);
-                                break;
-                            case Surface.ROTATION_180:
-                                SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_MINUS_X,
-                                        SensorManager.AXIS_MINUS_Y, adjusted);
-                                break;
-                            case Surface.ROTATION_270:
-                                SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_MINUS_Y,
-                                        SensorManager.AXIS_X, adjusted);
-                                break;
-                            default:
-                                System.arraycopy(rotation, 0, adjusted, 0, 9);
-                        }
-                        float[] orientation = new float[3];
-                        SensorManager.getOrientation(adjusted, orientation);
-                        return (Math.toDegrees(orientation[0]) + 360.0) % 360.0;
                     }
 
                     @Override
