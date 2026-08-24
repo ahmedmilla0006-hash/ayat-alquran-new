@@ -1078,6 +1078,14 @@ background:#fff7e6;border:1px solid #f0c36d;color:#6b4a00;font-size:13px;line-he
 #mobileMicHelp.show{display:block}
 </style>
 
+
+<style id="tarteel-correction-css">
+#tarteelCorrection{margin-top:7px;font-size:14px;line-height:1.7;min-height:24px}
+.t-correct{color:#16803b;font-weight:700}
+.t-error{color:#b42318;font-weight:700}
+.t-next{color:#1769aa;font-weight:700}
+</style>
+
 </head>
 
 <body>
@@ -6269,6 +6277,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   <div id="tarteelStatus">وضع التسميع متوقف</div>
   <div id="tarteelTranscript">اضغط «ابدأ التسميع» ثم اقرأ من الصفحة.</div>
   <div id="tarteelMatch"></div>
+  <div id="tarteelCorrection" aria-live="polite"></div>
   <div id="tarteelWordHint">🟢 التمييز يتحرك مع الكلمات التي يتعرف عليها النظام.</div>
   <button id="tarteelStart">🎙️ ابدأ التسميع</button>
 </div>
@@ -6285,6 +6294,8 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   let recognition=null, listening=false, pageAyahs=[], lastMatch=null;
+  let expectedIndex=0, sessionText="", correctionBusy=false, lastCorrectionKey="", lastCorrectionAt=0;
+  let autoAdvanceBusy=false, resultRevision=0;
 
   function norm(s){
     return String(s||"")
@@ -6402,6 +6413,19 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(!text) return;
     if(!pageAyahs.length) await loadPageAyahs();
     if(!pageAyahs.length){matchBox.textContent="تعذر تحميل نص الصفحة.";return;}
+    // في وضع التسميع نعتمد الآية المتوقعة أولًا، ثم نستخدم البحث العام كاحتياط.
+    const expected=pageAyahs[Math.max(0,Math.min(expectedIndex,pageAyahs.length-1))];
+    if(expected){
+      const ei=alignmentInfo(expected,text);
+      if(ei.matched>=2 || score(text,expected.text||"")>=0.55){
+        await evaluateRecitation(text);
+        if(ei.matched>=2){
+          const epct=Math.round(Math.min(1,score(text,expected.text||""))*100);
+          matchBox.textContent="الآية الحالية: "+(expected.surah?.name||"")+" — الآية "+expected.numberInSurah+" ("+epct+"%)";
+        }
+      }
+    }
+
     let best=null, bestScore=0;
     for(const a of pageAyahs){
       const s=score(text,a.text||"");
@@ -6426,6 +6450,133 @@ document.addEventListener("DOMContentLoaded",()=>{
     lastMatch=best;
   }
 
+
+  function ayahWords(ayah){ return words(ayah && ayah.text || ""); }
+
+  function alignmentInfo(expected, spoken){
+    const ew=ayahWords(expected), sw=words(spoken);
+    if(!ew.length || !sw.length) return {matched:0,total:ew.length,ratio:0,errorIndex:-1};
+    let pos=0, matched=0, errorIndex=-1;
+    for(let i=0;i<sw.length && pos<ew.length;i++){
+      const token=sw[i];
+      if(token===ew[pos] || token.includes(ew[pos]) || ew[pos].includes(token)){
+        matched++; pos++;
+      }else{
+        // إذا كانت الكلمة الحالية موجودة بعد كلمة واحدة، نعتبرها قفزة/سهوًا
+        const look=ew.indexOf(token,pos);
+        if(look>=0 && look-pos<=2){
+          errorIndex=pos;
+          pos=look+1;
+          matched++;
+        }else if(errorIndex<0){
+          errorIndex=pos;
+        }
+      }
+    }
+    return {matched,total:ew.length,ratio:matched/Math.max(1,ew.length),errorIndex};
+  }
+
+  function setCorrection(htmlText){
+    const box=document.getElementById("tarteelCorrection");
+    if(box) box.innerHTML=htmlText||"";
+  }
+
+  function speakCorrection(text){
+    if(!text || !window.speechSynthesis) return;
+    try{
+      window.speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance(text);
+      u.lang="ar-SA";
+      u.rate=0.9;
+      u.pitch=1;
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  }
+
+  function announceError(expected, spoken){
+    const ew=ayahWords(expected), sw=words(spoken);
+    if(!ew.length || !sw.length) return;
+    const info=alignmentInfo(expected,spoken);
+    if(info.errorIndex<0 || info.errorIndex>=ew.length) return;
+
+    const wrong = sw[Math.min(sw.length-1, info.errorIndex)] || "";
+    const right = ew[info.errorIndex] || "";
+    const key=wrong+"|"+right+"|"+expected.numberInSurah;
+    const now=Date.now();
+    if(key===lastCorrectionKey && now-lastCorrectionAt<3500) return;
+    lastCorrectionKey=key; lastCorrectionAt=now;
+
+    setCorrection('<span class="t-error">❌ خطأ: «'+wrong+'»</span> — <span class="t-correct">الصحيح: «'+right+'»</span>');
+    speakCorrection("الصحيح: "+right);
+  }
+
+  async function advanceToNextAyah(){
+    if(autoAdvanceBusy || !listening) return;
+    autoAdvanceBusy=true;
+    const nextIndex=expectedIndex+1;
+
+    // آية أخرى في نفس الصفحة
+    if(nextIndex < pageAyahs.length){
+      expectedIndex=nextIndex;
+      lastMatch=pageAyahs[expectedIndex];
+      sessionText="";
+      setCorrection('<span class="t-next">✅ أحسنت — الآية التالية</span>');
+      matchBox.textContent="الآية التالية: "+(lastMatch.surah?.name||"")+" — الآية "+lastMatch.numberInSurah;
+      try{
+        const items=Array.isArray(window.pageHitTiming)?window.pageHitTiming:[];
+        const item=items.find(x=>Number(x.ayah)===Number(lastMatch.numberInSurah) &&
+          (x._surah==null || Number(x._surah)===Number(lastMatch.surah.number)));
+        if(item){
+          item._text=lastMatch.text||"";
+          item._spokenText="";
+          recitationHighlight(item,"");
+        }
+      }catch(e){}
+      autoAdvanceBusy=false;
+      return;
+    }
+
+    // نهاية الصفحة: انتقل للصفحة التالية تلقائيًا
+    if(typeof window.currentPage!=="undefined" && Number(window.currentPage)<604 && typeof nextPage==="function"){
+      setCorrection('<span class="t-next">📖 انتهت الصفحة — الانتقال للصفحة التالية…</span>');
+      nextPage();
+      setTimeout(async()=>{
+        expectedIndex=0; sessionText=""; lastMatch=null;
+        pageAyahs=[];
+        await loadPageAyahs();
+        setCorrection('<span class="t-next">▶️ ابدأ الآية الأولى من الصفحة الجديدة</span>');
+        autoAdvanceBusy=false;
+      },700);
+      return;
+    }
+    setCorrection('<span class="t-correct">🎉 انتهت صفحات المصحف.</span>');
+    autoAdvanceBusy=false;
+  }
+
+  async function evaluateRecitation(text){
+    if(!text || !pageAyahs.length || autoAdvanceBusy) return;
+    const expected=pageAyahs[Math.max(0,Math.min(expectedIndex,pageAyahs.length-1))];
+    if(!expected) return;
+
+    const info=alignmentInfo(expected,text);
+    const total=info.total;
+    const minWords=Math.min(3,total);
+    const enough=info.matched>=minWords;
+
+    // تصحيح مبكر: لا نتدخل إلا بعد ظهور عدة كلمات، وبعيدًا عن الكلمات القصيرة جدًا.
+    if(enough && info.errorIndex>=0 && info.matched>=3 && info.ratio<0.9){
+      announceError(expected,text);
+    }else if(enough){
+      setCorrection('<span class="t-correct">🟢 القراءة صحيحة — '+info.matched+"/"+total+" كلمات</span>");
+    }
+
+    // الانتقال التلقائي عندما تكون معظم كلمات الآية قد قُرئت.
+    const completionThreshold = total<=4 ? 0.95 : 0.82;
+    if(info.ratio>=completionThreshold && info.matched>=Math.min(total,3)){
+      await advanceToNextAyah();
+    }
+  }
+
   function startRec(){
     if(!SR){
       status.textContent="المتصفح الحالي لا يدعم التعرف الصوتي العربي.";
@@ -6434,6 +6585,8 @@ document.addEventListener("DOMContentLoaded",()=>{
     }
     if(listening) return;
     recognition=new SR();
+    expectedIndex=0; sessionText=""; lastMatch=null; correctionBusy=false; lastCorrectionKey=""; lastCorrectionAt=0; autoAdvanceBusy=false;
+    setCorrection('<span class="t-next">📖 ابدأ من الآية الأولى في الصفحة</span>');
     recognition.lang="ar-SA";
     recognition.continuous=true;
     recognition.interimResults=true;
@@ -6442,14 +6595,14 @@ document.addEventListener("DOMContentLoaded",()=>{
       status.textContent="🎙️ يستمع الآن…";
     };
     recognition.onresult=(e)=>{
-      let finalText="", interim="";
-      for(let i=e.resultIndex;i<e.results.length;i++){
-        const txt=e.results[i][0].transcript;
-        if(e.results[i].isFinal) finalText+=txt+" "; else interim+=txt;
+      let all="";
+      for(let i=0;i<e.results.length;i++){
+        all += (e.results[i][0].transcript||"")+" ";
       }
-      const spoken=(finalText||interim).trim();
+      const spoken=all.trim();
       transcript.textContent=spoken||"يستمع…";
-      if(spoken){ status.textContent="🎙️ يستمع الآن — يتابع الكلمات…"; }
+      if(spoken){ status.textContent="🎙️ يستمع الآن — يتابع الكلمات ويصحح…"; }
+      resultRevision++;
       matchRecognition(spoken);
     };
     recognition.onerror=(e)=>{
@@ -6469,6 +6622,8 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(recognition){try{recognition.stop()}catch(e){}}
     start.classList.remove("stop"); start.textContent="🎙️ ابدأ التسميع";
     status.textContent="وضع التسميع متوقف";
+    setCorrection("");
+    try{ if(window.speechSynthesis) window.speechSynthesis.cancel(); }catch(e){}
     try{ clearAyahHighlight(); }catch(e){}
   }
 
@@ -6485,7 +6640,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(typeof oldLoad==="function"){
     window.loadPage=function(){
       const r=oldLoad.apply(this,arguments);
-      pageAyahs=[]; lastMatch=null;
+      pageAyahs=[]; lastMatch=null; expectedIndex=0; sessionText="";
       if(panel && panel.classList.contains("show")){
         setTimeout(loadPageAyahs,250);
       }
