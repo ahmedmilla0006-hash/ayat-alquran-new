@@ -1065,6 +1065,8 @@ body.update-banner-visible .page-area{
 #tarteelStart{width:100%;margin-top:9px;border:0;border-radius:11px;padding:11px;font:inherit;font-weight:800;background:#16803b;color:#fff}
 #tarteelStart.stop{background:#b42318}
 #tarteelMatch{margin-top:8px;font-size:13px;font-weight:700}
+#tarteelWordHint{margin-top:7px;font-size:12px;color:#5a5a5a}
+.night-mode #tarteelWordHint{color:#bbb}
 .night-mode #tarteelPanel{background:#202020;color:#fff;border-color:#444}
 .night-mode #tarteelTranscript{background:#303030;color:#fff}
 </style>
@@ -6267,6 +6269,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   <div id="tarteelStatus">وضع التسميع متوقف</div>
   <div id="tarteelTranscript">اضغط «ابدأ التسميع» ثم اقرأ من الصفحة.</div>
   <div id="tarteelMatch"></div>
+  <div id="tarteelWordHint">🟢 التمييز يتحرك مع الكلمات التي يتعرف عليها النظام.</div>
   <button id="tarteelStart">🎙️ ابدأ التسميع</button>
 </div>
 
@@ -6316,7 +6319,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     }
   }
 
-  function recitationHighlight(item){
+  function recitationHighlight(item, spokenText){
     if(!item || !item.polygon || !window.ayahHighlightLayer) return;
     try{
       clearAyahHighlight();
@@ -6330,12 +6333,67 @@ document.addEventListener("DOMContentLoaded",()=>{
       const m=getHighlightMapping(targetPage);
       positionHighlightLayer(targetPage);
       const ns="http://www.w3.org/2000/svg";
-      const poly=document.createElementNS(ns,"polygon");
-      poly.setAttribute("points",pts.map(p=>m.mapX(p[0])+","+m.mapY(p[1])).join(" "));
-      poly.setAttribute("fill",colorToRgba(getAyahDisplayColor(),.48));
-      poly.setAttribute("stroke",colorToRgba(getAyahDisplayColor(),.28));
-      poly.setAttribute("stroke-width",".8");
-      ayahHighlightLayer.appendChild(poly);
+
+      // طبقة خفيفة للآية كاملة، ثم نافذة متحركة للكلمة التي وصل إليها المستخدم.
+      const soft=document.createElementNS(ns,"polygon");
+      soft.setAttribute("points",pts.map(p=>m.mapX(p[0])+","+m.mapY(p[1])).join(" "));
+      soft.setAttribute("fill",colorToRgba(getAyahDisplayColor(),.14));
+      soft.setAttribute("stroke",colorToRgba(getAyahDisplayColor(),.20));
+      soft.setAttribute("stroke-width",".7");
+      ayahHighlightLayer.appendChild(soft);
+
+      const ayahText=String(item._text||lastMatch?.text||"");
+      const aw=words(ayahText);
+      const sw=words(spokenText||"");
+      let matched=0, pos=0;
+      for(const token of sw){
+        let found=-1;
+        for(let i=pos;i<aw.length;i++){
+          if(aw[i]===token || aw[i].includes(token) || token.includes(aw[i])){ found=i; break; }
+        }
+        if(found>=0){ matched=found+1; pos=found+1; }
+      }
+      const progress=aw.length ? Math.max(0,Math.min(.999,matched/aw.length)) : 0;
+      const win=estimateWordWindow(pts,progress);
+
+      const clipId="reciteWordClip_"+Date.now();
+      const defs=document.createElementNS(ns,"defs");
+      const clip=document.createElementNS(ns,"clipPath");
+      clip.setAttribute("id",clipId);
+      clip.setAttribute("clipPathUnits","userSpaceOnUse");
+      const rect=document.createElementNS(ns,"rect");
+      rect.setAttribute("x",win.x); rect.setAttribute("y",win.y);
+      rect.setAttribute("width",win.w); rect.setAttribute("height",win.h);
+      clip.appendChild(rect);
+      defs.appendChild(clip);
+
+      const img=document.createElementNS(ns,"image");
+      img.setAttribute("href",page.src || quranPageSvgUrl(targetPage));
+      img.setAttribute("x","0"); img.setAttribute("y","0");
+      img.setAttribute("width",m.viewW); img.setAttribute("height",m.viewH);
+      img.setAttribute("preserveAspectRatio","xMidYMin meet");
+      img.setAttribute("clip-path",`url(#${clipId})`);
+      img.setAttribute("pointer-events","none");
+
+      // تلوين حبر المصحف داخل نافذة الكلمة فقط.
+      const filterId="reciteWordFilter_"+Date.now();
+      const filter=document.createElementNS(ns,"filter");
+      filter.setAttribute("id",filterId);
+      filter.setAttribute("x","-10%"); filter.setAttribute("y","-10%");
+      filter.setAttribute("width","120%"); filter.setAttribute("height","120%");
+      const cm=document.createElementNS(ns,"feColorMatrix");
+      const c=hexToRgb(getAyahDisplayColor());
+      cm.setAttribute("type","matrix");
+      cm.setAttribute("values",
+        "0.299 0.587 0.114 0 "+(c.r/255)+" "+
+        "0.299 0.587 0.114 0 "+(c.g/255)+" "+
+        "0.299 0.587 0.114 0 "+(c.b/255)+" "+
+        "0 0 0 1 0");
+      filter.appendChild(cm);
+      defs.appendChild(filter);
+      img.setAttribute("filter",`url(#${filterId})`);
+      ayahHighlightLayer.appendChild(defs);
+      ayahHighlightLayer.appendChild(img);
       ayahHighlightLayer.style.display="block";
     }catch(e){}
   }
@@ -6352,13 +6410,18 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(!best) return;
     const pct=Math.round(bestScore*100);
     matchBox.textContent="أقرب آية: "+(best.surah?.name||"")+" — الآية "+best.numberInSurah+" ("+pct+"%)";
+    best._spokenText = text;
 
     // استخدم بيانات التوقيت الموجودة أصلًا في المشروع لإيجاد شكل الآية على الصورة.
     try{
       const items=Array.isArray(window.pageHitTiming)?window.pageHitTiming:[];
       const item=items.find(x=>Number(x.ayah)===Number(best.numberInSurah) &&
         (x._surah==null || Number(x._surah)===Number(best.surah.number)));
-      if(item) recitationHighlight(item);
+      if(item){
+        item._text = best.text || "";
+        item._spokenText = text;
+        recitationHighlight(item, text);
+      }
     }catch(e){}
     lastMatch=best;
   }
@@ -6384,8 +6447,10 @@ document.addEventListener("DOMContentLoaded",()=>{
         const txt=e.results[i][0].transcript;
         if(e.results[i].isFinal) finalText+=txt+" "; else interim+=txt;
       }
-      transcript.textContent=(finalText||interim||"").trim()||"يستمع…";
-      matchRecognition((finalText||interim).trim());
+      const spoken=(finalText||interim).trim();
+      transcript.textContent=spoken||"يستمع…";
+      if(spoken){ status.textContent="🎙️ يستمع الآن — يتابع الكلمات…"; }
+      matchRecognition(spoken);
     };
     recognition.onerror=(e)=>{
       status.textContent="خطأ في الميكروفون: "+(e.error||"تعذر التعرف");
@@ -6404,6 +6469,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(recognition){try{recognition.stop()}catch(e){}}
     start.classList.remove("stop"); start.textContent="🎙️ ابدأ التسميع";
     status.textContent="وضع التسميع متوقف";
+    try{ clearAyahHighlight(); }catch(e){}
   }
 
   if(btn){
