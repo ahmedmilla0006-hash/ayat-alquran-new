@@ -1055,6 +1055,27 @@ body.update-banner-visible .page-area{
   to{opacity:1;transform:translateY(0)}
 }
 </style>
+
+<style id="tarteel-mode-css">
+#tarteelModeButton{font-size:15px}
+#tarteelPanel{display:none;position:fixed;left:10px;right:10px;bottom:76px;z-index:10000;background:#fff;border:1px solid #ddd;border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,.2);padding:12px;direction:rtl}
+#tarteelPanel.show{display:block}
+#tarteelStatus{font-weight:800;margin:0 0 8px}
+#tarteelTranscript{font-size:14px;line-height:1.7;min-height:42px;background:#f6f6f6;border-radius:10px;padding:8px}
+#tarteelStart{width:100%;margin-top:9px;border:0;border-radius:11px;padding:11px;font:inherit;font-weight:800;background:#16803b;color:#fff}
+#tarteelStart.stop{background:#b42318}
+#tarteelMatch{margin-top:8px;font-size:13px;font-weight:700}
+.night-mode #tarteelPanel{background:#202020;color:#fff;border-color:#444}
+.night-mode #tarteelTranscript{background:#303030;color:#fff}
+</style>
+
+
+<style id="mobile-mic-css">
+#mobileMicHelp{display:none;margin:8px 0;padding:9px 11px;border-radius:10px;
+background:#fff7e6;border:1px solid #f0c36d;color:#6b4a00;font-size:13px;line-height:1.6}
+#mobileMicHelp.show{display:block}
+</style>
+
 </head>
 
 <body>
@@ -1249,7 +1270,8 @@ body.update-banner-visible .page-area{
     🕘 الذهاب إلى العلامة المرجعية
   </button>
 
-  <button class="menu-item" id="nightButton">
+  <button class="menu-item" id="tarteelModeButton">🎙️ وضع التسميع</button>
+<button class="menu-item" id="nightButton">
     🌙 الوضع الليلي
   </button>
 
@@ -1478,8 +1500,9 @@ body.update-banner-visible .page-area{
 
 const TOTAL_PAGES = 604;
 
-let currentPage =
-  Number(localStorage.getItem("quranPage") || 1);
+let currentPage = 1;
+// بدء المشروع دائمًا من الصفحة الأولى عند فتحه؛ بعد ذلك يحفظ التنقل بشكل طبيعي.
+localStorage.setItem("quranPage", "1");
 
 let highlightMode = localStorage.getItem("highlightMode") || "word-color";
 /* إزالة وضع متابعة الكلمة إن كان محفوظاً سابقاً */
@@ -6236,6 +6259,234 @@ document.addEventListener("DOMContentLoaded",()=>{
     window.addEventListener("load", function(){ setTimeout(hideSplash, 2000); });
   }
   setTimeout(hideSplash, 3500);
+})();
+</script>
+
+
+<div id="tarteelPanel" aria-live="polite">
+  <div id="tarteelStatus">وضع التسميع متوقف</div>
+  <div id="tarteelTranscript">اضغط «ابدأ التسميع» ثم اقرأ من الصفحة.</div>
+  <div id="tarteelMatch"></div>
+  <button id="tarteelStart">🎙️ ابدأ التسميع</button>
+</div>
+
+
+<script id="tarteel-mode-js">
+(function(){
+  const btn=document.getElementById("tarteelModeButton");
+  const panel=document.getElementById("tarteelPanel");
+  const start=document.getElementById("tarteelStart");
+  const status=document.getElementById("tarteelStatus");
+  const transcript=document.getElementById("tarteelTranscript");
+  const matchBox=document.getElementById("tarteelMatch");
+
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  let recognition=null, listening=false, pageAyahs=[], lastMatch=null;
+
+  function norm(s){
+    return String(s||"")
+      .replace(/[\u064B-\u065F\u0670]/g,"")
+      .replace(/[إأآٱ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه")
+      .replace(/[^\u0621-\u063A\u0641-\u064A0-9\s]/g," ")
+      .replace(/\s+/g," ").trim();
+  }
+  function words(s){return norm(s).split(" ").filter(Boolean)}
+  function score(rec, text){
+    const r=words(rec), t=words(text);
+    if(!r.length||!t.length) return 0;
+    const set=new Set(r); let hit=0;
+    for(const w of t) if(set.has(w)) hit++;
+    const suffix=r.slice(-Math.min(10,r.length)).join(" ");
+    const prefix=t.slice(0,Math.min(10,t.length)).join(" ");
+    let bonus=(suffix && prefix && (suffix.includes(prefix)||prefix.includes(suffix)))?0.35:0;
+    return Math.min(1,(hit/Math.max(1,Math.min(t.length,12)))+bonus);
+  }
+
+  async function loadPageAyahs(){
+    const p=Number(window.currentPage||1);
+    try{
+      const res=await fetch("https://api.alquran.cloud/v1/page/"+p+"/quran-simple-clean",{cache:"force-cache"});
+      if(!res.ok) throw new Error();
+      const j=await res.json();
+      pageAyahs=(j.data&&Array.isArray(j.data.ayahs))?j.data.ayahs:[];
+      return pageAyahs;
+    }catch(e){
+      pageAyahs=[];
+      return [];
+    }
+  }
+
+  function recitationHighlight(item){
+    if(!item || !item.polygon || !window.ayahHighlightLayer) return;
+    try{
+      clearAyahHighlight();
+      const pts=String(item.polygon).trim().split(/\s+/).map(pair=>{
+        const p=pair.split(",").map(Number);
+        return p.length===2 && p.every(Number.isFinite)?p:null;
+      }).filter(Boolean);
+      if(!pts.length) return;
+      const targetPage=pageFromTiming(item)||window.currentPage;
+      if(targetPage!==window.currentPage) return;
+      const m=getHighlightMapping(targetPage);
+      positionHighlightLayer(targetPage);
+      const ns="http://www.w3.org/2000/svg";
+      const poly=document.createElementNS(ns,"polygon");
+      poly.setAttribute("points",pts.map(p=>m.mapX(p[0])+","+m.mapY(p[1])).join(" "));
+      poly.setAttribute("fill",colorToRgba(getAyahDisplayColor(),.48));
+      poly.setAttribute("stroke",colorToRgba(getAyahDisplayColor(),.28));
+      poly.setAttribute("stroke-width",".8");
+      ayahHighlightLayer.appendChild(poly);
+      ayahHighlightLayer.style.display="block";
+    }catch(e){}
+  }
+
+  async function matchRecognition(text){
+    if(!text) return;
+    if(!pageAyahs.length) await loadPageAyahs();
+    if(!pageAyahs.length){matchBox.textContent="تعذر تحميل نص الصفحة.";return;}
+    let best=null, bestScore=0;
+    for(const a of pageAyahs){
+      const s=score(text,a.text||"");
+      if(s>bestScore){bestScore=s;best=a;}
+    }
+    if(!best) return;
+    const pct=Math.round(bestScore*100);
+    matchBox.textContent="أقرب آية: "+(best.surah?.name||"")+" — الآية "+best.numberInSurah+" ("+pct+"%)";
+
+    // استخدم بيانات التوقيت الموجودة أصلًا في المشروع لإيجاد شكل الآية على الصورة.
+    try{
+      const items=Array.isArray(window.pageHitTiming)?window.pageHitTiming:[];
+      const item=items.find(x=>Number(x.ayah)===Number(best.numberInSurah) &&
+        (x._surah==null || Number(x._surah)===Number(best.surah.number)));
+      if(item) recitationHighlight(item);
+    }catch(e){}
+    lastMatch=best;
+  }
+
+  function startRec(){
+    if(!SR){
+      status.textContent="المتصفح الحالي لا يدعم التعرف الصوتي العربي.";
+      transcript.textContent="جرّب Chrome على Android أو متصفحًا يدعم SpeechRecognition.";
+      return;
+    }
+    if(listening) return;
+    recognition=new SR();
+    recognition.lang="ar-SA";
+    recognition.continuous=true;
+    recognition.interimResults=true;
+    recognition.onstart=()=>{
+      listening=true; start.classList.add("stop"); start.textContent="⏹️ إيقاف التسميع";
+      status.textContent="🎙️ يستمع الآن…";
+    };
+    recognition.onresult=(e)=>{
+      let finalText="", interim="";
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        const txt=e.results[i][0].transcript;
+        if(e.results[i].isFinal) finalText+=txt+" "; else interim+=txt;
+      }
+      transcript.textContent=(finalText||interim||"").trim()||"يستمع…";
+      matchRecognition((finalText||interim).trim());
+    };
+    recognition.onerror=(e)=>{
+      status.textContent="خطأ في الميكروفون: "+(e.error||"تعذر التعرف");
+    };
+    recognition.onend=()=>{
+      if(listening){
+        try{ recognition.start(); }catch(e){}
+      }
+    };
+    loadPageAyahs();
+    try{recognition.start();}catch(e){status.textContent="تعذر بدء الميكروفون."}
+  }
+
+  function stopRec(){
+    listening=false;
+    if(recognition){try{recognition.stop()}catch(e){}}
+    start.classList.remove("stop"); start.textContent="🎙️ ابدأ التسميع";
+    status.textContent="وضع التسميع متوقف";
+  }
+
+  if(btn){
+    btn.onclick=()=>{
+      panel.classList.toggle("show");
+      if(panel.classList.contains("show")) loadPageAyahs();
+    };
+  }
+  if(start) start.onclick=()=>listening?stopRec():startRec();
+
+  // عند تغيير الصفحة نعيد قائمة الآيات ونزيل نتيجة الصفحة القديمة.
+  const oldLoad=window.loadPage;
+  if(typeof oldLoad==="function"){
+    window.loadPage=function(){
+      const r=oldLoad.apply(this,arguments);
+      pageAyahs=[]; lastMatch=null;
+      if(panel && panel.classList.contains("show")){
+        setTimeout(loadPageAyahs,250);
+      }
+      return r;
+    };
+  }
+})();
+</script>
+
+
+<script id="mobile-mic-patch">
+(function(){
+  const panel=document.getElementById("tarteelPanel");
+  if(!panel) return;
+
+  const start=document.getElementById("tarteelStart");
+  const status=document.getElementById("tarteelStatus");
+  const transcript=document.getElementById("tarteelTranscript");
+
+  let help=document.getElementById("mobileMicHelp");
+  if(!help){
+    help=document.createElement("div");
+    help.id="mobileMicHelp";
+    help.innerHTML="لعمل الميكروفون: افتح هذه الصفحة من <b>Chrome</b> أو متصفح يدعم الميكروفون، ويجب أن يكون الرابط <b>HTTPS</b>. اضغط «سماح» عندما يطلب المتصفح إذن الميكروفون.";
+    const first=panel.firstElementChild;
+    panel.insertBefore(help, first ? first.nextSibling : null);
+  }
+
+  function secureOk(){
+    return window.isSecureContext === true ||
+      location.protocol === "https:" ||
+      location.hostname === "localhost" ||
+      location.hostname === "127.0.0.1";
+  }
+
+  function checkMic(){
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){
+      status.textContent="التعرف الصوتي غير متاح في هذا المتصفح.";
+      help.classList.add("show");
+      return false;
+    }
+    if(!secureOk()){
+      status.textContent="الميكروفون يحتاج صفحة HTTPS.";
+      help.classList.add("show");
+      return false;
+    }
+    help.classList.remove("show");
+    return true;
+  }
+
+  // Patch the existing start button: no change to Quran navigation.
+  if(start){
+    start.addEventListener("click", function(){
+      setTimeout(checkMic, 100);
+    }, true);
+  }
+
+  // Helpful permission diagnostics.
+  if(navigator.permissions && navigator.permissions.query){
+    navigator.permissions.query({name:"microphone"}).then(function(p){
+      if(p.state==="denied"){
+        status.textContent="الميكروفون محظور من إعدادات المتصفح.";
+        help.classList.add("show");
+      }
+    }).catch(function(){});
+  }
 })();
 </script>
 
