@@ -476,252 +476,403 @@ jobs:
 
       - name: Fix unified location display and native Android Qibla compass
         run: |
-                python3 << 'PY'
-                from pathlib import Path
+          python3 << 'PY'
+          from pathlib import Path
+          import re
 
-                index = Path("android-app/www/index.html")
-                if not index.exists():
-                    raise SystemExit("ERROR: android-app/www/index.html not found.")
-                web = index.read_text(encoding="utf-8")
+          index = Path("android-app/www/index.html")
+          if not index.exists():
+              raise SystemExit("ERROR: android-app/www/index.html not found.")
+          web = index.read_text(encoding="utf-8")
 
-                old_render = """      prayerLocationLabel.textContent =
-                        (data.city ? data.city + " — " : "") +
-                        (data.dateLabel || data.date || "");"""
-                new_render = """      const displayPlace = data.cityName || data.city || "الموقع الحالي";
-                      prayerLocationLabel.textContent =
-                        displayPlace + " — " + (data.dateLabel || data.date || "");"""
-                if old_render in web:
-                    web = web.replace(old_render, new_render, 1)
+          # --- Light, idempotent HTML fixes (never fatal) ---
+          old_render = """      prayerLocationLabel.textContent =
+                (data.city ? data.city + " — " : "") +
+                (data.dateLabel || data.date || "");"""
+          new_render = """      const displayPlace = data.cityName || data.city || "الموقع الحالي";
+                prayerLocationLabel.textContent =
+                  displayPlace + " — " + (data.dateLabel || data.date || "");"""
+          if old_render in web:
+              web = web.replace(old_render, new_render, 1)
+              print("Patched prayerLocationLabel render.")
+          else:
+              print("INFO: prayerLocationLabel already updated or absent.")
 
-                # Update reverse-geocoding without depending on exact indentation/text.
-                import re
-                place_pattern = re.compile(
-                    r'(?ms)^\s*const cityName = a\.city \|\| a\.town \|\| a\.municipality \|\| a\.village \|\| "";.*?^\s*const friendly = .*?;'
-                )
-                place_match = place_pattern.search(web)
-                if place_match:
-                    indent = re.match(r'^[ \t]*', place_match.group(0)).group(0)
-                    new_place = (
-                        f'{indent}const cityName = a.city || a.town || a.municipality || a.village || "";\n'
-                        f'{indent}const province = a.state || a.province || a.region || "";\n'
-                        f'{indent}const country = a.country || "";\n'
-                        f'{indent}const normalizedCity = (country === "تركيا" && province) ? province : cityName;\n'
-                        f'{indent}const friendly = normalizedCity ? (normalizedCity + (country ? "، " + country : "")) : "الموقع الحالي";'
-                    )
-                    web = web[:place_match.start()] + new_place + web[place_match.end():]
-                else:
-                    print("INFO: reverse-geocoding block not present; continuing with native compass changes.")
+          place_pattern = re.compile(
+              r'(?ms)^\s*const cityName = a\.city \|\| a\.town \|\| a\.municipality \|\| a\.village \|\| "";.*?^\s*const friendly = .*?;'
+          )
+          place_match = place_pattern.search(web)
+          if place_match and "normalizedCity" not in place_match.group(0):
+              indent = re.match(r'^[ \t]*', place_match.group(0)).group(0)
+              new_place = (
+                  f'{indent}const cityName = a.city || a.town || a.municipality || a.village || "";\n'
+                  f'{indent}const province = a.state || a.province || a.region || "";\n'
+                  f'{indent}const country = a.country || "";\n'
+                  f'{indent}const normalizedCity = (country === "تركيا" && province) ? province : cityName;\n'
+                  f'{indent}const friendly = normalizedCity ? (normalizedCity + (country ? "، " + country : "")) : "الموقع الحالي";'
+              )
+              web = web[:place_match.start()] + new_place + web[place_match.end():]
+              print("Patched reverse-geocoding block.")
+          else:
+              print("INFO: reverse-geocoding block already OK or not present; continuing.")
 
-                old_payload = """                  city: fallbackCity,
+          old_payload = """                  city: fallbackCity,
                                   cityName: friendly,"""
-                new_payload = """                  city: friendly,
+          new_payload = """                  city: friendly,
                                   cityName: friendly,"""
-                if old_payload in web:
-                    web = web.replace(old_payload, new_payload, 1)
+          if old_payload in web:
+              web = web.replace(old_payload, new_payload, 1)
+              print("Patched prayer payload city fields.")
 
-                fetch_pattern = re.compile(r'(function\s+fetchPrayer\s*\(\s*lat\s*,\s*lng\s*\)\s*\{)')
-                fetch_repl = r"""\1
-                    try{
-                      if(window.AyaCompass && typeof window.AyaCompass.setLocation === "function"){
-                        window.AyaCompass.setLocation(Number(lat), Number(lng));
-                      }
-                    }catch(e){}"""
-                web, fetch_n = fetch_pattern.subn(fetch_repl, web, count=1)
-                if fetch_n == 0:
-                    print("INFO: fetchPrayer() not patched; native bridge will still be available.")
+          if "window.AyaCompass && typeof window.AyaCompass.setLocation" not in web:
+              fetch_pattern = re.compile(r'(function\s+fetchPrayer\s*\(\s*lat\s*,\s*lng\s*\)\s*\{)')
+              def fetch_repl(m):
+                  return m.group(1) + """
+    try{
+      if(window.AyaCompass && typeof window.AyaCompass.setLocation === "function"){
+        window.AyaCompass.setLocation(Number(lat), Number(lng));
+      }
+    }catch(e){}"""
+              web, n = fetch_pattern.subn(fetch_repl, web, count=1)
+              print("Patched fetchPrayer setLocation:", n)
 
-                old_else = """    }else if(prayerPopupBox){
-                      prayerPopupBox.style.maxWidth = "min(96vw,520px)";"""
-                new_else = """    }else{
-                      try{
-                        if(window.AyaCompass && typeof window.AyaCompass.stop === "function"){
-                          window.AyaCompass.stop();
-                        }
-                      }catch(e){}
-                      orientationActive = false;
-                      if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 تشغيل البوصلة";
-                      if(prayerPopupBox) prayerPopupBox.style.maxWidth = "min(96vw,520px)";
-                    }"""
-                if old_else in web:
-                    web = web.replace(old_else, new_else, 1)
-                else:
-                    print("INFO: tab switch block not patched.")
+          if "window.AYA_NATIVE_HEADING" not in web:
+              orient_anchor = """  function onOrient(e){
+    if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;"""
+              orient_repl = """  window.AYA_NATIVE_HEADING = function(heading){
+    const h = Number(heading);
+    if(!Number.isFinite(h)) return;
+    if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;
+    updateCompass(h);
+  };
 
-                orient_anchor = """  function onOrient(e){
-                    if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;"""
-                orient_repl = """  window.AYA_NATIVE_HEADING = function(heading){
-                    if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;
-                    const h = Number(heading);
-                    if(Number.isFinite(h)) updateCompass(h);
-                  };
+  function onOrient(e){
+    if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;"""
+              if orient_anchor in web:
+                  web = web.replace(orient_anchor, orient_repl, 1)
+                  print("Injected AYA_NATIVE_HEADING.")
+              else:
+                  print("INFO: onOrient anchor not found; AYA_NATIVE_HEADING may already exist.")
 
-                  function onOrient(e){
-                    if(!orientationActive || lastQiblaDeg == null || !qiblaNeedle) return;"""
-                if orient_anchor in web:
-                    web = web.replace(orient_anchor, orient_repl, 1)
-                else:
-                    print("INFO: orientation fallback will use native heading callback.")
+          if "window.AyaCompass && typeof window.AyaCompass.start" not in web:
+              start_anchor = """  async function startCompass(){
+    try{
+      if(!window.DeviceOrientationEvent){
+        setCompassStatus("هذا الهاتف لا يدعم مستشعر اتجاه الجهاز.");
+        return;
+      }"""
+              start_repl = """  async function startCompass(){
+    try{
+      if(window.AyaCompass && typeof window.AyaCompass.start === "function"){
+        if(lastQiblaDeg == null){
+          setCompassStatus("حدد موقعك أولًا لحساب اتجاه القبلة.");
+          return;
+        }
+        const started = window.AyaCompass.start();
+        if(started === false){
+          orientationActive = false;
+          setCompassStatus("تعذر الوصول إلى حساس الاتجاه في الهاتف.");
+          if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 تشغيل البوصلة";
+          return;
+        }
+        orientationActive = true;
+        setCompassStatus("البوصلة تعمل… حرّك الهاتف ببطء حتى يتجه السهم إلى القبلة.");
+        if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 البوصلة مفعّلة";
+        return;
+      }
+      if(!window.DeviceOrientationEvent){
+        setCompassStatus("هذا الهاتف لا يدعم مستشعر اتجاه الجهاز.");
+        return;
+      }"""
+              if start_anchor in web:
+                  web = web.replace(start_anchor, start_repl, 1)
+                  print("Patched startCompass for native bridge.")
+              else:
+                  print("INFO: startCompass already has native path or anchor missing.")
 
-                start_anchor = """  async function startCompass(){
-                    try{
-                      if(!window.DeviceOrientationEvent){
-                        setCompassStatus("هذا الهاتف لا يدعم مستشعر اتجاه الجهاز.");
-                        return;
-                      }"""
-                start_repl = """  async function startCompass(){
-                    try{
-                      if(window.AyaCompass && typeof window.AyaCompass.start === "function"){
-                        if(lastQiblaDeg == null){
-                          setCompassStatus("حدد موقعك أولًا لحساب اتجاه القبلة.");
-                          return;
-                        }
-                        orientationActive = true;
-                        window.AyaCompass.start();
-                        setCompassStatus("البوصلة تعمل… حرّك الهاتف ببطء حتى يتجه السهم إلى القبلة.");
-                        if(qiblaCompassBtn) qiblaCompassBtn.textContent = "🧭 البوصلة مفعّلة";
-                        return;
-                      }
-                      if(!window.DeviceOrientationEvent){
-                        setCompassStatus("هذا الهاتف لا يدعم مستشعر اتجاه الجهاز.");
-                        return;
-                      }"""
-                if start_anchor in web:
-                    web = web.replace(start_anchor, start_repl, 1)
-                else:
-                    print("INFO: startCompass() not patched; native bridge remains available.")
-                index.write_text(web, encoding="utf-8")
+          index.write_text(web, encoding="utf-8")
+          print("HTML write complete.")
 
-                java_dir = Path("android-app/android/app/src/main/java/com/aya/alquran")
-                java_dir.mkdir(parents=True, exist_ok=True)
+          java_dir = Path("android-app/android/app/src/main/java/com/aya/alquran")
+          java_dir.mkdir(parents=True, exist_ok=True)
 
-                bridge = java_dir / "AyaCompassBridge.java"
-                bridge.write_text("""package com.aya.alquran;
+          bridge_src = r"""package com.aya.alquran;
 
-                import android.app.Activity;
-                import android.hardware.GeomagneticField;
-                import android.hardware.Sensor;
-                import android.hardware.SensorEvent;
-                import android.hardware.SensorEventListener;
-                import android.hardware.SensorManager;
-                import android.view.Surface;
-                import android.webkit.JavascriptInterface;
-                import android.webkit.WebView;
+import android.app.Activity;
+import android.hardware.GeomagneticField;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.view.Surface;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebView;
 
-                public final class AyaCompassBridge implements SensorEventListener {
-                    private final Activity activity;
-                    private final WebView webView;
-                    private final SensorManager sensorManager;
-                    private final Sensor rotationSensor;
-                    private boolean running = false;
-                    private boolean hasLocation = false;
-                    private double latitude = 0.0;
-                    private double longitude = 0.0;
+/**
+ * Native device heading for Qibla compass.
+ * Prefers TYPE_ROTATION_VECTOR; falls back to accelerometer + magnetic field.
+ * Reports true-north degrees [0,360) to window.AYA_NATIVE_HEADING from JS.
+ */
+public final class AyaCompassBridge implements SensorEventListener {
+    private final Activity activity;
+    private final WebView webView;
+    private final SensorManager sensorManager;
+    private final Sensor rotationSensor;
+    private final Sensor accelerometer;
+    private final Sensor magnetometer;
 
-                    public AyaCompassBridge(Activity activity, WebView webView) {
-                        this.activity = activity;
-                        this.webView = webView;
-                        this.sensorManager = (SensorManager) activity.getSystemService(Activity.SENSOR_SERVICE);
-                        Sensor s = null;
-                        if (sensorManager != null) {
-                            s = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-                            if (s == null) {
-                                s = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR);
-                            }
-                        }
-                        rotationSensor = s;
-                    }
+    private boolean running = false;
+    private boolean useRotationVector = false;
+    private boolean hasLocation = false;
+    private double latitude = 0.0;
+    private double longitude = 0.0;
 
-                    @JavascriptInterface
-                    public synchronized void setLocation(double lat, double lon) {
-                        if (Double.isFinite(lat) && Double.isFinite(lon)) {
-                            latitude = lat;
-                            longitude = lon;
-                            hasLocation = true;
-                        }
-                    }
+    private final float[] gravity = new float[3];
+    private final float[] magnetic = new float[3];
+    private boolean hasGravity = false;
+    private boolean hasMagnetic = false;
 
-                    @JavascriptInterface
-                    public synchronized void start() {
-                        if (running || sensorManager == null || rotationSensor == null) return;
-                        sensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_GAME);
-                        running = true;
-                    }
+    private double lastHeading = Double.NaN;
+    private long lastEmitMs = 0L;
 
-                    @JavascriptInterface
-                    public synchronized void stop() {
-                        if (!running || sensorManager == null) return;
-                        sensorManager.unregisterListener(this);
-                        running = false;
-                    }
+    public AyaCompassBridge(Activity activity, WebView webView) {
+        this.activity = activity;
+        this.webView = webView;
+        SensorManager sm = null;
+        try {
+            sm = (SensorManager) activity.getSystemService(Activity.SENSOR_SERVICE);
+        } catch (Throwable ignored) {}
+        this.sensorManager = sm;
 
-                    @Override
-                    public void onSensorChanged(SensorEvent event) {
-                        if (!running || event == null || event.values == null) return;
-                        try {
-                            float[] rotation = new float[9];
-                            float[] adjusted = new float[9];
-                            SensorManager.getRotationMatrixFromVector(rotation, event.values);
+        Sensor rot = null;
+        Sensor acc = null;
+        Sensor mag = null;
+        if (sm != null) {
+            // Absolute orientation only (not GAME_ROTATION_VECTOR — no magnetometer).
+            rot = sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+            if (rot == null) {
+                try {
+                    rot = sm.getDefaultSensor(Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR);
+                } catch (Throwable ignored) {}
+            }
+            acc = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            mag = sm.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        }
+        this.rotationSensor = rot;
+        this.accelerometer = acc;
+        this.magnetometer = mag;
+    }
 
-                            int r = activity.getWindowManager().getDefaultDisplay().getRotation();
-                            switch (r) {
-                                case Surface.ROTATION_90:
-                                    SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_Y,
-                                            SensorManager.AXIS_MINUS_X, adjusted);
-                                    break;
-                                case Surface.ROTATION_180:
-                                    SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_MINUS_X,
-                                            SensorManager.AXIS_MINUS_Y, adjusted);
-                                    break;
-                                case Surface.ROTATION_270:
-                                    SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_MINUS_Y,
-                                            SensorManager.AXIS_X, adjusted);
-                                    break;
-                                default:
-                                    System.arraycopy(rotation, 0, adjusted, 0, 9);
-                            }
+    @JavascriptInterface
+    public boolean isAvailable() {
+        return sensorManager != null
+            && (rotationSensor != null || (accelerometer != null && magnetometer != null));
+    }
 
-                            float[] orientation = new float[3];
-                            SensorManager.getOrientation(adjusted, orientation);
-                            double heading = (Math.toDegrees(orientation[0]) + 360.0) % 360.0;
+    @JavascriptInterface
+    public synchronized void setLocation(double lat, double lon) {
+        if (Double.isFinite(lat) && Double.isFinite(lon)) {
+            latitude = lat;
+            longitude = lon;
+            hasLocation = true;
+        }
+    }
 
-                            if (hasLocation) {
-                                GeomagneticField field = new GeomagneticField(
-                                    (float) latitude, (float) longitude, 0f, System.currentTimeMillis()
-                                );
-                                heading = (heading + field.getDeclination() + 360.0) % 360.0;
-                            }
+    /** @return true if sensors registered successfully. */
+    @JavascriptInterface
+    public synchronized boolean start() {
+        if (sensorManager == null) return false;
+        if (running) return true;
 
-                            final double result = heading;
-                            webView.post(() -> {
-                                try {
-                                    webView.evaluateJavascript(
-                                        "window.AYA_NATIVE_HEADING && window.AYA_NATIVE_HEADING(" + result + ");",
-                                        null
-                                    );
-                                } catch (Throwable ignored) {}
-                            });
-                        } catch (Throwable ignored) {}
-                    }
+        boolean registered = false;
+        useRotationVector = false;
+        hasGravity = false;
+        hasMagnetic = false;
 
-                    @Override
-                    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+        if (rotationSensor != null) {
+            registered = sensorManager.registerListener(
+                this, rotationSensor, SensorManager.SENSOR_DELAY_GAME);
+            if (registered) {
+                useRotationVector = true;
+            }
+        }
+
+        if (!registered && accelerometer != null && magnetometer != null) {
+            boolean a = sensorManager.registerListener(
+                this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
+            boolean m = sensorManager.registerListener(
+                this, magnetometer, SensorManager.SENSOR_DELAY_GAME);
+            registered = a && m;
+            useRotationVector = false;
+            if (!registered) {
+                try { sensorManager.unregisterListener(this); } catch (Throwable ignored) {}
+            }
+        }
+
+        running = registered;
+        return registered;
+    }
+
+    @JavascriptInterface
+    public synchronized void stop() {
+        if (!running || sensorManager == null) {
+            running = false;
+            return;
+        }
+        try {
+            sensorManager.unregisterListener(this);
+        } catch (Throwable ignored) {}
+        running = false;
+        hasGravity = false;
+        hasMagnetic = false;
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (!running || event == null || event.values == null) return;
+        try {
+            int type = event.sensor.getType();
+            if (useRotationVector
+                    && (type == Sensor.TYPE_ROTATION_VECTOR
+                        || type == Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR)) {
+                float[] rotation = new float[9];
+                SensorManager.getRotationMatrixFromVector(rotation, event.values);
+                emitHeadingFromRotationMatrix(rotation);
+                return;
+            }
+
+            if (type == Sensor.TYPE_ACCELEROMETER) {
+                lowPass(event.values, gravity);
+                hasGravity = true;
+            } else if (type == Sensor.TYPE_MAGNETIC_FIELD) {
+                lowPass(event.values, magnetic);
+                hasMagnetic = true;
+            }
+
+            if (!useRotationVector && hasGravity && hasMagnetic) {
+                float[] R = new float[9];
+                float[] I = new float[9];
+                if (!SensorManager.getRotationMatrix(R, I, gravity, magnetic)) {
+                    return;
                 }
-                """, encoding="utf-8")
+                emitHeadingFromRotationMatrix(R);
+            }
+        } catch (Throwable ignored) {}
+    }
 
-                activity = java_dir / "MainActivity.java"
-                if not activity.exists():
-                    raise SystemExit("ERROR: MainActivity.java not found.")
-                src = activity.read_text(encoding="utf-8")
-                needle = 'getBridge().getWebView().addJavascriptInterface(new AyaMediaJs(), "AndroidInterface");'
-                line = needle + '\n            getBridge().getWebView().addJavascriptInterface(new AyaCompassBridge(this, getBridge().getWebView()), "AyaCompass");'
-                if "new AyaCompassBridge" not in src:
-                    if needle not in src:
-                        raise SystemExit("ERROR: MainActivity WebView interface anchor not found.")
-                    src = src.replace(needle, line, 1)
-                    activity.write_text(src, encoding="utf-8")
+    private void emitHeadingFromRotationMatrix(float[] rotation) {
+        float[] adjusted = new float[9];
+        int displayRotation;
+        try {
+            displayRotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+        } catch (Throwable t) {
+            displayRotation = Surface.ROTATION_0;
+        }
 
-                print("Unified location and native Android compass bridge installed.")
-                PY
+        // Remap so azimuth is relative to the screen's "up" in the current orientation.
+        switch (displayRotation) {
+            case Surface.ROTATION_90:
+                SensorManager.remapCoordinateSystem(
+                    rotation, SensorManager.AXIS_Y, SensorManager.AXIS_MINUS_X, adjusted);
+                break;
+            case Surface.ROTATION_180:
+                SensorManager.remapCoordinateSystem(
+                    rotation, SensorManager.AXIS_MINUS_X, SensorManager.AXIS_MINUS_Y, adjusted);
+                break;
+            case Surface.ROTATION_270:
+                SensorManager.remapCoordinateSystem(
+                    rotation, SensorManager.AXIS_MINUS_Y, SensorManager.AXIS_X, adjusted);
+                break;
+            case Surface.ROTATION_0:
+            default:
+                // Portrait: device Y points toward top of screen.
+                System.arraycopy(rotation, 0, adjusted, 0, 9);
+                break;
+        }
+
+        float[] orientation = new float[3];
+        SensorManager.getOrientation(adjusted, orientation);
+        // azimuth around -Z; 0 = magnetic north, increases toward east
+        double heading = Math.toDegrees(orientation[0]);
+        heading = (heading + 360.0) % 360.0;
+
+        // magnetic north → true north (Qibla bearing from Aladhan is true north)
+        if (hasLocation) {
+            try {
+                GeomagneticField field = new GeomagneticField(
+                    (float) latitude, (float) longitude, 0f, System.currentTimeMillis());
+                heading = (heading + field.getDeclination() + 360.0) % 360.0;
+            } catch (Throwable ignored) {}
+        }
+
+        long now = System.currentTimeMillis();
+        if (!Double.isNaN(lastHeading)) {
+            double delta = Math.abs(heading - lastHeading);
+            if (delta > 180.0) delta = 360.0 - delta;
+            if (delta < 0.4 && (now - lastEmitMs) < 50) {
+                return;
+            }
+        }
+        lastHeading = heading;
+        lastEmitMs = now;
+
+        final double result = heading;
+        final WebView wv = webView;
+        if (wv == null) return;
+        wv.post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    wv.evaluateJavascript(
+                        "window.AYA_NATIVE_HEADING&&window.AYA_NATIVE_HEADING(" + result + ");",
+                        null
+                    );
+                } catch (Throwable ignored) {}
+            }
+        });
+    }
+
+    private static void lowPass(float[] input, float[] output) {
+        final float alpha = 0.18f;
+        for (int i = 0; i < 3; i++) {
+            output[i] = output[i] + alpha * (input[i] - output[i]);
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+}
+"""
+          (java_dir / "AyaCompassBridge.java").write_text(bridge_src, encoding="utf-8")
+          print("Wrote AyaCompassBridge.java")
+
+          activity = java_dir / "MainActivity.java"
+          if not activity.exists():
+              raise SystemExit("ERROR: MainActivity.java not found.")
+          src = activity.read_text(encoding="utf-8")
+
+          if "new AyaCompassBridge" not in src:
+              needle = 'getBridge().getWebView().addJavascriptInterface(new AyaMediaJs(), "AndroidInterface");'
+              if needle in src:
+                  line = needle + '\n            getBridge().getWebView().addJavascriptInterface(new AyaCompassBridge(this, getBridge().getWebView()), "AyaCompass");'
+                  src = src.replace(needle, line, 1)
+                  activity.write_text(src, encoding="utf-8")
+                  print("Injected AyaCompass into MainActivity.")
+              else:
+                  m = re.search(r'addJavascriptInterface\([^;]+;', src)
+                  if m:
+                      insert_at = m.end()
+                      addition = '\n            getBridge().getWebView().addJavascriptInterface(new AyaCompassBridge(this, getBridge().getWebView()), "AyaCompass");'
+                      src = src[:insert_at] + addition + src[insert_at:]
+                      activity.write_text(src, encoding="utf-8")
+                      print("Injected AyaCompass into MainActivity (fallback anchor).")
+                  else:
+                      raise SystemExit("ERROR: MainActivity WebView interface anchor not found.")
+          else:
+              print("AyaCompass already registered in MainActivity.")
+
+          print("Unified location and native Android compass bridge installed.")
+          PY
 
       - name: Copy final web changes to Android
         working-directory: android-app
