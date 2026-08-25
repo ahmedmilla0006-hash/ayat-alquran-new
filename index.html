@@ -931,6 +931,87 @@ body{
 #updatesBanner strong{
   color: #b8f5d0;
 }
+
+/* إشعار تحديث بأسلوب واتساب (بطاقة عائمة) */
+#ayaSystemNotif{
+  display:none;
+  position:fixed;
+  top:calc(10px + var(--reader-safe-top, env(safe-area-inset-top, 0px)));
+  left:12px;
+  right:12px;
+  z-index:99990;
+  direction:rtl;
+  font-family:inherit;
+  pointer-events:auto;
+}
+#ayaSystemNotif.show{display:block;animation:ayaNotifIn .35s ease}
+@keyframes ayaNotifIn{
+  from{opacity:0;transform:translateY(-12px)}
+  to{opacity:1;transform:translateY(0)}
+}
+#ayaSystemNotif .aya-notif-card{
+  background:rgba(40,40,40,.92);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  border-radius:18px;
+  padding:12px 14px;
+  box-shadow:0 8px 28px rgba(0,0,0,.35);
+  color:#fff;
+}
+#ayaSystemNotif .aya-notif-top{
+  display:flex;align-items:flex-start;gap:10px;
+}
+#ayaSystemNotif .aya-notif-icon{
+  width:40px;height:40px;border-radius:10px;flex:none;
+  background:linear-gradient(145deg,#1fa34a,#0f6b32);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;box-shadow:0 2px 8px rgba(0,0,0,.25);
+}
+#ayaSystemNotif .aya-notif-body{flex:1;min-width:0}
+#ayaSystemNotif .aya-notif-app{
+  font-size:12px;color:rgba(255,255,255,.65);margin-bottom:2px;
+}
+#ayaSystemNotif .aya-notif-title{
+  font-size:15px;font-weight:700;line-height:1.35;
+}
+#ayaSystemNotif .aya-notif-sub{
+  font-size:13px;color:rgba(255,255,255,.8);margin-top:2px;line-height:1.4;
+}
+#ayaSystemNotif .aya-notif-actions{
+  display:flex;justify-content:flex-end;gap:8px;margin-top:10px;
+}
+#ayaSystemNotif .aya-notif-btn{
+  border:0;background:transparent;color:#7ec8ff;
+  font:inherit;font-size:14px;font-weight:700;
+  padding:6px 10px;cursor:pointer;border-radius:8px;
+}
+#ayaSystemNotif .aya-notif-btn.primary{color:#79d69a}
+#ayaSystemNotif .aya-notif-progress-wrap{
+  display:none;margin-top:10px;
+}
+#ayaSystemNotif .aya-notif-progress-wrap.show{display:block}
+#ayaSystemNotif .aya-notif-progress-track{
+  height:4px;border-radius:999px;background:rgba(255,255,255,.2);overflow:hidden;
+}
+#ayaSystemNotif .aya-notif-progress-bar{
+  height:100%;width:0%;background:#7ec8ff;
+  border-radius:999px;transition:width .2s ease;
+}
+#updatesDownloadProgress{
+  display:none;margin-top:12px;direction:rtl;
+}
+#updatesDownloadProgress.show{display:block}
+#updatesDownloadProgress .track{
+  height:8px;border-radius:999px;background:#3a3a3a;overflow:hidden;
+}
+#updatesDownloadProgress .bar{
+  height:100%;width:0%;background:linear-gradient(90deg,#16803b,#79d69a);
+  border-radius:999px;transition:width .2s ease;
+}
+#updatesDownloadProgress .pct{
+  margin-top:6px;font-size:13px;color:#bbb;text-align:center;
+}
+
 /* عند ظهور التحديث: أنزل شريط الجزء/السورة تحت شريط التحديث */
 body.update-banner-visible .reader-info-top{
   top: 42px !important;
@@ -2333,6 +2414,27 @@ body.interface-new.night-mode .page-area {
 
 <div id="updatesBanner" role="button" tabindex="0">🎉 يتوفر إصدار جديد — اضغط للتحديث</div>
 
+<!-- إشعار بأسلوب واتساب -->
+<div id="ayaSystemNotif" aria-live="polite">
+  <div class="aya-notif-card">
+    <div class="aya-notif-top">
+      <div class="aya-notif-icon">📖</div>
+      <div class="aya-notif-body">
+        <div class="aya-notif-app">آية · الآن</div>
+        <div class="aya-notif-title" id="ayaNotifTitle">يتوفر إصدار جديد</div>
+        <div class="aya-notif-sub" id="ayaNotifSub">اضغط «تحديث الآن» لتحميل الإصدار</div>
+      </div>
+    </div>
+    <div class="aya-notif-progress-wrap" id="ayaNotifProgressWrap">
+      <div class="aya-notif-progress-track"><div class="aya-notif-progress-bar" id="ayaNotifProgressBar"></div></div>
+    </div>
+    <div class="aya-notif-actions" id="ayaNotifActions">
+      <button type="button" class="aya-notif-btn" id="ayaNotifDismiss">لاحقاً</button>
+      <button type="button" class="aya-notif-btn primary" id="ayaNotifUpdate">تحديث الآن</button>
+    </div>
+  </div>
+</div>
+
 <!-- نافذة التحديثات -->
 <div class="popup-overlay" id="updatesOverlay">
   <div class="popup-box about-box">
@@ -2349,6 +2451,10 @@ body.interface-new.night-mode .page-area {
         <div style="font-weight:700;color:#79d69a;margin-bottom:6px">الإصدار الجديد: <span id="updatesNewVersion"></span></div>
         <div id="updatesNotes" style="color:#ddd;line-height:1.9;font-size:15px;margin-bottom:14px;white-space:pre-wrap"></div>
         <button type="button" class="popup-item" id="updatesDownloadBtn" style="text-align:center;margin:0">⬇️ تحديث الآن</button>
+        <div id="updatesDownloadProgress">
+          <div class="track"><div class="bar" id="updatesProgressBar"></div></div>
+          <div class="pct" id="updatesProgressPct">0%</div>
+        </div>
       </div>
     </div>
   </div>
@@ -6534,16 +6640,61 @@ document.addEventListener("DOMContentLoaded",()=>{
     return false;
   }
 
+  const ayaSystemNotif = document.getElementById("ayaSystemNotif");
+  const ayaNotifTitle = document.getElementById("ayaNotifTitle");
+  const ayaNotifSub = document.getElementById("ayaNotifSub");
+  const ayaNotifDismiss = document.getElementById("ayaNotifDismiss");
+  const ayaNotifUpdate = document.getElementById("ayaNotifUpdate");
+  const ayaNotifProgressWrap = document.getElementById("ayaNotifProgressWrap");
+  const ayaNotifProgressBar = document.getElementById("ayaNotifProgressBar");
+  const ayaNotifActions = document.getElementById("ayaNotifActions");
+  const updatesDownloadProgress = document.getElementById("updatesDownloadProgress");
+  const updatesProgressBar = document.getElementById("updatesProgressBar");
+  const updatesProgressPct = document.getElementById("updatesProgressPct");
+
+  function showWaStyleNotif(remoteVersion, notes){
+    if(!ayaSystemNotif) return;
+    if(ayaNotifTitle) ayaNotifTitle.textContent = "يتوفر إصدار جديد";
+    if(ayaNotifSub){
+      ayaNotifSub.textContent = notes
+        ? String(notes).slice(0, 80)
+        : ("الإصدار " + (remoteVersion || "") + " جاهز للتحديث");
+    }
+    if(ayaNotifProgressWrap) ayaNotifProgressWrap.classList.remove("show");
+    if(ayaNotifActions) ayaNotifActions.style.display = "flex";
+    ayaSystemNotif.classList.add("show");
+  }
+  function hideWaStyleNotif(){
+    if(ayaSystemNotif) ayaSystemNotif.classList.remove("show");
+  }
+  function setDownloadProgressUI(percent, message){
+    const p = Math.max(0, Math.min(100, Number(percent) || 0));
+    if(updatesDownloadProgress) updatesDownloadProgress.classList.add("show");
+    if(updatesProgressBar) updatesProgressBar.style.width = p + "%";
+    if(updatesProgressPct) updatesProgressPct.textContent = Math.round(p) + "%" + (message ? " — " + message : "");
+    if(ayaSystemNotif){
+      ayaSystemNotif.classList.add("show");
+      if(ayaNotifTitle) ayaNotifTitle.textContent = "جاري تحديث آية";
+      if(ayaNotifSub) ayaNotifSub.textContent = message || ("التحميل " + Math.round(p) + "%");
+      if(ayaNotifProgressWrap) ayaNotifProgressWrap.classList.add("show");
+      if(ayaNotifProgressBar) ayaNotifProgressBar.style.width = p + "%";
+      if(ayaNotifActions) ayaNotifActions.style.display = "none";
+    }
+  }
+
   function notifyUpdateAvailable(remoteVersion, notes){
     const title = "آية";
     const body = "يتوفر إصدار جديد (" + remoteVersion + ")";
-    /* لا نرسل إشعار شريط الحالة — الشريط داخل التطبيق أوضح للضغط */ void 0 && postAndroid("notify-update", {
+    showWaStyleNotif(remoteVersion, notes);
+    /* إشعار نظام أندرويد (يحتاج دعم في كود التطبيق الأصلي) */
+    postAndroid("notify-update", {
       title: title,
       body: body,
       version: remoteVersion || "",
       versionName: remoteVersion || "",
       apkUrl: latestUpdateUrl || "",
-      url: latestUpdateUrl || ""
+      url: latestUpdateUrl || "",
+      action: "update"
     });
     postAndroid("update-available", {
       versionName: remoteVersion || "",
@@ -6560,6 +6711,24 @@ document.addEventListener("DOMContentLoaded",()=>{
         });
       }
     }catch(e){}
+  }
+
+  if(ayaNotifDismiss){
+    ayaNotifDismiss.onclick = function(){
+      try{ localStorage.setItem(DISMISS_KEY, latestRemoteVersion || ""); }catch(e){}
+      hideWaStyleNotif();
+      if(updatesBanner) updatesBanner.classList.remove("show");
+      try{ document.body.classList.remove("update-banner-visible"); }catch(e){}
+    };
+  }
+  if(ayaNotifUpdate){
+    ayaNotifUpdate.onclick = function(){
+      hideWaStyleNotif();
+      openUpdates();
+      setTimeout(function(){
+        if(updatesDownloadBtn) updatesDownloadBtn.click();
+      }, 200);
+    };
   }
 
   function openUpdates(){
@@ -6643,15 +6812,43 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(updatesCheckBtn) updatesCheckBtn.onclick = function(){ checkForUpdates({ silent: false }); };
 
   window.__ayaUpdateProgress = function(percent, message){
+    const p = Number(percent) || 0;
     if(updatesStatus){
-      updatesStatus.textContent = message || ("جاري التحميل… " + Math.round(percent || 0) + "%");
+      updatesStatus.textContent = message || ("جاري التحميل… " + Math.round(p) + "%");
     }
+    setDownloadProgressUI(p, message || "");
+    postAndroid("notify-update-progress", {
+      title: "آية",
+      body: "جاري التحميل… " + Math.round(p) + "%",
+      percent: p,
+      versionName: latestRemoteVersion || ""
+    });
   };
   window.__ayaUpdateDone = function(ok, message){
     if(updatesStatus){
       updatesStatus.textContent = message || (ok ? "اكتمل التحميل — افتح نافذة التثبيت." : "فشل التحميل.");
     }
     if(updatesDownloadBtn) updatesDownloadBtn.disabled = false;
+    if(ok){
+      setDownloadProgressUI(100, "اكتمل");
+      if(ayaNotifTitle) ayaNotifTitle.textContent = "تم التحميل";
+      if(ayaNotifSub) ayaNotifSub.textContent = message || "افتح نافذة التثبيت لإكمال التحديث";
+      postAndroid("notify-update-done", {
+        title: "آية",
+        body: message || "اكتمل تحميل التحديث",
+        ok: true
+      });
+    }else{
+      if(ayaNotifActions) ayaNotifActions.style.display = "flex";
+      if(ayaNotifProgressWrap) ayaNotifProgressWrap.classList.remove("show");
+      if(ayaNotifTitle) ayaNotifTitle.textContent = "فشل التحديث";
+      if(ayaNotifSub) ayaNotifSub.textContent = message || "حاول مرة أخرى";
+      postAndroid("notify-update-done", {
+        title: "آية",
+        body: message || "فشل تحميل التحديث",
+        ok: false
+      });
+    }
   };
 
   if(updatesDownloadBtn){
@@ -6659,8 +6856,15 @@ document.addEventListener("DOMContentLoaded",()=>{
       if(!latestUpdateUrl) return;
       try{
         if(window.AndroidInterface && typeof window.AndroidInterface.postMessage === "function"){
-          if(updatesStatus) updatesStatus.textContent = "جاري تحميل التحديث داخل التطبيق…";
+          if(updatesStatus) updatesStatus.textContent = "جاري تحميل التحديث…";
           if(updatesDownloadBtn) updatesDownloadBtn.disabled = true;
+          setDownloadProgressUI(0, "بدء التحميل…");
+          postAndroid("notify-update-progress", {
+            title: "آية",
+            body: "جاري التحميل…",
+            percent: 0,
+            versionName: latestRemoteVersion || ""
+          });
           window.AndroidInterface.postMessage(JSON.stringify({
             cmd: "download-apk",
             data: {
