@@ -2037,6 +2037,53 @@ body.interface-new.night-mode .page-area {
 }
 </style>
 
+
+<style id="picker-fullscreen-force">
+/* إجبار قوائم القارئ والسورة على ملء الشاشة */
+#readerPickerOverlay.popup-overlay,
+#surahPickerOverlay.popup-overlay{
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  padding: 0 !important;
+  padding-top: env(safe-area-inset-top, 0px) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  inset: 0 !important;
+  z-index: 300 !important;
+}
+#readerPickerOverlay .popup-box,
+#surahPickerOverlay .popup-box{
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+}
+#readerPickerOverlay .popup-header,
+#surahPickerOverlay .popup-header{
+  flex: 0 0 auto !important;
+}
+#readerPickerOverlay .popup-list,
+#surahPickerOverlay .popup-list{
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+#readerPickerOverlay .popup-item,
+#surahPickerOverlay .popup-item{
+  width: 100% !important;
+  margin-bottom: 10px !important;
+  padding: 16px 18px !important;
+  font-size: 18px !important;
+}
+</style>
+
 </head>
 
 <body>
@@ -2249,6 +2296,10 @@ body.interface-new.night-mode .page-area {
     🔎 البحث
   </button>
 
+  <button class="menu-item" id="tafsirButton">
+    📚 التفسير
+  </button>
+
   <button class="menu-item" id="saveButton">
     🔖 حفظ الصفحة الحالية
   </button>
@@ -2286,6 +2337,10 @@ body.interface-new.night-mode .page-area {
   <button class="menu-item" id="updatesButton">
     🔄 التحديثات
     <span class="update-badge" id="updatesBadge" aria-hidden="true">1</span>
+  </button>
+
+  <button class="menu-item" id="helpButton">
+    ❓ مساعدة
   </button>
 
   <button class="menu-item" id="aboutButton">
@@ -2381,7 +2436,7 @@ body.interface-new.night-mode .page-area {
     </form>
 
     <p class="search-hint">
-      يمكنك البحث بكلمة من القرآن، أو باسم السورة، أو برقم الصفحة من 1 إلى 604.
+      ابحث بكلمة أو اسم سورة أو رقم صفحة (1–604). اختر نتيجة للانتقال، وتبقى نافذة البحث مفتوحة حتى تضغط ✕ لتتمكن من تجربة نتيجة أخرى.
     </p>
 
     <div class="popup-list" id="searchResults"></div>
@@ -2455,6 +2510,178 @@ body.interface-new.night-mode .page-area {
           <div class="track"><div class="bar" id="updatesProgressBar"></div></div>
           <div class="pct" id="updatesProgressPct">0%</div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- نافذة التفسير: الطبري · ابن كثير · البغوي -->
+<div class="popup-overlay" id="tafsirOverlay">
+  <div class="popup-box" style="max-width:min(96vw,560px);max-height:92vh">
+    <div class="popup-header">
+      <h2>التفسير</h2>
+      <button class="popup-close" id="tafsirClose" type="button">✕</button>
+    </div>
+    <div style="direction:rtl;text-align:right;color:#eee;display:flex;flex-direction:column;gap:10px;min-height:0">
+      <label style="font-size:13px;color:#bbb">اختر التفسير</label>
+      <select id="tafsirEdition" style="width:100%;border:1px solid #555;border-radius:12px;background:#303030;color:#fff;padding:12px;font:inherit;font-size:15px">
+        <option value="ar-tafsir-al-tabari">جامع البيان — تفسير الطبري</option>
+        <option value="ar-tafsir-ibn-kathir">تفسير ابن كثير</option>
+        <option value="ar-tafsir-al-baghawi">تفسير البغوي</option>
+      </select>
+      <div id="tafsirRef" style="font-weight:800;color:#79d69a;font-size:16px;min-height:24px">—</div>
+      <div id="tafsirAyahText" style="color:#ddd;line-height:2;font-size:17px;padding:8px 4px;border-bottom:1px solid #444"></div>
+      <div id="tafsirStatus" class="search-status" style="text-align:center;padding:6px 0">اضغط مطوّلاً على آية (200ms) لعرض تفسيرها</div>
+      <div id="tafsirBody" style="overflow-y:auto;max-height:42vh;line-height:2.05;font-size:16px;color:#f0f0f0;padding:4px 2px 12px;white-space:pre-wrap"></div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button type="button" class="popup-item" id="tafsirPrev" style="margin:0;flex:1;text-align:center">السابق</button>
+        <button type="button" class="popup-item" id="tafsirPlay" style="margin:0;flex:1;text-align:center">▶ تشغيل</button>
+        <button type="button" class="popup-item" id="tafsirNext" style="margin:0;flex:1;text-align:center">التالي</button>
+      </div>
+      <button type="button" class="popup-item" id="tafsirCurrent" style="margin:0;text-align:center;background:#2a5a3a">تفسير الآية الحالية</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- نافذة المساعدة -->
+
+<!-- دليل التشغيل لأول مرة -->
+
+<!-- نافذة ما الجديد بعد التحديث -->
+<div class="popup-overlay" id="whatsNewOverlay" style="z-index:510">
+  <div class="popup-box" style="width:min(96vw,400px)!important;max-width:400px!important;max-height:88dvh!important;height:auto!important;display:flex;flex-direction:column">
+    <div class="popup-header" style="margin-bottom:6px">
+      <h2 id="whatsNewTitle">ما الجديد</h2>
+      <button type="button" class="popup-close" id="whatsNewClose" aria-label="إغلاق">✕</button>
+    </div>
+    <div id="whatsNewVersion" style="color:#79d69a;font-weight:800;font-size:15px;margin-bottom:10px;text-align:right"></div>
+    <div id="whatsNewBody" style="direction:rtl;text-align:right;color:#eee;line-height:1.95;font-size:15.5px;overflow-y:auto;max-height:55dvh;padding:4px 2px 12px;-webkit-overflow-scrolling:touch"></div>
+    <button type="button" class="popup-item" id="whatsNewOk" style="margin:0;text-align:center;background:#2a5a3a">حسناً</button>
+  </div>
+</div>
+
+<div class="popup-overlay" id="onboardingOverlay" style="z-index:500">
+  <div class="popup-box" style="width:min(96vw,420px)!important;max-width:420px!important;max-height:90dvh!important;height:auto!important;display:flex;flex-direction:column">
+    <div class="popup-header" style="margin-bottom:8px">
+      <h2 id="onboardTitle">مرحباً بك في آية</h2>
+      <button type="button" class="popup-close" id="onboardSkip" aria-label="تخطي" title="تخطي">✕</button>
+    </div>
+    <div id="onboardBody" style="direction:rtl;text-align:right;color:#eee;line-height:1.9;font-size:15.5px;min-height:160px;flex:1;overflow-y:auto;padding:6px 2px 10px"></div>
+    <div id="onboardDots" style="display:flex;justify-content:center;gap:8px;padding:8px 0 12px"></div>
+    <div style="display:flex;gap:8px">
+      <button type="button" class="popup-item" id="onboardPrev" style="margin:0;flex:1;text-align:center;display:none">السابق</button>
+      <button type="button" class="popup-item" id="onboardNext" style="margin:0;flex:1;text-align:center;background:#2a5a3a">التالي</button>
+    </div>
+  </div>
+</div>
+
+<div class="popup-overlay" id="helpOverlay">
+  <div class="popup-box" style="width:min(96vw,560px)!important;max-width:560px!important;max-height:92dvh!important;height:auto!important">
+    <div class="popup-header">
+      <h2>مساعدة</h2>
+      <button class="popup-close" id="helpClose" type="button">✕</button>
+    </div>
+    <div id="helpContent" style="direction:rtl;text-align:right;color:#eee;overflow-y:auto;max-height:78dvh;line-height:1.85;font-size:15px;padding:4px 2px 18px;-webkit-overflow-scrolling:touch">
+
+      <div style="font-weight:800;color:#79d69a;font-size:17px;margin:8px 0 6px">📖 تطبيق آية</div>
+      <div style="color:#ccc;margin-bottom:14px">تطبيق لقراءة القرآن الكريم مع التلاوة المتزامنة، تمييز الآيات، التفسير، والتنزيل للعمل دون إنترنت.</div>
+
+      <div style="font-weight:800;color:#79d69a;font-size:17px;margin:16px 0 6px">👆 اللمس على صفحة المصحف</div>
+      <div style="background:rgba(0,0,0,.22);border-radius:12px;padding:12px 14px;margin-bottom:10px">
+        <div style="margin-bottom:8px"><b style="color:#fff">ضغط قصير</b> (أقل من 200ms)<br>إظهار أو إخفاء أزرار التحكم (القائمة والمشغّل).</div>
+        <div style="margin-bottom:8px"><b style="color:#fff">ضغط متوسط ثم رفع الإصبع</b> (≥ 200ms وأقل من 700ms)<br>اختيار الآية وفتح <b>التفسير</b>.</div>
+        <div><b style="color:#fff">ضغط مطوّل</b> (≥ 700ms)<br>اختيار الآية و<b>تشغيل التلاوة</b> من موضعها.</div>
+      </div>
+      <div style="color:#bbb;font-size:13px;margin-bottom:12px">إذا أردت التشغيل فقط: استمر بالضغط حتى 700ms دون رفع الإصبع مبكراً.</div>
+
+      <div style="font-weight:800;color:#79d69a;font-size:17px;margin:16px 0 6px">🎧 التلاوة والقرّاء</div>
+      <ul style="margin:0 0 12px 0;padding-right:18px;color:#ddd">
+        <li>اختر القارئ من البطاقة أسفل المشغّل أو من القائمة ← <b>القراء والتلاوات</b>.</li>
+        <li>اختر السورة من البطاقة المجاورة.</li>
+        <li>أزرار المشغّل: <b>السابق</b> · <b>تشغيل/إيقاف</b> · <b>التالي</b>، مع شريط التقدّم والوقت.</li>
+        <li><b>تكرار الآية</b>: يعيد الآية الحالية حتى توقف التكرار.</li>
+        <li><b>سرعة القراءة</b>: تغيير سرعة التلاوة (حسب دعم الجهاز).</li>
+        <li>أزرار التقديم/الترجيع للتنقّل داخل التلاوة.</li>
+        <li>أثناء التشغيل يُميَّز نص الآية الحالية على المصحف (إن توفّر توقيت للقارئ).</li>
+        <li>ليس لكل القرّاء توقيت آيات؛ بدون توقيت تشتغل التلاوة دون تمييز دقيق.</li>
+      </ul>
+
+      <div style="font-weight:800;color:#79d69a;font-size:17px;margin:16px 0 6px">📚 التفسير</div>
+      <ul style="margin:0 0 12px 0;padding-right:18px;color:#ddd">
+        <li>من القائمة ← <b>التفسير</b>، أو بالضغط المتوسط على آية ثم رفع الإصبع.</li>
+        <li>التفاسير المتاحة: <b>الطبري</b> (جامع البيان)، <b>ابن كثير</b>، <b>البغوي</b>.</li>
+        <li>يمكنك التنقّل: السابق / التالي، وتشغيل الآية، أو «تفسير الآية الحالية».</li>
+        <li>يحتاج اتصالاً بالإنترنت عند أول تحميل لكل آية (مع تخزين مؤقت).</li>
+      </ul>
+
+      <div style="font-weight:800;color:#79d69a;font-size:17px;margin:16px 0 6px">🔎 البحث والتنقّل</div>
+      <ul style="margin:0 0 12px 0;padding-right:18px;color:#ddd">
+        <li><b>السور</b>: قائمة بكل سور القرآن والانتقال لبدايتها.</li>
+        <li><b>الأجزاء والأحزاب</b>: الانتقال حسب الجزء أو الحزب.</li>
+        <li><b>البحث</b>: ابحث في نص الآيات ثم انتقل للنتيجة.</li>
+        <li>السحب الأفقي على الصفحة: التنقّل بين صفحات المصحف.</li>
+      </ul>
+
+      <div style="font-weight:800;color:#79d69a;font-size:17px;margin:16px 0 6px">🔖 العلامة المرجعية</div>
+      <ul style="margin:0 0 12px 0;padding-right:18px;color:#ddd">
+        <li><b>حفظ الصفحة الحالية</b>: يحفظ موضعك.</li>
+        <li><b>الذهاب إلى العلامة المرجعية</b>: يعود لآخر صفحة محفوظة.</li>
+      </ul>
+
+      <div style="font-weight:800;color:#79d69a;font-size:17px;margin:16px 0 6px">🎨 العرض والتمييز</div>
+      <ul style="margin:0 0 12px 0;padding-right:18px;color:#ddd">
+        <li><b>الوضع الليلي</b>: خلفية داكنة مع إبقاء المصحف واضحاً.</li>
+        <li><b>إعدادات التمييز</b>: لون وطريقة تمييز الآية أثناء التلاوة.</li>
+        <li><b>تكبير / تصغير / الحجم الطبيعي</b>: ضبط حجم صفحة المصحف.</li>
+        <li><b>تصميم الواجهة</b>: من أسفل القائمة اختر <b>زجاجي</b> أو <b>كلاسيكي</b>.</li>
+        <li>في الوضع الزجاجي تظهر قوائم القارئ والسورة كبطاقات أسفل المشغّل.</li>
+      </ul>
+
+      <div style="font-weight:800;color:#79d69a;font-size:17px;margin:16px 0 6px">⬇️ تنزيل الملحقات (دون إنترنت)</div>
+      <ul style="margin:0 0 12px 0;padding-right:18px;color:#ddd">
+        <li>من القائمة ← <b>تنزيل الملحقات</b>.</li>
+        <li>يمكن تنزيل صفحات المصحف و/أو ملفات التلاوة لقارئ وسور محددة.</li>
+        <li>بعد اكتمال التنزيل تعمل الصفحات والصوت من الجهاز دون نت (حسب ما نزّلته).</li>
+        <li>يمكنك إيقاف التنزيل أو مسح الملفات المنزّلة من نفس النافذة.</li>
+      </ul>
+
+      <div style="font-weight:800;color:#79d69a;font-size:17px;margin:16px 0 6px">🔄 التحديثات</div>
+      <ul style="margin:0 0 12px 0;padding-right:18px;color:#ddd">
+        <li>من القائمة ← <b>التحديثات</b> للتحقق من إصدار جديد.</li>
+        <li>عند توفر تحديث تظهر بطاقة داخل التطبيق ويمكن التحميل والتثبيت.</li>
+      </ul>
+
+      <div style="font-weight:800;color:#79d69a;font-size:17px;margin:16px 0 6px">☰ القائمة الجانبية</div>
+      <div style="color:#ddd;margin-bottom:12px">زر القائمة أعلى اليسار (أو حسب الاتجاه). تفتح: السور، الأجزاء، البحث، التفسير، الحفظ، العلامة، الوضع الليلي، التمييز، التكبير، القرّاء، التنزيلات، التحديثات، المساعدة، وحول التطبيق.</div>
+
+      <div style="font-weight:800;color:#79d69a;font-size:17px;margin:16px 0 6px">💡 نصائح سريعة</div>
+      <ul style="margin:0 0 12px 0;padding-right:18px;color:#ddd">
+        <li>للقراءة بهدوء: اضغط ضغطة قصيرة لإخفاء الأزرار.</li>
+        <li>إن لم يظهر تمييز الآيات: تأكد أن القارئ يدعم التوقيت وأن الصفحة محملة.</li>
+        <li>إن تأخر التفسير أو الصوت: تحقق من الإنترنت أو من اكتمال التنزيل.</li>
+        <li>آخر موضع قراءة والقارئ المختار يُحفظان تلقائياً في الجهاز.</li>
+      </ul>
+
+      <div style="font-weight:800;color:#79d69a;font-size:17px;margin:16px 0 6px">🔐 ملاحظات تقنية</div>
+      <ul style="margin:0 0 12px 0;padding-right:18px;color:#ddd">
+        <li>الصوت والتفسير وصور المصحف قد تحتاج إنترنت إن لم تكن منزّلة.</li>
+        <li>إعداداتك (القارئ، الصفحة، الوضع الليلي، لون التمييز، أسلوب الواجهة) تُحفظ على الجهاز.</li>
+        <li>عند تثبيت تحديث جديد يُفضَّل فتح التطبيق مرة بعد التثبيت للتأكد من الإصدار.</li>
+      </ul>
+
+      <div style="font-weight:800;color:#79d69a;font-size:17px;margin:16px 0 6px">🚀 دليل التشغيل</div>
+      <div style="margin-bottom:12px;display:flex;flex-direction:column;gap:8px">
+        <button type="button" class="popup-item" id="helpShowOnboarding" style="margin:0;text-align:center;width:100%">دليل التشغيل الكامل</button>
+        <button type="button" class="popup-item" id="helpShowWhatsNew" style="margin:0;text-align:center;width:100%">ما الجديد في هذا الإصدار</button>
+      </div>
+
+      <div style="font-weight:800;color:#79d69a;font-size:17px;margin:16px 0 6px">ℹ️ حول</div>
+      <div style="color:#ddd;margin-bottom:8px">من القائمة ← <b>حول</b> لعرض اسم التطبيق والمصمم.</div>
+
+      <div style="margin-top:18px;padding-top:12px;border-top:1px solid rgba(255,255,255,.12);color:#9ab;font-size:13px;text-align:center">
+        نسأل الله أن ينفع بهذا العمل · بارك الله فيك
       </div>
     </div>
   </div>
@@ -2833,12 +3060,12 @@ setReadingUIHidden(readingUIHidden);
   ============================================================
   التفاعل باللمس على صفحة المصحف
   ------------------------------------------------------------
-  1) ضغط قصير (< LONG_PRESS_MS وبدون حركة كبيرة)
+  1) ضغط قصير (< 200ms وبدون حركة) عند الرفع
      → إظهار/إخفاء أزرار التحكم (toggleReadingUI)
-  2) ضغط مطوّل (>= LONG_PRESS_MS بدون حركة)
-     → تحديد الآية تحت الإصبع عبر مضلعات Timing API
-     → الانتقال إليها وتشغيل التلاوة (حتى لو كانت من سورة أخرى
-        في نفس الصفحة مثل الإخلاص/الفلق/الناس)
+  2) ضغط >= 200ms ثم رفع الإصبع (قبل 700ms)
+     → فتح تفسير الآية
+  3) ضغط مطوّل (>= 700ms)
+     → تشغيل تلاوة الآية (بدون فتح التفسير أثناء الضغط)
   3) سحب أفقي
      → تنقل بين الصفحات (معالج touchstart/touchend المنفصل)
   أزرار المشغّل والقائمة لا تمر من هنا (يُستبعد أقرب عنصر تحكم).
@@ -2847,16 +3074,23 @@ setReadingUIHidden(readingUIHidden);
 let uiTapStartX = 0;
 let uiTapStartY = 0;
 let uiTapStartTime = 0;
-let longPressTimer = null;   /* مؤقت الضغط المطوّل */
-let longPressTriggered = false; /* true إذا نجح الضغط المطوّل في هذه اللمسة */
-const LONG_PRESS_MS = 400;   /* مدة الضغط المطوّل بالمللي ثانية */
-const TAP_MOVE_MAX = 28;     /* تسامح حركة الإصبع أثناء الضغط المطوّل (بكسل) */
-const HIT_NEAREST_MAX = 80;  /* أقصى مسافة (بوحدات viewBox) لاعتبار "أقرب آية" */
+let longPressTimer = null;   /* مؤقت تشغيل الآية (700ms) */
+let tafsirPressTimer = null; /* مؤقت اختيار الآية للتفسير (200ms) */
+let longPressTriggered = false; /* تشغيل التلاوة */
+let tafsirPressTriggered = false; /* فتح التفسير */
+const TAFSIR_PRESS_MS = 200; /* اختيار الآية → التفسير */
+const LONG_PRESS_MS = 700;   /* اختيار الآية → القراءة */
+const TAP_MOVE_MAX = 28;
+const HIT_NEAREST_MAX = 80;
 
 function clearLongPressTimer(){
   if(longPressTimer){
     clearTimeout(longPressTimer);
     longPressTimer = null;
+  }
+  if(tafsirPressTimer){
+    clearTimeout(tafsirPressTimer);
+    tafsirPressTimer = null;
   }
 }
 
@@ -3271,6 +3505,38 @@ function seekToAyahItem(item, options = {}){
   3) إيجاد الآية (مباشر / صندوق / أقرب)
   4) الانتقال + تشغيل
 */
+async function resolveAyahAtPoint(clientX, clientY){
+  try{
+    if(page && !page.complete){
+      await new Promise(resolve=>{
+        const done = ()=>resolve();
+        page.addEventListener("load", done, {once:true});
+        setTimeout(done, 800);
+      });
+    }
+    if(typeof positionHighlightLayer === "function") positionHighlightLayer();
+    try{ await loadPageHitTiming(currentPage); }catch(e){}
+    const item = findAyahAtClientPoint(clientX, clientY);
+    if(!item) return null;
+    const s = Number(item._surah || item.surah || (typeof timingSurahLoaded !== "undefined" ? timingSurahLoaded : 0) || (typeof currentAudioSurah !== "undefined" ? currentAudioSurah : 0) || (typeof getSurahNumberForPage === "function" ? getSurahNumberForPage(currentPage) : 1));
+    return { item: item, surah: s || 1, ayah: Number(item.ayah) || 1 };
+  }catch(e){
+    return null;
+  }
+}
+
+function onTafsirPressAyah(clientX, clientY){
+  (async function(){
+    const ref = await resolveAyahAtPoint(clientX, clientY);
+    if(!ref) return;
+    window.__lastTafsirRef = { surah: ref.surah, ayah: ref.ayah };
+    try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){}
+    if(typeof window.__ayaOpenTafsir === "function"){
+      window.__ayaOpenTafsir({ surah: ref.surah, ayah: ref.ayah });
+    }
+  })();
+}
+
 function onLongPressAyah(clientX, clientY){
   longPressTriggered = true;
 
@@ -3302,6 +3568,10 @@ function onLongPressAyah(clientX, clientY){
 
     const item = findAyahAtClientPoint(clientX, clientY);
     if(item){
+      try{
+        const s = Number(item._surah || item.surah || (typeof timingSurahLoaded !== "undefined" ? timingSurahLoaded : 0) || (typeof currentAudioSurah !== "undefined" ? currentAudioSurah : 0) || (typeof getSurahNumberForPage === "function" ? getSurahNumberForPage(currentPage) : 1));
+        window.__lastTafsirRef = { surah: s || 1, ayah: Number(item.ayah) || 1 };
+      }catch(e){}
       seekToAyahItem(item, {autoPlay:true});
       try{
         if(navigator.vibrate) navigator.vibrate(18);
@@ -3327,14 +3597,25 @@ pageArea.addEventListener("pointerdown", e=>{
   uiTapStartY = e.clientY;
   uiTapStartTime = Date.now();
   longPressTriggered = false;
+  tafsirPressTriggered = false;
   clearLongPressTimer();
 
   const pressX = e.clientX;
   const pressY = e.clientY;
 
+  /* 200ms: تأهيل الآية للتفسير — لا نفتح النافذة إلا عند رفع الإصبع */
+  tafsirPressTimer = setTimeout(()=>{
+    tafsirPressTimer = null;
+    tafsirPressTriggered = true;
+    try{ if(navigator.vibrate) navigator.vibrate(8); }catch(e){}
+  }, TAFSIR_PRESS_MS);
+
+  /* 700ms: تشغيل التلاوة */
   longPressTimer = setTimeout(()=>{
     longPressTimer = null;
-    /* استخدم آخر موضع معروف إن تحرك الإصبع قليلاً */
+    longPressTriggered = true;
+    /* ألغِ فتح التفسير لأن المستخدم اختار القراءة */
+    tafsirPressTriggered = false;
     onLongPressAyah(pressX, pressY);
   }, LONG_PRESS_MS);
 }, {passive:true});
@@ -3355,20 +3636,30 @@ pageArea.addEventListener("pointerup", e=>{
   const dx = e.clientX - uiTapStartX;
   const dy = e.clientY - uiTapStartY;
   const elapsed = Date.now() - uiTapStartTime;
+  const moved = Math.abs(dx) >= TAP_MOVE_MAX || Math.abs(dy) >= TAP_MOVE_MAX;
 
-  /* بعد ضغط مطوّل: لا تبدّل الواجهة، وأبقِ العلم حتى ينتهي touchend */
+  /* تشغيل تلاوة (700ms): لا تفتح تفسير ولا تبدّل الواجهة */
   if(longPressTriggered){
-    setTimeout(()=>{ longPressTriggered = false; }, 50);
+    setTimeout(()=>{ longPressTriggered = false; tafsirPressTriggered = false; }, 50);
     return;
   }
 
-  if(
-    Math.abs(dx) < TAP_MOVE_MAX &&
-    Math.abs(dy) < TAP_MOVE_MAX &&
-    elapsed < LONG_PRESS_MS
-  ){
+  /* ضغط >= 200ms ثم رفع الإصبع → فتح التفسير */
+  if(!moved && tafsirPressTriggered){
+    const px = e.clientX, py = e.clientY;
+    setTimeout(()=>{ longPressTriggered = false; tafsirPressTriggered = false; }, 50);
+    if(typeof onTafsirPressAyah === "function"){
+      onTafsirPressAyah(px, py);
+    }
+    return;
+  }
+
+  /* ضغط عادي قصير: إظهار/إخفاء أزرار التحكم */
+  if(!moved && elapsed < TAFSIR_PRESS_MS){
     toggleReadingUI();
   }
+
+  tafsirPressTriggered = false;
 }, {passive:true});
 
 pageArea.addEventListener("pointercancel", ()=>{
@@ -5550,11 +5841,13 @@ function openSearch(){
 
   searchOverlay.classList.add("show");
 
-  searchResults.innerHTML = "";
+  if(searchResults && !searchResults.children.length){
+    searchResults.innerHTML = "";
+  }
 
-  searchInput.value = "";
-
-  setTimeout(() => searchInput.focus(), 80);
+  setTimeout(() => {
+    try{ searchInput.focus(); }catch(e){}
+  }, 80);
 
 }
 
@@ -5570,12 +5863,10 @@ document.getElementById(
 
 searchClose.onclick = closeSearch;
 
+/* لا تُغلق نافذة البحث بالضغط على الخلفية —
+   تبقى مفتوحة لاختيار نتيجة أخرى، وتُغلق فقط من زر ✕ */
 searchOverlay.onclick = e => {
-
-  if(e.target === searchOverlay){
-    closeSearch();
-  }
-
+  /* تجاهل الإغلاق التلقائي من الخلفية */
 };
 
 /* رمز لإلغاء طلبات الانتقال القديمة عند اختيار نتيجة بحث أخرى بسرعة */
@@ -5594,21 +5885,19 @@ async function goToAyahFromSearch(pageNumber, surahNumber, ayahNumber){
   const ayah = Number(ayahNumber);
   let pageNum = Math.max(1, Math.min(TOTAL_PAGES, Number(pageNumber) || 1));
 
-  closeSearch();
+  /* تبقى نافذة البحث مفتوحة ليختار المستخدم نتيجة أخرى إن أراد */
 
   if(!Number.isFinite(ayah) || ayah < 1 || !Number.isFinite(surah) || surah < 1){
     loadPage(pageNum);
     return;
   }
 
-  /* إيقاف أي تشغيل سابق حتى لا يختلط مع الآية المطلوبة */
   if(audio){
     try{ audio.pause(); }catch(e){}
   }
   if(typeof resetRepeat === "function") resetRepeat();
   if(typeof clearAyahHighlight === "function") clearAyahHighlight();
 
-  /* جلب توقيت السورة أولاً لتأكيد الصفحة والآية */
   let items = [];
   try{
     items = await fetchTimingForSurah(surah);
@@ -5618,19 +5907,18 @@ async function goToAyahFromSearch(pageNumber, surahNumber, ayahNumber){
 
   if(!items || !items.length){
     try{
-      await new Promise(r=>setTimeout(r, 300));
+      await new Promise(r=>setTimeout(r, 400));
       items = await fetchTimingForSurah(surah);
     }catch(e){}
   }
 
   if(token !== searchNavigateToken) return;
 
-  const match = (items || []).find(item =>
+  let match = (items || []).find(item =>
     Number(item.ayah) === ayah &&
     (item._surah == null || Number(item._surah) === surah)
   );
 
-  /* إن وُجدت الصفحة في بيانات التوقيت فهي الأدق لمصحف mp3quran */
   if(match){
     const timingPage = pageFromTiming(match, surah);
     if(timingPage && timingPage >= 1 && timingPage <= TOTAL_PAGES){
@@ -5638,15 +5926,14 @@ async function goToAyahFromSearch(pageNumber, surahNumber, ayahNumber){
     }
   }
 
-  /* تحديث الصفحة والصورة */
-  currentPage = pageNum;
-  localStorage.setItem("quranPage", currentPage);
-  if(typeof updateMushafPageInfo === "function"){
-    updateMushafPageInfo();
-  }
-  loadQuranPageFromInternet(currentPage);
-  if(typeof loadPageHitTiming === "function"){
-    loadPageHitTiming(currentPage);
+  /* تحميل الصفحة عبر المسار الرسمي لضمان التزامن */
+  if(typeof loadPage === "function"){
+    loadPage(pageNum, { surahNumber: surah, autoContinue: false });
+  }else{
+    currentPage = pageNum;
+    localStorage.setItem("quranPage", currentPage);
+    if(typeof updateMushafPageInfo === "function") updateMushafPageInfo();
+    loadQuranPageFromInternet(currentPage);
   }
 
   await new Promise(resolve=>{
@@ -5657,13 +5944,24 @@ async function goToAyahFromSearch(pageNumber, surahNumber, ayahNumber){
     }
     const done = ()=>resolve();
     if(img) img.addEventListener("load", done, {once:true});
-    setTimeout(done, 1000);
+    setTimeout(done, 1200);
   });
 
   if(token !== searchNavigateToken) return;
 
+  /* إعادة جلب التوقيت بعد تحميل الصفحة لضمان التطابق مع القارئ الحالي */
+  try{
+    items = await fetchTimingForSurah(surah);
+  }catch(e){}
+  match = (items || []).find(item =>
+    Number(item.ayah) === ayah &&
+    (item._surah == null || Number(item._surah) === surah)
+  );
+
   if(!match){
-    loadPage(pageNum, { surahNumber: surah, autoContinue: true });
+    if(typeof loadPage === "function"){
+      loadPage(pageNum, { surahNumber: surah, autoContinue: true });
+    }
     return;
   }
 
@@ -5674,13 +5972,11 @@ async function goToAyahFromSearch(pageNumber, surahNumber, ayahNumber){
   timingSurahLoaded = surah;
   currentAudioSurah = surah;
 
-  /* انتظار قصير لمزامنة طبقة التمييز مع الصورة */
   if(typeof positionHighlightLayer === "function"){
     positionHighlightLayer();
   }
 
-  /* الانتقال للآية + التشغيل + التمييز */
-  seekToAyahItem(match, { autoPlay: true });
+  const seekOk = seekToAyahItem(match, { autoPlay: true });
 
   if(typeof drawAyahHighlight === "function"){
     requestAnimationFrame(()=>{
@@ -5689,13 +5985,18 @@ async function goToAyahFromSearch(pageNumber, surahNumber, ayahNumber){
     });
   }
 
-  /* إعادة محاولة التمييز بعد استقرار الصورة/الصوت */
-  setTimeout(()=>{
-    if(token !== searchNavigateToken) return;
-    if(typeof positionHighlightLayer === "function") positionHighlightLayer();
-    if(typeof drawAyahHighlight === "function") drawAyahHighlight(match);
-    if(typeof syncHighlight === "function") syncHighlight();
-  }, 350);
+  /* محاولات إضافية لاستقرار التشغيل والتمييز */
+  [300, 700, 1200].forEach(function(ms){
+    setTimeout(function(){
+      if(token !== searchNavigateToken) return;
+      if(typeof positionHighlightLayer === "function") positionHighlightLayer();
+      if(typeof drawAyahHighlight === "function") drawAyahHighlight(match);
+      if(typeof syncHighlight === "function") syncHighlight();
+      if(seekOk === false){
+        try{ seekToAyahItem(match, { autoPlay: true }); }catch(e){}
+      }
+    }, ms);
+  });
 }
 
 function addSearchResult(title, meta, text, targetPage, surahNumber, ayahNumber){
@@ -5718,13 +6019,21 @@ function addSearchResult(title, meta, text, targetPage, surahNumber, ayahNumber)
       '</span>' : '');
 
   button.onclick = () => {
+    try{
+      Array.prototype.forEach.call(
+        searchResults.querySelectorAll(".search-result"),
+        function(el){ el.classList.remove("glass-selected"); el.style.outline = ""; }
+      );
+      button.classList.add("glass-selected");
+      button.style.outline = "2px solid rgba(121,214,154,.7)";
+    }catch(e){}
     const s = Number(surahNumber);
     const a = Number(ayahNumber);
     if(Number.isFinite(s) && s >= 1 && Number.isFinite(a) && a >= 1){
       goToAyahFromSearch(targetPage, s, a);
     }else{
       loadPage(targetPage);
-      closeSearch();
+      /* لا نغلق البحث — يبقى لاختيار نتيجة أخرى */
     }
   };
 
@@ -5760,14 +6069,15 @@ function searchLocal(query){
     );
 
   matches.forEach(item => {
-
+    const surahNum = surahs.indexOf(item) + 1;
     addSearchResult(
       "سورة " + item[0],
       "بداية السورة — الصفحة " + item[1],
       "",
-      item[1]
+      item[1],
+      surahNum,
+      1
     );
-
   });
 
   return matches.length > 0 ||
@@ -5779,8 +6089,12 @@ function searchLocal(query){
 
 async function searchWord(query){
 
-  searchResults.innerHTML =
-    '<div class="search-status">جاري البحث في القرآن…</div>';
+  /* أبقِ نتائج السور/الصفحات الظاهرة، وأضف حالة التحميل تحتها */
+  const loading = document.createElement("div");
+  loading.className = "search-status";
+  loading.id = "searchWordLoading";
+  loading.textContent = "جاري البحث في آيات القرآن…";
+  searchResults.appendChild(loading);
 
   const qNorm = normalizeArabic(query);
 
@@ -5816,42 +6130,54 @@ async function searchWord(query){
     https://api.alquran.cloud/v1/search/{word}/all/quran-simple-clean
   */
   async function searchAlQuranCloud(){
-    const url =
-      "https://api.alquran.cloud/v1/search/" +
-      encodeURIComponent(query) +
-      "/all/quran-simple-clean";
+    /* جرّب النص الأصلي ثم المطبّع لزيادة دقة النتائج */
+    const queries = [query];
+    if(qNorm && qNorm !== normalizeArabic(query) || qNorm !== query){
+      if(queries.indexOf(qNorm) < 0) queries.push(qNorm);
+    }
+    /* أزل التطويل والهمزات الزائدة لصيغة ثالثة */
+    const q2 = qNorm.replace(/ا/g, "ا").replace(/ـ/g, "");
+    if(q2 && queries.indexOf(q2) < 0) queries.push(q2);
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers: { "Accept": "application/json" }
-    });
-
-    if(!response.ok) throw new Error("AlQuran search failed");
-
-    const json = await response.json();
-    const raw =
-      json && json.data && Array.isArray(json.data.matches)
-        ? json.data.matches
-        : [];
-
-    return raw.map(item=>{
-      const surahNumber = Number(item.surah && item.surah.number);
-      const ayahNumber = Number(item.numberInSurah || 0);
-      const text = String(item.text || "").replace(/^\uFEFF/, "").trim();
-      return {
-        verseKey: surahNumber && ayahNumber ? (surahNumber + ":" + ayahNumber) : "",
-        surahNumber,
-        ayahNumber,
-        text,
-        surahName: localSurahName(surahNumber),
-        page: 0,
-        rank: rankMatch(text)
-      };
-    }).filter(item =>
-      item.surahNumber >= 1 &&
-      item.ayahNumber >= 1 &&
-      item.rank > 0
-    );
+    const all = [];
+    for(let qi = 0; qi < queries.length; qi++){
+      const qTry = queries[qi];
+      if(!qTry) continue;
+      try{
+        const url =
+          "https://api.alquran.cloud/v1/search/" +
+          encodeURIComponent(qTry) +
+          "/all/quran-simple-clean";
+        const response = await fetch(url, {
+          method: "GET",
+          headers: { "Accept": "application/json" }
+        });
+        if(!response.ok) continue;
+        const json = await response.json();
+        const raw =
+          json && json.data && Array.isArray(json.data.matches)
+            ? json.data.matches
+            : [];
+        raw.forEach(function(item){
+          const surahNumber = Number(item.surah && item.surah.number);
+          const ayahNumber = Number(item.numberInSurah || 0);
+          const text = String(item.text || "").replace(/^\uFEFF/, "").trim();
+          if(surahNumber >= 1 && ayahNumber >= 1){
+            all.push({
+              verseKey: surahNumber + ":" + ayahNumber,
+              surahNumber: surahNumber,
+              ayahNumber: ayahNumber,
+              text: text,
+              surahName: localSurahName(surahNumber),
+              page: 0,
+              rank: rankMatch(text)
+            });
+          }
+        });
+      }catch(e){}
+    }
+    if(!all.length) throw new Error("AlQuran search failed");
+    return all.filter(function(item){ return item.rank > 0; });
   }
 
   /* احتياطي: QuranHub إن فشل المصدر الأساسي */
@@ -5934,10 +6260,19 @@ async function searchWord(query){
     }
 
     if(!matches.length){
-      searchResults.innerHTML =
-        '<div class="search-status">' +
-        'لم يتم العثور على نتائج للكلمة التي كتبتها.' +
-        '</div>';
+      const ld = document.getElementById("searchWordLoading");
+      if(ld) ld.remove();
+      if(!searchResults.querySelector(".search-result")){
+        searchResults.innerHTML =
+          '<div class="search-status">' +
+          'لم يتم العثور على نتائج للكلمة التي كتبتها.' +
+          '</div>';
+      }else{
+        const note = document.createElement("div");
+        note.className = "search-status";
+        note.textContent = "لا توجد آيات إضافية تحتوي هذه الكلمة.";
+        searchResults.appendChild(note);
+      }
       return;
     }
 
@@ -5957,10 +6292,10 @@ async function searchWord(query){
       return a.ayahNumber - b.ayahNumber;
     });
 
-    searchResults.innerHTML =
-      '<div class="search-status">جاري تجهيز النتائج…</div>';
+    const ld2 = document.getElementById("searchWordLoading");
+    if(ld2) ld2.textContent = "جاري تجهيز نتائج الآيات…";
 
-    const top = matches.slice(0, 25);
+    const top = matches.slice(0, 40);
 
     /* جلب أرقام الصفحات دفعة واحدة */
     const withPages = await Promise.all(
@@ -5976,7 +6311,10 @@ async function searchWord(query){
       })
     );
 
-    searchResults.innerHTML = "";
+    const ld3 = document.getElementById("searchWordLoading");
+    if(ld3) ld3.remove();
+    /* أزل رسائل الحالة القديمة فقط، واحتفظ بنتائج السور */
+    Array.prototype.slice.call(searchResults.querySelectorAll(".search-status")).forEach(function(el){ el.remove(); });
 
     withPages.forEach(match=>{
       const pageNumber = Number(match.page);
@@ -6000,11 +6338,12 @@ async function searchWord(query){
     }
 
   }catch(error){
-    searchResults.innerHTML =
-      '<div class="search-status">' +
-      'تعذر الاتصال بخدمة البحث حالياً. ' +
-      'تأكد من اتصال الإنترنت ثم جرّب مرة أخرى.' +
-      '</div>';
+    const ld4 = document.getElementById("searchWordLoading");
+    if(ld4) ld4.remove();
+    const note = document.createElement("div");
+    note.className = "search-status";
+    note.textContent = "تعذر الاتصال بخدمة البحث حالياً. تأكد من الإنترنت ثم جرّب مرة أخرى.";
+    searchResults.appendChild(note);
   }
 
 }
@@ -6027,13 +6366,21 @@ searchForm.onsubmit = async e => {
 
   }
 
-  const foundLocal =
-    searchLocal(query);
+  /* ابدأ دائماً بقائمة نظيفة */
+  searchResults.innerHTML = "";
 
-  if(foundLocal){
+  const qn = normalizeArabic(query);
+  const isPageOnly = /^\d+$/.test(qn) && Number(qn) >= 1 && Number(qn) <= TOTAL_PAGES;
+
+  /* نتائج محلية: رقم صفحة أو اسم سورة */
+  searchLocal(query);
+
+  /* رقم صفحة فقط: لا داعي لبحث الآيات */
+  if(isPageOnly){
     return;
   }
 
+  /* دائماً ابحث عن الآيات التي تحتوي الكلمة (حتى لو وُجدت سورة بنفس الاسم مثل يوسف) */
   await searchWord(query);
 
 };
@@ -6555,7 +6902,8 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.126";
+  const APP_VERSION = "1.0.127";
+  try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
   const AUTO_CHECK_DELAY_MS = 4000;
@@ -7534,6 +7882,16 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(!el) return;
     el.classList.add("show");
     el.classList.add("picker-fullscreen");
+    try{
+      var box = el.querySelector(".popup-box");
+      if(box){
+        box.style.width = "100%";
+        box.style.maxWidth = "100%";
+        box.style.height = "100%";
+        box.style.maxHeight = "100%";
+        box.style.borderRadius = "0";
+      }
+    }catch(e){}
   }
   function closeOverlay(el){
     if(!el) return;
@@ -8261,6 +8619,385 @@ body.interface-old #downloadsPopup .download-native-select{
   },true);
 })();
 </script>
+
+<script id="aya-tafsir-script">
+/* التفسير: الطبري · ابن كثير · البغوي — spa5k/tafsir_api */
+(function(){
+  const EDITIONS = {
+    "ar-tafsir-al-tabari": "جامع البيان — تفسير الطبري",
+    "ar-tafsir-ibn-kathir": "تفسير ابن كثير",
+    "ar-tafsir-al-baghawi": "تفسير البغوي"
+  };
+  const BASE = "https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/";
+  const SURAH_AYAHS = [0,7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,16,17,13,12,11,11,10,8,9,5,8,8,5,6,5,6,5,5,6,3,5,4,5,6,3,5,3,5,4,5,6];
+
+  const overlay = document.getElementById("tafsirOverlay");
+  const btn = document.getElementById("tafsirButton");
+  const closeBtn = document.getElementById("tafsirClose");
+  const editionSel = document.getElementById("tafsirEdition");
+  const refEl = document.getElementById("tafsirRef");
+  const ayahTextEl = document.getElementById("tafsirAyahText");
+  const bodyEl = document.getElementById("tafsirBody");
+  const statusEl = document.getElementById("tafsirStatus");
+  const prevBtn = document.getElementById("tafsirPrev");
+  const nextBtn = document.getElementById("tafsirNext");
+  const playBtn = document.getElementById("tafsirPlay");
+  const currentBtn = document.getElementById("tafsirCurrent");
+
+  let tafsirSurah = 1, tafsirAyah = 1;
+  const cache = {};
+
+  try{
+    const saved = localStorage.getItem("aya_tafsir_edition");
+    if(saved && editionSel && EDITIONS[saved]) editionSel.value = saved;
+  }catch(e){}
+
+  function surahName(n){
+    try{ if(typeof surahs !== "undefined" && surahs[n-1]) return surahs[n-1][0]; }catch(e){}
+    return "سورة " + n;
+  }
+  function maxAyah(s){ return SURAH_AYAHS[Number(s)||1] || 7; }
+  function setStatus(m){ if(statusEl) statusEl.textContent = m || ""; }
+
+  function getPlayingRef(){
+    try{
+      if(typeof getActiveTiming === "function"){
+        const a = getActiveTiming();
+        if(a && a.ayah){
+          const s = Number(a._surah || a.surah || (typeof timingSurahLoaded !== "undefined" ? timingSurahLoaded : 0) || (typeof currentAudioSurah !== "undefined" ? currentAudioSurah : 0) || (typeof getSurahNumberForPage === "function" ? getSurahNumberForPage(currentPage) : 1));
+          if(s) return { surah: s, ayah: Number(a.ayah) };
+        }
+      }
+    }catch(e){}
+    if(window.__lastTafsirRef && window.__lastTafsirRef.surah){
+      return { surah: Number(window.__lastTafsirRef.surah), ayah: Number(window.__lastTafsirRef.ayah)||1 };
+    }
+    try{
+      const s = (typeof currentAudioSurah !== "undefined" && currentAudioSurah) ? Number(currentAudioSurah) : (typeof getSurahNumberForPage === "function" ? getSurahNumberForPage(currentPage) : 1);
+      return { surah: s||1, ayah: 1 };
+    }catch(e){}
+    return { surah: 1, ayah: 1 };
+  }
+
+  function stripTafsirNoise(text){
+    return String(text||"")
+      .replace(/\[\[[\s\S]*?\]\]/g, "")
+      .replace(/\\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
+  async function loadTafsir(surah, ayah){
+    surah = Math.max(1, Math.min(114, Number(surah)||1));
+    ayah = Math.max(1, Math.min(maxAyah(surah), Number(ayah)||1));
+    tafsirSurah = surah; tafsirAyah = ayah;
+    const edition = (editionSel && editionSel.value) || "ar-tafsir-al-tabari";
+    try{ localStorage.setItem("aya_tafsir_edition", edition); }catch(e){}
+    if(refEl) refEl.textContent = surahName(surah) + " — الآية " + ayah;
+    if(ayahTextEl) ayahTextEl.textContent = "";
+    if(bodyEl) bodyEl.textContent = "";
+    setStatus("جاري تحميل التفسير…");
+
+    const key = edition + ":" + surah + ":" + ayah;
+    if(cache[key]){ render(cache[key]); return; }
+
+    try{
+      const tafsirUrl = BASE + edition + "/" + surah + "/" + ayah + ".json";
+      const ayahUrl = "https://api.alquran.cloud/v1/ayah/" + surah + ":" + ayah + "/quran-uthmani";
+      const [tr, ar] = await Promise.all([
+        fetch(tafsirUrl, { cache: "force-cache" }).then(r=>{ if(!r.ok) throw new Error("tafsir"); return r.json(); }),
+        fetch(ayahUrl, { cache: "force-cache" }).then(r=>r.ok?r.json():null).catch(()=>null)
+      ]);
+      let uthmani = "";
+      try{ uthmani = (ar && ar.data && ar.data.text) || ""; }catch(e){}
+      const text = stripTafsirNoise((tr && (tr.text || tr.tafsir || tr.content)) || "");
+      const payload = { uthmani: uthmani, tafsir: text, edition: edition };
+      cache[key] = payload;
+      render(payload);
+    }catch(e){
+      setStatus("تعذر تحميل التفسير. تأكد من الإنترنت.");
+      if(bodyEl) bodyEl.textContent = "";
+    }
+  }
+
+  function render(p){
+    if(ayahTextEl) ayahTextEl.textContent = p.uthmani || "";
+    if(bodyEl) bodyEl.textContent = p.tafsir || "لا يتوفر نص لهذه الآية.";
+    setStatus(EDITIONS[p.edition] || "");
+  }
+
+  function openTafsir(ref){
+    ref = ref || getPlayingRef();
+    if(overlay) overlay.classList.add("show");
+    try{
+      const menu = document.getElementById("sideMenu");
+      const ov = document.getElementById("overlay");
+      if(menu) menu.classList.remove("open");
+      if(ov) ov.classList.remove("show");
+    }catch(e){}
+    loadTafsir(ref.surah, ref.ayah);
+  }
+  function closeTafsir(){ if(overlay) overlay.classList.remove("show"); }
+
+  if(btn) btn.onclick = function(){ openTafsir(); };
+  if(closeBtn) closeBtn.onclick = closeTafsir;
+  if(overlay) overlay.addEventListener("click", function(e){ if(e.target===overlay) closeTafsir(); });
+  if(editionSel) editionSel.onchange = function(){ loadTafsir(tafsirSurah, tafsirAyah); };
+  if(prevBtn) prevBtn.onclick = function(){
+    let s=tafsirSurah, a=tafsirAyah-1;
+    if(a<1){ s=Math.max(1,s-1); a=maxAyah(s); }
+    loadTafsir(s,a);
+  };
+  if(nextBtn) nextBtn.onclick = function(){
+    let s=tafsirSurah, a=tafsirAyah+1;
+    if(a>maxAyah(s)){ s=Math.min(114,s+1); a=1; }
+    loadTafsir(s,a);
+  };
+  if(currentBtn) currentBtn.onclick = function(){ openTafsir(getPlayingRef()); };
+  if(playBtn) playBtn.onclick = function(){
+    try{
+      if(typeof seekToAyahItem === "function" && typeof currentTiming !== "undefined"){
+        const item = (currentTiming||[]).find(function(it){ return Number(it.ayah)===Number(tafsirAyah); });
+        if(item){ seekToAyahItem(item,{autoPlay:true}); return; }
+      }
+      if(typeof loadPage === "function" && typeof surahs !== "undefined" && surahs[tafsirSurah-1]){
+        loadPage(Number(surahs[tafsirSurah-1][1])||1, { surahNumber: tafsirSurah, autoContinue: true });
+      }
+    }catch(e){}
+  };
+
+  window.__ayaOpenTafsir = openTafsir;
+  window.__ayaSetTafsirRef = function(surah, ayah){
+    window.__lastTafsirRef = { surah: Number(surah), ayah: Number(ayah) };
+  };
+})();
+</script>
+
+
+<script id="aya-help-script">
+(function(){
+  var overlay = document.getElementById("helpOverlay");
+  var btn = document.getElementById("helpButton");
+  var closeBtn = document.getElementById("helpClose");
+  function openHelp(){
+    if(!overlay) return;
+    overlay.classList.add("show");
+    try{
+      var menu = document.getElementById("sideMenu");
+      var ov = document.getElementById("overlay");
+      if(menu) menu.classList.remove("open");
+      if(ov) ov.classList.remove("show");
+    }catch(e){}
+  }
+  function closeHelp(){ if(overlay) overlay.classList.remove("show"); }
+  if(btn) btn.onclick = openHelp;
+  if(closeBtn) closeBtn.onclick = closeHelp;
+  if(overlay) overlay.addEventListener("click", function(e){ if(e.target === overlay) closeHelp(); });
+})();
+</script>
+
+
+<script id="aya-onboarding-script">
+(function(){
+  var KEY = "aya_onboarding_seen_version";
+  var onboardOv = document.getElementById("onboardingOverlay");
+  var whatsOv = document.getElementById("whatsNewOverlay");
+
+  function currentAppVersion(){
+    try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
+    return "1.0.127";
+  }
+
+  /* دليل أول تشغيل فقط */
+  var FIRST_RUN_STEPS = [
+    {
+      title: "مرحباً بك في آية",
+      html: "تطبيق لقراءة القرآن الكريم مع التلاوة وتمييز الآيات والتفسير.<br><br>في الشاشات التالية شرح سريع لكيفية الاستخدام — يمكنك تخطيه في أي وقت."
+    },
+    {
+      title: "اللمس على المصحف",
+      html: "<b>ضغط قصير</b>: إظهار أو إخفاء الأزرار.<br><br><b>ضغط متوسط ثم رفع الإصبع</b> (حوالي 200ms): فتح <b>التفسير</b> للآية.<br><br><b>ضغط مطوّل</b> (حوالي 700ms): <b>تشغيل التلاوة</b> من الآية."
+    },
+    {
+      title: "التلاوة والقرّاء",
+      html: "اختر <b>القارئ</b> و<b>السورة</b> من الأسفل.<br><br>استخدم أزرار التشغيل والسابق والتالي.<br><br>يمكنك <b>تكرار الآية</b> أو تغيير <b>سرعة القراءة</b> من أزرار المشغّل."
+    },
+    {
+      title: "القائمة والمزيد",
+      html: "من زر القائمة ☰ تجد:<br>• السور والأجزاء والبحث<br>• <b>التفسير</b> (الطبري · ابن كثير · البغوي)<br>• حفظ الصفحة والعلامة المرجعية<br>• الوضع الليلي وإعدادات التمييز<br>• تنزيل الملحقات للعمل دون إنترنت<br>• المساعدة والتحديثات"
+    },
+    {
+      title: "جاهز للبدء",
+      html: "نصيحة: اضغط ضغطة قصيرة لإخفاء الأزرار والقراءة بهدوء.<br><br>يمكنك فتح <b>المساعدة</b> لاحقاً من القائمة في أي وقت.<br><br>بارك الله فيك 🌿"
+    }
+  ];
+
+  /*
+    ملاحظات كل إصدار — تظهر في نافذة «ما الجديد» بعد التحديث فقط.
+    عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا.
+  */
+  var WHATS_NEW = {
+    "1.0.126": [
+      "قسم المساعدة داخل القائمة",
+      "دليل التشغيل عند أول فتح للتطبيق",
+      "نافذة «ما الجديد» بعد التحديثات"
+    ],
+    "1.0.127": [
+      "إضافة <b>التفسير</b>: الطبري · ابن كثير · البغوي",
+      "فتح التفسير بالضغط على الآية ثم رفع الإصبع (حوالي 200ms)",
+      "تشغيل التلاوة بالضغط المطوّل على الآية (حوالي 700ms)",
+      "قسم <b>المساعدة</b> الشامل من القائمة",
+      "إصلاح وتحسين <b>عملية البحث</b>: نتائج أدق لكل الآيات",
+      "البحث عن كلمة يظهر السورة وجميع الآيات التي تحتويها",
+      "اختيار السورة من البحث يبدأ التلاوة من أولها",
+      "نافذة البحث تبقى مفتوحة حتى الإغلاق لاختيار نتيجة أخرى"
+    ]
+  };
+
+  /* ---- أول تشغيل (متعدد الخطوات) ---- */
+  var titleEl = document.getElementById("onboardTitle");
+  var bodyEl = document.getElementById("onboardBody");
+  var dotsEl = document.getElementById("onboardDots");
+  var prevBtn = document.getElementById("onboardPrev");
+  var nextBtn = document.getElementById("onboardNext");
+  var skipBtn = document.getElementById("onboardSkip");
+  var steps = FIRST_RUN_STEPS.slice();
+  var step = 0;
+
+  function markSeen(){
+    try{ localStorage.setItem(KEY, currentAppVersion()); }catch(e){}
+  }
+
+  function closeOnboard(){
+    if(onboardOv) onboardOv.classList.remove("show");
+    markSeen();
+  }
+
+  function renderOnboard(){
+    if(!onboardOv) return;
+    var s = steps[step] || { title: "", html: "" };
+    if(titleEl) titleEl.textContent = s.title;
+    if(bodyEl) bodyEl.innerHTML = s.html;
+    if(dotsEl){
+      dotsEl.innerHTML = "";
+      for(var i=0;i<steps.length;i++){
+        var d = document.createElement("span");
+        d.style.cssText = "width:8px;height:8px;border-radius:50%;display:inline-block;background:"+(i===step?"#79d69a":"rgba(255,255,255,.28)");
+        dotsEl.appendChild(d);
+      }
+    }
+    if(prevBtn) prevBtn.style.display = step > 0 ? "block" : "none";
+    if(nextBtn) nextBtn.textContent = step >= steps.length - 1 ? "ابدأ القراءة" : "التالي";
+  }
+
+  function openFirstRun(){
+    if(!onboardOv) return;
+    steps = FIRST_RUN_STEPS.slice();
+    step = 0;
+    renderOnboard();
+    onboardOv.classList.add("show");
+  }
+
+  if(prevBtn) prevBtn.onclick = function(){ if(step>0){ step--; renderOnboard(); } };
+  if(nextBtn) nextBtn.onclick = function(){
+    if(step >= steps.length - 1) closeOnboard();
+    else { step++; renderOnboard(); }
+  };
+  if(skipBtn) skipBtn.onclick = closeOnboard;
+  if(onboardOv) onboardOv.addEventListener("click", function(e){ if(e.target === onboardOv) closeOnboard(); });
+
+  /* ---- نافذة ما الجديد (بعد التحديث) ---- */
+  var wnTitle = document.getElementById("whatsNewTitle");
+  var wnVer = document.getElementById("whatsNewVersion");
+  var wnBody = document.getElementById("whatsNewBody");
+  var wnClose = document.getElementById("whatsNewClose");
+  var wnOk = document.getElementById("whatsNewOk");
+
+  function closeWhatsNew(){
+    if(whatsOv) whatsOv.classList.remove("show");
+    markSeen();
+  }
+
+  function openWhatsNew(){
+    if(!whatsOv) return;
+    var ver = currentAppVersion();
+    if(wnTitle) wnTitle.textContent = "ما الجديد";
+    if(wnVer) wnVer.textContent = "الإصدار " + ver;
+    var items = WHATS_NEW[ver];
+    var html;
+    if(items && items.length){
+      html = "<ul style='margin:0;padding-right:18px'>";
+      for(var i=0;i<items.length;i++){
+        html += "<li style='margin-bottom:8px'>" + items[i] + "</li>";
+      }
+      html += "</ul>";
+    }else{
+      html = "<div style='color:#ccc'>تحسينات عامة واستقرار في هذا الإصدار.</div>";
+    }
+    if(wnBody) wnBody.innerHTML = html;
+    whatsOv.classList.add("show");
+  }
+
+  if(wnClose) wnClose.onclick = closeWhatsNew;
+  if(wnOk) wnOk.onclick = closeWhatsNew;
+  if(whatsOv) whatsOv.addEventListener("click", function(e){ if(e.target === whatsOv) closeWhatsNew(); });
+
+  function decide(){
+    var ver = currentAppVersion();
+    var seen = null;
+    try{ seen = localStorage.getItem(KEY); }catch(e){}
+    if(!seen) return "first";
+    if(seen === ver) return null;
+    return "update";
+  }
+
+  function schedule(){
+    var m = decide();
+    if(!m) return;
+    var run = function(){
+      if(decide() !== m) return;
+      if(m === "first") openFirstRun();
+      else openWhatsNew();
+    };
+    setTimeout(run, 2400);
+    setTimeout(run, 4000);
+  }
+
+  if(document.readyState === "complete") schedule();
+  else window.addEventListener("load", schedule);
+
+  window.__ayaShowOnboarding = openFirstRun;
+  window.__ayaShowWhatsNew = openWhatsNew;
+})();
+</script>
+
+
+<script id="aya-help-onboard-link">
+(function(){
+  function bind(){
+    var b = document.getElementById("helpShowOnboarding");
+    var w = document.getElementById("helpShowWhatsNew");
+    if(b && !b.__bound){
+      b.__bound = true;
+      b.onclick = function(){
+        try{ var h=document.getElementById("helpOverlay"); if(h) h.classList.remove("show"); }catch(e){}
+        if(typeof window.__ayaShowOnboarding === "function") window.__ayaShowOnboarding();
+      };
+    }
+    if(w && !w.__bound){
+      w.__bound = true;
+      w.onclick = function(){
+        try{ var h=document.getElementById("helpOverlay"); if(h) h.classList.remove("show"); }catch(e){}
+        if(typeof window.__ayaShowWhatsNew === "function") window.__ayaShowWhatsNew();
+      };
+    }
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
+  else bind();
+  setTimeout(bind, 500);
+})();
+</script>
+
 </body>
 </html>
 
