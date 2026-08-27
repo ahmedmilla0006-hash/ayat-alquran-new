@@ -5934,6 +5934,11 @@ function openSearch(){
 function closeSearch(){
 
   searchOverlay.classList.remove("show");
+  /* مسح نص البحث والنتائج عند الإغلاق بزر ✕ */
+  try{
+    if(searchInput) searchInput.value = "";
+    if(searchResults) searchResults.innerHTML = "";
+  }catch(e){}
 
 }
 
@@ -6085,6 +6090,9 @@ function addSearchResult(title, meta, text, targetPage, surahNumber, ayahNumber)
     document.createElement("button");
 
   button.className = "popup-item search-result";
+  if(surahNumber && ayahNumber){
+    button.setAttribute("data-ayah-key", String(surahNumber) + ":" + String(ayahNumber));
+  }
 
   button.innerHTML =
     '<span class="search-result-title">' +
@@ -6142,28 +6150,102 @@ function searchLocal(query){
 
   }
 
-  const matches =
-    surahs.filter(item =>
-      normalizeArabic(item[0]).includes(q) ||
-      String(surahs.indexOf(item) + 1) === q
-    );
+  /*
+    مطابقة أسماء السور بدقة:
+    - تطابق كامل أولاً
+    - ثم بداية الاسم
+    - للكلمات القصيرة (≤2) لا نستخدم includes حتى لا يطابق «عم» داخل «عمران»
+    - أسماء شائعة: عم → النبأ، ص/ق/يس/طه كما هي
+  */
+  const SURAH_ALIASES = {
+    "عم": "النبا",
+    "عم يتساءلون": "النبا",
+    "الملك": "الملك",
+    "تبارك": "الملك",
+    "يس": "يس",
+    "ياسين": "يس",
+    "طه": "طه",
+    "ص": "ص",
+    "ق": "ق",
+    "حم": null /* لا نربط حم بسورة واحدة؛ تُعالَج كبحث كلمة كاملة فقط */
+  };
 
-  matches.forEach(item => {
-    const surahNum = surahs.indexOf(item) + 1;
+  function surahMatchScore(nameNorm, qStr){
+    if(!nameNorm || !qStr) return 0;
+    /* تطابق كامل فقط (مع أو بدون ال) */
+    if(nameNorm === qStr) return 100;
+    const bare = nameNorm.replace(/^ال/, "");
+    const qBare = qStr.replace(/^ال/, "");
+    if(bare === qBare && qBare.length > 0) return 95;
+    /*
+      المطابقة الجزئية (بداية الاسم أو includes)
+      تبدأ من 3 أحرف فأكثر فقط.
+      حرفان: تطابق كامل للكلمة/الاسم فقط (مثل ص، ق، عم عبر الاسم المستعار).
+    */
+    if(qStr.length >= 3){
+      if(nameNorm.indexOf(qStr) === 0) return 80;
+      if(qBare.length >= 3 && bare.indexOf(qBare) === 0) return 70;
+      if(nameNorm.indexOf(qStr) >= 0 || (qBare.length >= 3 && bare.indexOf(qBare) >= 0)) return 40;
+    }
+    return 0;
+  }
+
+  const scored = [];
+  const seenNums = new Set();
+
+  /* أسماء مستعارة شائعة */
+  const aliasTarget = SURAH_ALIASES[q];
+  if(aliasTarget){
+    surahs.forEach(function(item, idx){
+      const nNorm = normalizeArabic(item[0]);
+      if(nNorm === aliasTarget || nNorm.replace(/^ال/, "") === aliasTarget.replace(/^ال/, "")){
+        scored.push({ item: item, num: idx + 1, score: 110 });
+        seenNums.add(idx + 1);
+      }
+    });
+  }
+
+  surahs.forEach(function(item, idx){
+    const num = idx + 1;
+    if(seenNums.has(num)) return;
+    if(String(num) === q){
+      scored.push({ item: item, num: num, score: 120 });
+      seenNums.add(num);
+      return;
+    }
+    const score = surahMatchScore(normalizeArabic(item[0]), q);
+    if(score > 0){
+      scored.push({ item: item, num: num, score: score });
+      seenNums.add(num);
+    }
+  });
+
+  scored.sort(function(a, b){ return b.score - a.score; });
+
+  scored.forEach(function(entry){
     addSearchResult(
-      "سورة " + item[0],
-      "بداية السورة — الصفحة " + item[1],
+      "سورة " + entry.item[0],
+      "بداية السورة — الصفحة " + entry.item[1],
       "",
-      item[1],
-      surahNum,
+      entry.item[1],
+      entry.num,
       1
     );
   });
 
-  return matches.length > 0 ||
-         (/^\d+$/.test(q) &&
-          numeric >= 1 &&
-          numeric <= TOTAL_PAGES);
+  /*
+    جلب كل آيات السورة فقط عند تطابق اسمها الحقيقي
+    (مثل «الناس» أو «النبأ» أو «ناس»)، وليس عند الاسم المستعار («عم»).
+    score 110 = اسم مستعار → لا تُجلب كل الآيات.
+  */
+  const exactSurahs = scored
+    .filter(function(e){ return e.score >= 95 && e.score !== 110; })
+    .map(function(e){ return e.num; });
+
+  return {
+    hasLocal: scored.length > 0 || (/^\d+$/.test(q) && numeric >= 1 && numeric <= TOTAL_PAGES),
+    exactSurahs: exactSurahs
+  };
 
 }
 
@@ -6194,14 +6276,24 @@ async function searchWord(query){
     return 0;
   }
 
-  /* ترتيب أدق: تطابق كامل للكلمة أولاً ثم ظهورها داخل النص */
+  /*
+    ترتيب أدق:
+    - تطابق كلمة كاملة = أعلى دائماً
+    - حرفان أو أقل: كلمة كاملة فقط (لا جزئي داخل كلمة أطول)
+    - 3 أحرف فأكثر: يُسمح بالتطابق الجزئي داخل النص
+  */
   function rankMatch(text){
     const t = normalizeArabic(text);
     if(!t || !qNorm) return 0;
-    const parts = t.split(/\s+/);
-    if(parts.some(w => w === qNorm)) return 3;
-    if(t.includes(" " + qNorm + " ") || t.startsWith(qNorm + " ") || t.endsWith(" " + qNorm)) return 2;
-    if(t.includes(qNorm)) return 1;
+    const parts = t.split(/\s+/).filter(Boolean);
+    /* كلمة كاملة مطابقة */
+    if(parts.some(function(w){ return w === qNorm; })) return 3;
+    /* حدود كلمة بمسافات */
+    if(
+      (" " + t + " ").indexOf(" " + qNorm + " ") >= 0
+    ) return 2;
+    /* تطابق جزئي — من 3 أحرف فقط */
+    if(qNorm.length >= 3 && t.indexOf(qNorm) >= 0) return 1;
     return 0;
   }
 
@@ -6428,6 +6520,47 @@ async function searchWord(query){
 
 }
 
+
+/* جلب كل آيات سورة معيّنة (عند تطابق اسم السورة بالكامل مثل «الناس») */
+async function fetchAllAyahsOfSurah(surahNumber){
+  const n = Number(surahNumber);
+  if(!n || n < 1 || n > 114) return [];
+  try{
+    const url = "https://api.alquran.cloud/v1/surah/" + n + "/quran-simple-clean";
+    const response = await fetch(url, { method: "GET", headers: { "Accept": "application/json" } });
+    if(!response.ok) return [];
+    const json = await response.json();
+    const ayahs = (json && json.data && Array.isArray(json.data.ayahs)) ? json.data.ayahs : [];
+    const name = (typeof surahs !== "undefined" && surahs[n-1]) ? surahs[n-1][0] : ("سورة " + n);
+    const startPage = (typeof surahs !== "undefined" && surahs[n-1]) ? Number(surahs[n-1][1]) || 0 : 0;
+    return ayahs.map(function(a){
+      return {
+        surahNumber: n,
+        ayahNumber: Number(a.numberInSurah || a.number || 0),
+        text: String(a.text || "").trim(),
+        surahName: name,
+        page: Number(a.page || startPage) || startPage
+      };
+    }).filter(function(a){ return a.ayahNumber >= 1; });
+  }catch(e){
+    return [];
+  }
+}
+
+function updateSearchResultCount(){
+  if(!searchResults) return;
+  const old = document.getElementById("searchResultCount");
+  if(old) old.remove();
+  const n = searchResults.querySelectorAll(".search-result").length;
+  if(n <= 0) return;
+  const el = document.createElement("div");
+  el.id = "searchResultCount";
+  el.className = "search-status";
+  el.style.cssText = "font-weight:800;color:#79d69a;padding:8px 4px 4px;text-align:center";
+  el.textContent = "عدد النتائج: " + n;
+  searchResults.insertBefore(el, searchResults.firstChild);
+}
+
 searchForm.onsubmit = async e => {
 
   e.preventDefault();
@@ -6453,15 +6586,50 @@ searchForm.onsubmit = async e => {
   const isPageOnly = /^\d+$/.test(qn) && Number(qn) >= 1 && Number(qn) <= TOTAL_PAGES;
 
   /* نتائج محلية: رقم صفحة أو اسم سورة */
-  searchLocal(query);
+  const localInfo = searchLocal(query) || { hasLocal: false, exactSurahs: [] };
 
   /* رقم صفحة فقط: لا داعي لبحث الآيات */
   if(isPageOnly){
+    updateSearchResultCount();
     return;
   }
 
-  /* دائماً ابحث عن الآيات التي تحتوي الكلمة (حتى لو وُجدت سورة بنفس الاسم مثل يوسف) */
+  /* دائماً ابحث عن الآيات التي تحتوي الكلمة */
   await searchWord(query);
+
+  /*
+    إذا طابق الاستعلام اسم السورة الحقيقي بالكامل (مثل «الناس» أو «النبأ»)
+    اجلب كل آياتها. الأسماء المستعارة مثل «عم» تظهر السورة فقط + الآيات التي فيها الكلمة.
+  */
+  try{
+    const exactList = (localInfo && localInfo.exactSurahs) ? localInfo.exactSurahs : [];
+    if(exactList.length){
+      const seen = new Set();
+      searchResults.querySelectorAll(".search-result").forEach(function(btn){
+        const t = (btn.getAttribute("data-ayah-key") || "");
+        if(t) seen.add(t);
+      });
+      for(let si = 0; si < exactList.length; si++){
+        const sn = exactList[si];
+        const ayahs = await fetchAllAyahsOfSurah(sn);
+        ayahs.forEach(function(a){
+          const key = a.surahNumber + ":" + a.ayahNumber;
+          if(seen.has(key)) return;
+          seen.add(key);
+          addSearchResult(
+            "سورة " + a.surahName,
+            "الآية " + a.ayahNumber + (a.page ? (" — الصفحة " + a.page) : ""),
+            a.text || "",
+            a.page || 1,
+            a.surahNumber,
+            a.ayahNumber
+          );
+        });
+      }
+    }
+  }catch(e){}
+
+  updateSearchResultCount();
 
 };
 
@@ -6770,14 +6938,33 @@ document.addEventListener("DOMContentLoaded",()=>{
     return "";
   }
 
+  function fmtMediaTime(sec){
+    sec = Math.max(0, Math.floor(Number(sec) || 0));
+    var m = Math.floor(sec / 60);
+    var s = sec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
   function mediaPayload(){
+    var pos = Number(audio.currentTime);
+    var dur = Number(audio.duration);
+    if(!Number.isFinite(pos) || pos < 0) pos = 0;
+    if(!Number.isFinite(dur) || dur < 0) dur = 0;
+    /* بعض المتصفحات تعطي Infinity قبل اكتمال البيانات */
+    if(dur === Infinity) dur = 0;
+    if(dur > 0 && pos > dur) pos = dur;
     return {
       title: surahLabel() + (ayahHint() ? " — " + ayahHint() : ""),
       artist: reciterLabel(),
       album: "آية",
       playing: !audio.paused,
-      position: audio.currentTime || 0,
-      duration: audio.duration || 0
+      position: pos,
+      duration: dur,
+      positionSec: Math.floor(pos),
+      durationSec: Math.floor(dur),
+      positionText: fmtMediaTime(pos),
+      durationText: fmtMediaTime(dur),
+      playbackRate: audio.playbackRate || 1
     };
   }
 
@@ -6812,10 +6999,10 @@ document.addEventListener("DOMContentLoaded",()=>{
     }
 
     try{
-      if(payload.duration && Number.isFinite(payload.duration) && payload.duration > 0){
+      if(payload.duration > 0 && Number.isFinite(payload.duration)){
         navigator.mediaSession.setPositionState({
           duration: payload.duration,
-          playbackRate: audio.playbackRate || 1,
+          playbackRate: payload.playbackRate || 1,
           position: Math.max(0, Math.min(payload.position, payload.duration))
         });
       }
@@ -6932,9 +7119,19 @@ document.addEventListener("DOMContentLoaded",()=>{
   audio.addEventListener("loadedmetadata", updateMediaSession);
   audio.addEventListener("durationchange", updateMediaSession);
 
+  /* تحديث العداد في الإشعار أثناء التشغيل (كل ثانية) */
   setInterval(function(){
     if(!audio.paused) updateMediaSession();
-  }, 2500);
+  }, 1000);
+
+  /* مزامنة أدق مع تقدم الصوت */
+  var __mediaLastTu = 0;
+  audio.addEventListener("timeupdate", function(){
+    var now = Date.now();
+    if(now - __mediaLastTu < 900) return;
+    __mediaLastTu = now;
+    updateMediaSession();
+  });
 
   document.addEventListener("visibilitychange", function(){
     if(document.visibilityState === "visible"){
@@ -6982,7 +7179,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.128";
+  const APP_VERSION = "1.0.129";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
@@ -8894,7 +9091,7 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.128";
+    return "1.0.129";
   }
 
   /*
@@ -8938,11 +9135,9 @@ body.interface-old #downloadsPopup .download-native-select{
     ملاحظات كل إصدار — تظهر في «ما الجديد» بعد تثبيت تحديث جديد فقط.
     عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
-  var WHATS_NEW = {
+    var WHATS_NEW = {
     "1.0.126": [
-      "قسم المساعدة داخل القائمة",
-      "دليل التشغيل عند أول فتح للتطبيق",
-      "نافذة «ما الجديد» بعد التحديثات"
+      "قسم المساعدة داخل القائمة"
     ],
     "1.0.127": [
       "إضافة <b>التفسير</b>: الطبري · ابن كثير · البغوي",
@@ -8957,6 +9152,12 @@ body.interface-old #downloadsPopup .download-native-select{
     "1.0.128": [
       "تحسين <b>البحث</b>: مطابقة أسماء السور والكلمات الكاملة (وليس الحروف داخل الكلمات)",
       "إمكانية البحث عن سور بأسماء حرف واحد مثل <b>ص</b> و<b>ق</b>",
+      "مسح نص البحث والنتائج عند الإغلاق بزر ✕"
+    ],
+    "1.0.129": [
+      "تحسينات في <b>عملية البحث</b>",
+      "المطابقة الجزئية لأسماء السور والكلمات تبدأ من <b>3 أحرف</b> فقط",
+      "عرض <b>عدد النتائج</b> أعلى قائمة البحث",
       "مسح نص البحث والنتائج عند الإغلاق بزر ✕"
     ]
   };
@@ -9199,13 +9400,16 @@ body.interface-old #downloadsPopup .download-native-select{
     if(wnTitle) wnTitle.textContent = "ما الجديد";
     if(wnVer) wnVer.textContent = "حتى الإصدار " + ver;
 
-    /* كل ما بين آخر إصدار شوهد والحالي (مثل 127 + 128) */
+    /* كل ما بين آخر إصدار شوهد والحالي (مثل 127 + 128 + 129) */
     var groups = collectWhatsNew(lastSeen, ver);
-    /* فتح يدوي من المساعدة بعد مشاهدة الإصدار: اعرض آخر إصدارين (الأحدث أولاً) */
+    /*
+      فتح يدوي من المساعدة (أو بعد مشاهدة الإصدار الحالي):
+      اعرض كل ملاحظات الإصدارات المتاحة حتى يظهر 1.0.127 وما بعده.
+    */
     if(!groups.length){
       var keys = Object.keys(WHATS_NEW).sort(function(a, b){ return cmpVer(b, a); });
       groups = [];
-      for(var ki = 0; ki < keys.length && groups.length < 2; ki++){
+      for(var ki = 0; ki < keys.length; ki++){
         groups.push({ ver: keys[ki], items: WHATS_NEW[keys[ki]] || [] });
       }
     }
