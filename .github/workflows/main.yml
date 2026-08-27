@@ -436,163 +436,32 @@ jobs:
           activity.write_bytes(base64.b64decode(activity_b64))
 
           # ============================================================
-          # RESTORE EXISTING MEDIA SERVICE
-          # MainActivity already references AyaMediaService; keep the
-          # existing media notification/player functionality intact.
+          # ============================================================
+          # AYA MEDIA SERVICE — keep the existing service intact
+          # IMPORTANT: use AndroidX MediaCompat classes from androidx.media:media
           # ============================================================
 
           service_b64 = "cGFja2FnZSBjb20uYXlhLmFscXVyYW47CgppbXBvcnQgYW5kcm9pZC5hcHAuTm90aWZpY2F0aW9uOwppbXBvcnQgYW5kcm9pZC5hcHAuUGVuZGluZ0ludGVudDsKaW1wb3J0IGFuZHJvaWQuYXBwLlNlcnZpY2U7CmltcG9ydCBhbmRyb2lkLmNvbnRlbnQuQ29udGV4dDsKaW1wb3J0IGFuZHJvaWQuY29udGVudC5JbnRlbnQ7CmltcG9ydCBhbmRyb2lkLm9zLklCaW5kZXI7CmltcG9ydCBhbmRyb2lkLm9zLlBvd2VyTWFuYWdlcjsKaW1wb3J0IGFuZHJvaWQub3MuU3lzdGVtQ2xvY2s7CmltcG9ydCBhbmRyb2lkLnN1cHBvcnQudjQubWVkaWEuTWVkaWFNZXRhZGF0YUNvbXBhdDsKaW1wb3J0IGFuZHJvaWQuc3VwcG9ydC52NC5tZWRpYS5zZXNzaW9uLk1lZGlhU2Vzc2lvbkNvbXBhdDsKaW1wb3J0IGFuZHJvaWQuc3VwcG9ydC52NC5tZWRpYS5zZXNzaW9uLlBsYXliYWNrU3RhdGVDb21wYXQ7CgppbXBvcnQgYW5kcm9pZHguY29yZS5hcHAuTm90aWZpY2F0aW9uQ29tcGF0OwppbXBvcnQgYW5kcm9pZHgubWVkaWEuYXBwLk5vdGlmaWNhdGlvbkNvbXBhdC5NZWRpYVN0eWxlOwoKcHVibGljIGNsYXNzIEF5YU1lZGlhU2VydmljZSBleHRlbmRzIFNlcnZpY2UgewoKICAgIHB1YmxpYyBzdGF0aWMgZmluYWwgU3RyaW5nIENIQU5ORUxfSUQgPSAiYXlhX21lZGlhIjsKICAgIHB1YmxpYyBzdGF0aWMgZmluYWwgaW50IE5PVElGSUNBVElPTl9JRCA9IDc3MDE7CgogICAgcHVibGljIHN0YXRpYyBmaW5hbCBTdHJpbmcgQUNUSU9OX1NZTkMgPSAiY29tLmF5YS5hbHF1cmFuLlNZTkMiOwogICAgcHVibGljIHN0YXRpYyBmaW5hbCBTdHJpbmcgQUNUSU9OX1BMQVkgPSAiY29tLmF5YS5hbHF1cmFuLlBMQVkiOwogICAgcHVibGljIHN0YXRpYyBmaW5hbCBTdHJpbmcgQUNUSU9OX1BBVVNFID0gImNvbS5heWEuYWxxdXJhbi5QQVVTRSI7CiAgICBwdWJsaWMgc3RhdGljIGZpbmFsIFN0cmluZyBBQ1RJT05fUFJFViA9ICJjb20uYXlhLmFscXVyYW4uUFJFViI7CiAgICBwdWJsaWMgc3RhdGljIGZpbmFsIFN0cmluZyBBQ1RJT05fTkVYVCA9ICJjb20uYXlhLmFscXVyYW4uTkVYVCI7CiAgICBwdWJsaWMgc3RhdGljIGZpbmFsIFN0cmluZyBBQ1RJT05fU1RPUCA9ICJjb20uYXlhLmFscXVyYW4uU1RPUCI7CgogICAgcHVibGljIHN0YXRpYyBmaW5hbCBTdHJpbmcgRVhUUkFfQ01EID0gImF5YV9jbWQiOwogICAgcHVibGljIHN0YXRpYyBmaW5hbCBTdHJpbmcgRVhUUkFfVElUTEUgPSAiYXlhX3RpdGxlIjsKICAgIHB1YmxpYyBzdGF0aWMgZmluYWwgU3RyaW5nIEVYVFJBX0FSVElTVCA9ICJheWFfYXJ0aXN0IjsKICAgIHB1YmxpYyBzdGF0aWMgZmluYWwgU3RyaW5nIEVYVFJBX1BMQVlJTkcgPSAiYXlhX3BsYXlpbmciOwogICAgcHVibGljIHN0YXRpYyBmaW5hbCBTdHJpbmcgRVhUUkFfUE9TSVRJT04gPSAiYXlhX3Bvc2l0aW9uIjsKICAgIHB1YmxpYyBzdGF0aWMgZmluYWwgU3RyaW5nIEVYVFJBX0RVUkFUSU9OID0gImF5YV9kdXJhdGlvbiI7CgogICAgcHVibGljIHN0YXRpYyBmaW5hbCBTdHJpbmcgQ01EX1BMQVkgPSAicGxheSI7CiAgICBwdWJsaWMgc3RhdGljIGZpbmFsIFN0cmluZyBDTURfUEFVU0UgPSAicGF1c2UiOwogICAgcHVibGljIHN0YXRpYyBmaW5hbCBTdHJpbmcgQ01EX1BSRVYgPSAicHJldiI7CiAgICBwdWJsaWMgc3RhdGljIGZpbmFsIFN0cmluZyBDTURfTkVYVCA9ICJuZXh0IjsKICAgIHB1YmxpYyBzdGF0aWMgZmluYWwgU3RyaW5nIENNRF9TVE9QID0gInN0b3AiOwoKICAgIHByaXZhdGUgU3RyaW5nIHRpdGxlID0gItin2YTZgtix2KLZhiDYp9mE2YPYsdmK2YUiOwogICAgcHJpdmF0ZSBTdHJpbmcgYXJ0aXN0ID0gItii2YrYqSI7CiAgICBwcml2YXRlIGJvb2xlYW4gcGxheWluZyA9IGZhbHNlOwogICAgcHJpdmF0ZSBsb25nIGR1cmF0aW9uTXMgPSAwTDsKICAgIHByaXZhdGUgbG9uZyBwb3NpdGlvbk1zID0gMEw7CiAgICBwcml2YXRlIGxvbmcgcG9zaXRpb25VcGRhdGVkQXQgPSAwTDsKICAgIHByaXZhdGUgTWVkaWFTZXNzaW9uQ29tcGF0IG1lZGlhU2Vzc2lvbjsKICAgIHByaXZhdGUgUG93ZXJNYW5hZ2VyLldha2VMb2NrIHdha2VMb2NrOwoKICAgIEBPdmVycmlkZQogICAgcHVibGljIHZvaWQgb25DcmVhdGUoKSB7CiAgICAgICAgc3VwZXIub25DcmVhdGUoKTsKICAgICAgICB0cnkgewogICAgICAgICAgICBQb3dlck1hbmFnZXIgcG0gPSAoUG93ZXJNYW5hZ2VyKSBnZXRTeXN0ZW1TZXJ2aWNlKENvbnRleHQuUE9XRVJfU0VSVklDRSk7CiAgICAgICAgICAgIGlmIChwbSAhPSBudWxsKSB7CiAgICAgICAgICAgICAgICB3YWtlTG9jayA9IHBtLm5ld1dha2VMb2NrKFBvd2VyTWFuYWdlci5QQVJUSUFMX1dBS0VfTE9DSywgIkF5YTpNZWRpYVdha2VMb2NrIik7CiAgICAgICAgICAgICAgICB3YWtlTG9jay5zZXRSZWZlcmVuY2VDb3VudGVkKGZhbHNlKTsKICAgICAgICAgICAgfQogICAgICAgIH0gY2F0Y2ggKEV4Y2VwdGlvbiBlKSB7CiAgICAgICAgfQogICAgICAgIG1lZGlhU2Vzc2lvbiA9IG5ldyBNZWRpYVNlc3Npb25Db21wYXQodGhpcywgIkF5YU1lZGlhU2Vzc2lvbiIpOwogICAgICAgIG1lZGlhU2Vzc2lvbi5zZXRDYWxsYmFjayhuZXcgTWVkaWFTZXNzaW9uQ29tcGF0LkNhbGxiYWNrKCkgewogICAgICAgICAgICBAT3ZlcnJpZGUgcHVibGljIHZvaWQgb25QbGF5KCkgeyBwbGF5aW5nID0gdHJ1ZTsgYWNxdWlyZVdha2VMb2NrKCk7IGRpc3BhdGNoKENNRF9QTEFZKTsgcmVmcmVzaCgpOyB9CiAgICAgICAgICAgIEBPdmVycmlkZSBwdWJsaWMgdm9pZCBvblBhdXNlKCkgeyBwbGF5aW5nID0gZmFsc2U7IHJlbGVhc2VXYWtlTG9jaygpOyBkaXNwYXRjaChDTURfUEFVU0UpOyByZWZyZXNoKCk7IH0KICAgICAgICAgICAgQE92ZXJyaWRlIHB1YmxpYyB2b2lkIG9uU2tpcFRvTmV4dCgpIHsgZGlzcGF0Y2goQ01EX05FWFQpOyByZWZyZXNoKCk7IH0KICAgICAgICAgICAgQE92ZXJyaWRlIHB1YmxpYyB2b2lkIG9uU2tpcFRvUHJldmlvdXMoKSB7IGRpc3BhdGNoKENNRF9QUkVWKTsgcmVmcmVzaCgpOyB9CiAgICAgICAgICAgIEBPdmVycmlkZSBwdWJsaWMgdm9pZCBvblN0b3AoKSB7CiAgICAgICAgICAgICAgICBwbGF5aW5nID0gZmFsc2U7CiAgICAgICAgICAgICAgICByZWxlYXNlV2FrZUxvY2soKTsKICAgICAgICAgICAgICAgIGRpc3BhdGNoKENNRF9TVE9QKTsKICAgICAgICAgICAgICAgIHN0b3BGb3JlZ3JvdW5kKHRydWUpOwogICAgICAgICAgICAgICAgc3RvcFNlbGYoKTsKICAgICAgICAgICAgfQogICAgICAgIH0pOwogICAgICAgIG1lZGlhU2Vzc2lvbi5zZXRBY3RpdmUodHJ1ZSk7CiAgICB9CgogICAgcHJpdmF0ZSB2b2lkIGFjcXVpcmVXYWtlTG9jaygpIHsKICAgICAgICB0cnkgewogICAgICAgICAgICBpZiAod2FrZUxvY2sgIT0gbnVsbCAmJiAhd2FrZUxvY2suaXNIZWxkKCkpIHsKICAgICAgICAgICAgICAgIHdha2VMb2NrLmFjcXVpcmUoNiAqIDYwICogNjAgKiAxMDAwTCk7CiAgICAgICAgICAgIH0KICAgICAgICB9IGNhdGNoIChFeGNlcHRpb24gZSkgewogICAgICAgIH0KICAgIH0KCiAgICBwcml2YXRlIHZvaWQgcmVsZWFzZVdha2VMb2NrKCkgewogICAgICAgIHRyeSB7CiAgICAgICAgICAgIGlmICh3YWtlTG9jayAhPSBudWxsICYmIHdha2VMb2NrLmlzSGVsZCgpKSB7CiAgICAgICAgICAgICAgICB3YWtlTG9jay5yZWxlYXNlKCk7CiAgICAgICAgICAgIH0KICAgICAgICB9IGNhdGNoIChFeGNlcHRpb24gZSkgewogICAgICAgIH0KICAgIH0KCiAgICBwcml2YXRlIHZvaWQgZGlzcGF0Y2goU3RyaW5nIGNtZCkgewogICAgICAgIHRyeSB7CiAgICAgICAgICAgIEludGVudCBpID0gbmV3IEludGVudCh0aGlzLCBNYWluQWN0aXZpdHkuY2xhc3MpOwogICAgICAgICAgICBpLnNldEFjdGlvbihJbnRlbnQuQUNUSU9OX01BSU4pOwogICAgICAgICAgICBpLmFkZENhdGVnb3J5KEludGVudC5DQVRFR09SWV9MQVVOQ0hFUik7CiAgICAgICAgICAgIGkuc2V0RmxhZ3MoSW50ZW50LkZMQUdfQUNUSVZJVFlfU0lOR0xFX1RPUCB8IEludGVudC5GTEFHX0FDVElWSVRZX05FV19UQVNLKTsKICAgICAgICAgICAgaS5wdXRFeHRyYShFWFRSQV9DTUQsIGNtZCk7CiAgICAgICAgICAgIHN0YXJ0QWN0aXZpdHkoaSk7CiAgICAgICAgICAgIE1haW5BY3Rpdml0eSBhY3QgPSBNYWluQWN0aXZpdHkuZ2V0SW5zdGFuY2UoKTsKICAgICAgICAgICAgaWYgKGFjdCAhPSBudWxsKSB7CiAgICAgICAgICAgICAgICBhY3QuYXBwbHlNZWRpYUNvbW1hbmQoY21kKTsKICAgICAgICAgICAgfQogICAgICAgIH0gY2F0Y2ggKEV4Y2VwdGlvbiBlKSB7CiAgICAgICAgICAgIHRyeSB7CiAgICAgICAgICAgICAgICBJbnRlbnQgaSA9IG5ldyBJbnRlbnQodGhpcywgTWFpbkFjdGl2aXR5LmNsYXNzKTsKICAgICAgICAgICAgICAgIGkuc2V0RmxhZ3MoSW50ZW50LkZMQUdfQUNUSVZJVFlfU0lOR0xFX1RPUCB8IEludGVudC5GTEFHX0FDVElWSVRZX05FV19UQVNLKTsKICAgICAgICAgICAgICAgIGkucHV0RXh0cmEoRVhUUkFfQ01ELCBjbWQpOwogICAgICAgICAgICAgICAgc3RhcnRBY3Rpdml0eShpKTsKICAgICAgICAgICAgfSBjYXRjaCAoRXhjZXB0aW9uIGUyKSB7CiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICB9CgogICAgcHJpdmF0ZSB2b2lkIHJlZnJlc2goKSB7CiAgICAgICAgdHJ5IHsKICAgICAgICAgICAgdXBkYXRlU2Vzc2lvbigpOwogICAgICAgICAgICBzdGFydEZvcmVncm91bmQoTk9USUZJQ0FUSU9OX0lELCBidWlsZE5vdGlmaWNhdGlvbigpKTsKICAgICAgICB9IGNhdGNoIChFeGNlcHRpb24gZSkgewogICAgICAgIH0KICAgIH0KCiAgICBwcml2YXRlIHZvaWQgdXBkYXRlU2Vzc2lvbigpIHsKICAgICAgICBpZiAobWVkaWFTZXNzaW9uID09IG51bGwpIHJldHVybjsKICAgICAgICB0cnkgewogICAgICAgICAgICBsb25nIGN1cnJlbnRQb3NpdGlvbiA9IGdldEN1cnJlbnRQb3NpdGlvbk1zKCk7CiAgICAgICAgICAgIE1lZGlhTWV0YWRhdGFDb21wYXQuQnVpbGRlciBtZXRhID0gbmV3IE1lZGlhTWV0YWRhdGFDb21wYXQuQnVpbGRlcigpCiAgICAgICAgICAgICAgICAgICAgLnB1dFN0cmluZyhNZWRpYU1ldGFkYXRhQ29tcGF0Lk1FVEFEQVRBX0tFWV9USVRMRSwgdGl0bGUgPT0gbnVsbCA/ICLYp9mE2YLYsdii2YYg2KfZhNmD2LHZitmFIiA6IHRpdGxlKQogICAgICAgICAgICAgICAgICAgIC5wdXRMb25nKE1lZGlhTWV0YWRhdGFDb21wYXQuTUVUQURBVEFfS0VZX0RVUkFUSU9OLCBNYXRoLm1heCgwTCwgZHVyYXRpb25NcykpCiAgICAgICAgICAgICAgICAgICAgLnB1dFN0cmluZyhNZWRpYU1ldGFkYXRhQ29tcGF0Lk1FVEFEQVRBX0tFWV9BUlRJU1QsIGFydGlzdCA9PSBudWxsID8gItii2YrYqSIgOiBhcnRpc3QpCiAgICAgICAgICAgICAgICAgICAgLnB1dFN0cmluZyhNZWRpYU1ldGFkYXRhQ29tcGF0Lk1FVEFEQVRBX0tFWV9BTEJVTSwgItii2YrYqSIpOwogICAgICAgICAgICBtZWRpYVNlc3Npb24uc2V0TWV0YWRhdGEobWV0YS5idWlsZCgpKTsKCiAgICAgICAgICAgIGxvbmcgYWN0aW9ucyA9IFBsYXliYWNrU3RhdGVDb21wYXQuQUNUSU9OX1BMQVkKICAgICAgICAgICAgICAgICAgICB8IFBsYXliYWNrU3RhdGVDb21wYXQuQUNUSU9OX1BBVVNFCiAgICAgICAgICAgICAgICAgICAgfCBQbGF5YmFja1N0YXRlQ29tcGF0LkFDVElPTl9QTEFZX1BBVVNFCiAgICAgICAgICAgICAgICAgICAgfCBQbGF5YmFja1N0YXRlQ29tcGF0LkFDVElPTl9TS0lQX1RPX05FWFQKICAgICAgICAgICAgICAgICAgICB8IFBsYXliYWNrU3RhdGVDb21wYXQuQUNUSU9OX1NLSVBfVE9fUFJFVklPVVMKICAgICAgICAgICAgICAgICAgICB8IFBsYXliYWNrU3RhdGVDb21wYXQuQUNUSU9OX1NUT1A7CgogICAgICAgICAgICBpbnQgc3RhdGUgPSBwbGF5aW5nID8gUGxheWJhY2tTdGF0ZUNvbXBhdC5TVEFURV9QTEFZSU5HIDogUGxheWJhY2tTdGF0ZUNvbXBhdC5TVEFURV9QQVVTRUQ7CiAgICAgICAgICAgIFBsYXliYWNrU3RhdGVDb21wYXQuQnVpbGRlciBwYiA9IG5ldyBQbGF5YmFja1N0YXRlQ29tcGF0LkJ1aWxkZXIoKQogICAgICAgICAgICAgICAgICAgIC5zZXRBY3Rpb25zKGFjdGlvbnMpCiAgICAgICAgICAgICAgICAgICAgLnNldFN0YXRlKHN0YXRlLCBjdXJyZW50UG9zaXRpb24sIHBsYXlpbmcgPyAxLjBmIDogMGYpOwogICAgICAgICAgICBtZWRpYVNlc3Npb24uc2V0UGxheWJhY2tTdGF0ZShwYi5idWlsZCgpKTsKICAgICAgICAgICAgbWVkaWFTZXNzaW9uLnNldEFjdGl2ZSh0cnVlKTsKICAgICAgICB9IGNhdGNoIChFeGNlcHRpb24gZSkgewogICAgICAgIH0KICAgIH0KCiAgICBAT3ZlcnJpZGUKICAgIHB1YmxpYyBpbnQgb25TdGFydENvbW1hbmQoSW50ZW50IGludGVudCwgaW50IGZsYWdzLCBpbnQgc3RhcnRJZCkgewogICAgICAgIGlmIChpbnRlbnQgIT0gbnVsbCkgewogICAgICAgICAgICBTdHJpbmcgYWN0aW9uID0gaW50ZW50LmdldEFjdGlvbigpOwogICAgICAgICAgICBpZiAoaW50ZW50Lmhhc0V4dHJhKEVYVFJBX1RJVExFKSkgewogICAgICAgICAgICAgICAgU3RyaW5nIHQgPSBpbnRlbnQuZ2V0U3RyaW5nRXh0cmEoRVhUUkFfVElUTEUpOwogICAgICAgICAgICAgICAgaWYgKHQgIT0gbnVsbCAmJiAhdC5pc0VtcHR5KCkpIHRpdGxlID0gdDsKICAgICAgICAgICAgfQogICAgICAgICAgICBpZiAoaW50ZW50Lmhhc0V4dHJhKEVYVFJBX0FSVElTVCkpIHsKICAgICAgICAgICAgICAgIFN0cmluZyBhID0gaW50ZW50LmdldFN0cmluZ0V4dHJhKEVYVFJBX0FSVElTVCk7CiAgICAgICAgICAgICAgICBpZiAoYSAhPSBudWxsKSBhcnRpc3QgPSBhOwogICAgICAgICAgICB9CiAgICAgICAgICAgIGlmIChpbnRlbnQuaGFzRXh0cmEoRVhUUkFfUExBWUlORykpIHsKICAgICAgICAgICAgICAgIHBsYXlpbmcgPSBpbnRlbnQuZ2V0Qm9vbGVhbkV4dHJhKEVYVFJBX1BMQVlJTkcsIHBsYXlpbmcpOwogICAgICAgICAgICB9CiAgICAgICAgICAgIGlmIChpbnRlbnQuaGFzRXh0cmEoRVhUUkFfRFVSQVRJT04pKSB7CiAgICAgICAgICAgICAgICBkdXJhdGlvbk1zID0gTWF0aC5tYXgoMEwsIGludGVudC5nZXRMb25nRXh0cmEoRVhUUkFfRFVSQVRJT04sIGR1cmF0aW9uTXMpKTsKICAgICAgICAgICAgfQogICAgICAgICAgICBpZiAoaW50ZW50Lmhhc0V4dHJhKEVYVFJBX1BPU0lUSU9OKSkgewogICAgICAgICAgICAgICAgcG9zaXRpb25NcyA9IE1hdGgubWF4KDBMLCBpbnRlbnQuZ2V0TG9uZ0V4dHJhKEVYVFJBX1BPU0lUSU9OLCBwb3NpdGlvbk1zKSk7CiAgICAgICAgICAgICAgICBwb3NpdGlvblVwZGF0ZWRBdCA9IFN5c3RlbUNsb2NrLmVsYXBzZWRSZWFsdGltZSgpOwogICAgICAgICAgICB9CgogICAgICAgICAgICBpZiAoQUNUSU9OX1BMQVkuZXF1YWxzKGFjdGlvbikpIHsKICAgICAgICAgICAgICAgIHBsYXlpbmcgPSB0cnVlOwogICAgICAgICAgICAgICAgYWNxdWlyZVdha2VMb2NrKCk7CiAgICAgICAgICAgICAgICBkaXNwYXRjaChDTURfUExBWSk7CiAgICAgICAgICAgIH0gZWxzZSBpZiAoQUNUSU9OX1BBVVNFLmVxdWFscyhhY3Rpb24pKSB7CiAgICAgICAgICAgICAgICBwbGF5aW5nID0gZmFsc2U7CiAgICAgICAgICAgICAgICByZWxlYXNlV2FrZUxvY2soKTsKICAgICAgICAgICAgICAgIGRpc3BhdGNoKENNRF9QQVVTRSk7CiAgICAgICAgICAgIH0gZWxzZSBpZiAoQUNUSU9OX1BSRVYuZXF1YWxzKGFjdGlvbikpIHsKICAgICAgICAgICAgICAgIGRpc3BhdGNoKENNRF9QUkVWKTsKICAgICAgICAgICAgfSBlbHNlIGlmIChBQ1RJT05fTkVYVC5lcXVhbHMoYWN0aW9uKSkgewogICAgICAgICAgICAgICAgZGlzcGF0Y2goQ01EX05FWFQpOwogICAgICAgICAgICB9IGVsc2UgaWYgKEFDVElPTl9TVE9QLmVxdWFscyhhY3Rpb24pKSB7CiAgICAgICAgICAgICAgICBwbGF5aW5nID0gZmFsc2U7CiAgICAgICAgICAgICAgICByZWxlYXNlV2FrZUxvY2soKTsKICAgICAgICAgICAgICAgIGRpc3BhdGNoKENNRF9TVE9QKTsKICAgICAgICAgICAgICAgIHN0b3BGb3JlZ3JvdW5kKHRydWUpOwogICAgICAgICAgICAgICAgc3RvcFNlbGYoKTsKICAgICAgICAgICAgICAgIHJldHVybiBTVEFSVF9OT1RfU1RJQ0tZOwogICAgICAgICAgICB9IGVsc2UgaWYgKEFDVElPTl9TWU5DLmVxdWFscyhhY3Rpb24pKSB7CiAgICAgICAgICAgICAgICBpZiAocGxheWluZykgYWNxdWlyZVdha2VMb2NrKCk7CiAgICAgICAgICAgICAgICBlbHNlIHJlbGVhc2VXYWtlTG9jaygpOwogICAgICAgICAgICB9CiAgICAgICAgfQoKICAgICAgICB0cnkgewogICAgICAgICAgICB1cGRhdGVTZXNzaW9uKCk7CiAgICAgICAgICAgIHN0YXJ0Rm9yZWdyb3VuZChOT1RJRklDQVRJT05fSUQsIGJ1aWxkTm90aWZpY2F0aW9uKCkpOwogICAgICAgIH0gY2F0Y2ggKEV4Y2VwdGlvbiBlKSB7CiAgICAgICAgfQoKICAgICAgICByZXR1cm4gU1RBUlRfU1RJQ0tZOwogICAgfQoKICAgIHByaXZhdGUgbG9uZyBnZXRDdXJyZW50UG9zaXRpb25NcygpIHsKICAgICAgICBsb25nIHAgPSBwb3NpdGlvbk1zOwogICAgICAgIGlmIChwbGF5aW5nICYmIHBvc2l0aW9uVXBkYXRlZEF0ID4gMEwpIHsKICAgICAgICAgICAgcCArPSBNYXRoLm1heCgwTCwgU3lzdGVtQ2xvY2suZWxhcHNlZFJlYWx0aW1lKCkgLSBwb3NpdGlvblVwZGF0ZWRBdCk7CiAgICAgICAgfQogICAgICAgIGlmIChkdXJhdGlvbk1zID4gMEwpIHAgPSBNYXRoLm1pbihwLCBkdXJhdGlvbk1zKTsKICAgICAgICByZXR1cm4gTWF0aC5tYXgoMEwsIHApOwogICAgfQoKICAgIHByaXZhdGUgUGVuZGluZ0ludGVudCBzZXJ2aWNlQWN0aW9uKFN0cmluZyBhY3Rpb24sIGludCByZXEpIHsKICAgICAgICBJbnRlbnQgaSA9IG5ldyBJbnRlbnQodGhpcywgQXlhTWVkaWFTZXJ2aWNlLmNsYXNzKTsKICAgICAgICBpLnNldEFjdGlvbihhY3Rpb24pOwogICAgICAgIGkucHV0RXh0cmEoRVhUUkFfVElUTEUsIHRpdGxlKTsKICAgICAgICBpLnB1dEV4dHJhKEVYVFJBX0FSVElTVCwgYXJ0aXN0KTsKICAgICAgICBpLnB1dEV4dHJhKEVYVFJBX1BMQVlJTkcsIHBsYXlpbmcpOwogICAgICAgIHJldHVybiBQZW5kaW5nSW50ZW50LmdldFNlcnZpY2UodGhpcywgcmVxLCBpLCBQZW5kaW5nSW50ZW50LkZMQUdfVVBEQVRFX0NVUlJFTlQgfCBQZW5kaW5nSW50ZW50LkZMQUdfSU1NVVRBQkxFKTsKICAgIH0KCiAgICBwcml2YXRlIE5vdGlmaWNhdGlvbiBidWlsZE5vdGlmaWNhdGlvbigpIHsKICAgICAgICBJbnRlbnQgb3BlbiA9IG5ldyBJbnRlbnQodGhpcywgTWFpbkFjdGl2aXR5LmNsYXNzKTsKICAgICAgICBvcGVuLnNldEZsYWdzKEludGVudC5GTEFHX0FDVElWSVRZX1NJTkdMRV9UT1AgfCBJbnRlbnQuRkxBR19BQ1RJVklUWV9DTEVBUl9UT1ApOwogICAgICAgIFBlbmRpbmdJbnRlbnQgY29udGVudCA9IFBlbmRpbmdJbnRlbnQuZ2V0QWN0aXZpdHkodGhpcywgMCwgb3BlbiwgUGVuZGluZ0ludGVudC5GTEFHX1VQREFURV9DVVJSRU5UIHwgUGVuZGluZ0ludGVudC5GTEFHX0lNTVVUQUJMRSk7CgogICAgICAgIFN0cmluZyBzdGF0dXMgPSBwbGF5aW5nID8gItmK2LnZhdmEINin2YTYotmGIiA6ICLZhdiq2YjZgtmBIjsKICAgICAgICBTdHJpbmcgYm9keSA9IChhcnRpc3QgPT0gbnVsbCB8fCBhcnRpc3QuaXNFbXB0eSgpKSA/IHN0YXR1cyA6IChhcnRpc3QgKyAiIOKAlCAiICsgc3RhdHVzKTsKCiAgICAgICAgTm90aWZpY2F0aW9uQ29tcGF0LkJ1aWxkZXIgYiA9IG5ldyBOb3RpZmljYXRpb25Db21wYXQuQnVpbGRlcih0aGlzLCBDSEFOTkVMX0lEKQogICAgICAgICAgICAgICAgLnNldFNtYWxsSWNvbihhbmRyb2lkLlIuZHJhd2FibGUuaWNfbWVkaWFfcGxheSkKICAgICAgICAgICAgICAgIC5zZXRDb250ZW50VGl0bGUodGl0bGUgPT0gbnVsbCA/ICLYp9mE2YLYsdii2YYg2KfZhNmD2LHZitmFIiA6IHRpdGxlKQogICAgICAgICAgICAgICAgLnNldENvbnRlbnRUZXh0KGJvZHkpCiAgICAgICAgICAgICAgICAuc2V0U3ViVGV4dCgi2KLZitipIikKICAgICAgICAgICAgICAgIC5zZXRDb250ZW50SW50ZW50KGNvbnRlbnQpCiAgICAgICAgICAgICAgICAuc2V0T25nb2luZyhwbGF5aW5nKQogICAgICAgICAgICAgICAgLnNldE9ubHlBbGVydE9uY2UodHJ1ZSkKICAgICAgICAgICAgICAgIC5zZXRWaXNpYmlsaXR5KE5vdGlmaWNhdGlvbkNvbXBhdC5WSVNJQklMSVRZX1BVQkxJQykKICAgICAgICAgICAgICAgIC5zZXRQcmlvcml0eShOb3RpZmljYXRpb25Db21wYXQuUFJJT1JJVFlfTE9XKQogICAgICAgICAgICAgICAgLnNldENhdGVnb3J5KE5vdGlmaWNhdGlvbkNvbXBhdC5DQVRFR09SWV9UUkFOU1BPUlQpCiAgICAgICAgICAgICAgICAuc2V0QXV0b0NhbmNlbChmYWxzZSk7CgogICAgICAgIGIuYWRkQWN0aW9uKGFuZHJvaWQuUi5kcmF3YWJsZS5pY19tZWRpYV9wcmV2aW91cywgItin2YTYs9in2KjZgtipIiwgc2VydmljZUFjdGlvbihBQ1RJT05fUFJFViwgMSkpOwogICAgICAgIGlmIChwbGF5aW5nKSB7CiAgICAgICAgICAgIGIuYWRkQWN0aW9uKGFuZHJvaWQuUi5kcmF3YWJsZS5pY19tZWRpYV9wYXVzZSwgItil2YrZgtin2YEiLCBzZXJ2aWNlQWN0aW9uKEFDVElPTl9QQVVTRSwgMikpOwogICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgIGIuYWRkQWN0aW9uKGFuZHJvaWQuUi5kcmF3YWJsZS5pY19tZWRpYV9wbGF5LCAi2KrYtNi62YrZhCIsIHNlcnZpY2VBY3Rpb24oQUNUSU9OX1BMQVksIDMpKTsKICAgICAgICB9CiAgICAgICAgYi5hZGRBY3Rpb24oYW5kcm9pZC5SLmRyYXdhYmxlLmljX21lZGlhX25leHQsICLYp9mE2KrYp9mE2YrYqSIsIHNlcnZpY2VBY3Rpb24oQUNUSU9OX05FWFQsIDQpKTsKCiAgICAgICAgdHJ5IHsKICAgICAgICAgICAgaWYgKG1lZGlhU2Vzc2lvbiAhPSBudWxsKSB7CiAgICAgICAgICAgICAgICBiLnNldFN0eWxlKG5ldyBNZWRpYVN0eWxlKCkKICAgICAgICAgICAgICAgICAgICAgICAgLnNldE1lZGlhU2Vzc2lvbihtZWRpYVNlc3Npb24uZ2V0U2Vzc2lvblRva2VuKCkpCiAgICAgICAgICAgICAgICAgICAgICAgIC5zZXRTaG93QWN0aW9uc0luQ29tcGFjdFZpZXcoMCwgMSwgMikpOwogICAgICAgICAgICB9CiAgICAgICAgfSBjYXRjaCAoRXhjZXB0aW9uIGUpIHsKICAgICAgICB9CgogICAgICAgIHJldHVybiBiLmJ1aWxkKCk7CiAgICB9CgogICAgQE92ZXJyaWRlCiAgICBwdWJsaWMgdm9pZCBvblRhc2tSZW1vdmVkKEludGVudCByb290SW50ZW50KSB7CiAgICAgICAgcGxheWluZyA9IGZhbHNlOwogICAgICAgIHJlbGVhc2VXYWtlTG9jaygpOwogICAgICAgIHRyeSB7IHN0b3BGb3JlZ3JvdW5kKHRydWUpOyB9IGNhdGNoIChFeGNlcHRpb24gaWdub3JlZCkge30KICAgICAgICBzdG9wU2VsZigpOwogICAgICAgIHN1cGVyLm9uVGFza1JlbW92ZWQocm9vdEludGVudCk7CiAgICB9CgogICAgQE92ZXJyaWRlCiAgICBwdWJsaWMgdm9pZCBvbkRlc3Ryb3koKSB7CiAgICAgICAgcmVsZWFzZVdha2VMb2NrKCk7CiAgICAgICAgdHJ5IHsKICAgICAgICAgICAgaWYgKG1lZGlhU2Vzc2lvbiAhPSBudWxsKSB7CiAgICAgICAgICAgICAgICBtZWRpYVNlc3Npb24uc2V0QWN0aXZlKGZhbHNlKTsKICAgICAgICAgICAgICAgIG1lZGlhU2Vzc2lvbi5yZWxlYXNlKCk7CiAgICAgICAgICAgICAgICBtZWRpYVNlc3Npb24gPSBudWxsOwogICAgICAgICAgICB9CiAgICAgICAgfSBjYXRjaCAoRXhjZXB0aW9uIGUpIHsKICAgICAgICB9CiAgICAgICAgc3VwZXIub25EZXN0cm95KCk7CiAgICB9CgogICAgQE92ZXJyaWRlCiAgICBwdWJsaWMgSUJpbmRlciBvbkJpbmQoSW50ZW50IGludGVudCkgewogICAgICAgIHJldHVybiBudWxsOwogICAgfQp9Cg=="
-          service_text = r"""package com.aya.alquran;
-          
-          import android.app.Notification;
-          import android.app.NotificationChannel;
-          import android.app.NotificationManager;
-          import android.app.PendingIntent;
-          import android.app.Service;
-          import android.content.Intent;
-          import android.os.Build;
-          import android.os.IBinder;
-          
-                    import androidx.core.app.NotificationCompat;
-          import androidx.media.app.NotificationCompat.MediaStyle;
-          import androidx.media.session.MediaSessionCompat;
-          import androidx.media.session.PlaybackStateCompat;
-          
-          public class AyaMediaService extends Service {
-              public static final String ACTION_SYNC = "com.aya.alquran.ACTION_SYNC";
-              public static final String EXTRA_CMD = "extra_cmd";
-              public static final String EXTRA_TITLE = "extra_title";
-              public static final String EXTRA_ARTIST = "extra_artist";
-              public static final String EXTRA_PLAYING = "extra_playing";
-              public static final String CMD_PLAY = "PLAY";
-              public static final String CMD_PAUSE = "PAUSE";
-              public static final String CMD_PREV = "PREV";
-              public static final String CMD_NEXT = "NEXT";
-              public static final String CMD_STOP = "STOP";
-              private static final String CHANNEL_ID = "aya_media";
-              private static final int NOTIFICATION_ID = 7701;
-              private String title = "القرآن الكريم";
-              private String artist = "قارئ";
-              private boolean playing = false;
-              private MediaSessionCompat mediaSession;
-          
-              @Override public void onCreate() {
-                  super.onCreate();
-                  createChannel();
-                  mediaSession = new MediaSessionCompat(this, "AyaMediaService");
-                  mediaSession.setCallback(new MediaSessionCompat.Callback() {
-                      @Override public void onPlay() { sendCommand(CMD_PLAY); }
-                      @Override public void onPause() { sendCommand(CMD_PAUSE); }
-                      @Override public void onSkipToNext() { sendCommand(CMD_NEXT); }
-                      @Override public void onSkipToPrevious() { sendCommand(CMD_PREV); }
-                      @Override public void onStop() { sendCommand(CMD_STOP); }
-                  });
-                  mediaSession.setActive(true);
-              }
-          
-              @Override public int onStartCommand(Intent intent, int flags, int startId) {
-                  if (intent != null) {
-                      String action = intent.getAction();
-                      if (ACTION_SYNC.equals(action)) {
-                          if (intent.hasExtra(EXTRA_TITLE)) title = intent.getStringExtra(EXTRA_TITLE);
-                          if (intent.hasExtra(EXTRA_ARTIST)) artist = intent.getStringExtra(EXTRA_ARTIST);
-                          if (intent.hasExtra(EXTRA_PLAYING)) playing = intent.getBooleanExtra(EXTRA_PLAYING, false);
-                      } else {
-                          String cmd = intent.getStringExtra(EXTRA_CMD);
-                          if (cmd == null) cmd = action;
-                          if (cmd != null) sendCommand(cmd);
-                      }
-                  }
-                  updateNotification();
-                  return START_STICKY;
-              }
-          
-              private void sendCommand(String cmd) {
-                  MainActivity activity = MainActivity.getInstance();
-                  if (activity != null) {
-                      activity.applyMediaCommand(cmd);
-                  } else {
-                      Intent i = new Intent(this, MainActivity.class);
-                      i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                      i.putExtra(EXTRA_CMD, cmd);
-                      startActivity(i);
-                  }
-              }
-          
-              private void createChannel() {
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                      NotificationManager nm = getSystemService(NotificationManager.class);
-                      if (nm != null) nm.createNotificationChannel(new NotificationChannel(
-                              CHANNEL_ID, "تشغيل القرآن", NotificationManager.IMPORTANCE_LOW));
-                  }
-              }
-          
-              private PendingIntent actionIntent(String command, int requestCode) {
-                  Intent i = new Intent(this, AyaMediaService.class);
-                  i.putExtra(EXTRA_CMD, command);
-                  return PendingIntent.getService(this, requestCode, i,
-                          PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-              }
-          
-              private Notification buildNotification() {
-                  Intent open = new Intent(this, MainActivity.class);
-                  open.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                  PendingIntent content = PendingIntent.getActivity(this, 0, open,
-                          PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                  NotificationCompat.Builder b = new NotificationCompat.Builder(this, CHANNEL_ID)
-                          .setSmallIcon(android.R.drawable.ic_media_play)
-                          .setContentTitle(title == null || title.isEmpty() ? "القرآن الكريم" : title)
-                          .setContentText(artist == null ? "قارئ" : artist)
-                          .setContentIntent(content)
-                          .setOnlyAlertOnce(true)
-                          .setOngoing(playing)
-                          .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                          .addAction(android.R.drawable.ic_media_previous, "السابق", actionIntent(CMD_PREV, 1));
-                  if (playing) {
-                      b.addAction(android.R.drawable.ic_media_pause, "إيقاف مؤقت", actionIntent(CMD_PAUSE, 2));
-                  } else {
-                      b.addAction(android.R.drawable.ic_media_play, "تشغيل", actionIntent(CMD_PLAY, 2));
-                  }
-                  b.addAction(android.R.drawable.ic_media_next, "التالي", actionIntent(CMD_NEXT, 3));
-                  if (mediaSession != null) {
-                      long actions = PlaybackStateCompat.ACTION_PLAY
-                              | PlaybackStateCompat.ACTION_PAUSE
-                              | PlaybackStateCompat.ACTION_PLAY_PAUSE
-                              | PlaybackStateCompat.ACTION_SKIP_TO_NEXT
-                              | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
-                              | PlaybackStateCompat.ACTION_STOP;
-                      mediaSession.setPlaybackState(new PlaybackStateCompat.Builder()
-                              .setActions(actions)
-                              .setState(playing ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED, 0, 1f)
-                              .build());
-                      b.setStyle(new MediaStyle().setMediaSession(mediaSession.getSessionToken()));
-                  }
-                  return b.build();
-              }
-          
-              private void updateNotification() {
-                  startForeground(NOTIFICATION_ID, buildNotification());
-              }
-          
-              @Override public void onDestroy() {
-                  if (mediaSession != null) {
-                      mediaSession.setActive(false);
-                      mediaSession.release();
-                      mediaSession = null;
-                  }
-                  super.onDestroy();
-              }
-          
-              @Override public IBinder onBind(Intent intent) { return null; }
-          }
-          """
           service_file = java_dir / "AyaMediaService.java"
-          service_file.write_text(service_text, encoding="utf-8")
+          service_file.write_bytes(base64.b64decode(service_b64))
+
           if not service_file.exists():
               raise SystemExit("ERROR: AyaMediaService.java was not created.")
+
           service_text_check = service_file.read_text(encoding="utf-8")
-          if "public class AyaMediaService" not in service_text_check:
-              raise SystemExit("ERROR: AyaMediaService.java is invalid.")
+          required_service = [
+              "public class AyaMediaService",
+              "android.support.v4.media.session.MediaSessionCompat",
+              "android.support.v4.media.session.PlaybackStateCompat",
+              "EXTRA_POSITION",
+              "EXTRA_DURATION",
+              "onTaskRemoved(Intent rootIntent)",
+          ]
+          missing_service = [x for x in required_service if x not in service_text_check]
+          if missing_service:
+              raise SystemExit(
+                  "ERROR: AyaMediaService.java missing: " + ", ".join(missing_service)
+              )
 
           mtxt = manifest.read_text(encoding="utf-8")
           if 'android:name=".AyaMediaService"' not in mtxt:
@@ -604,8 +473,15 @@ jobs:
                   '        android:foregroundServiceType="mediaPlayback" />\n'
               )
               mtxt = re.sub(r"(</application>)", svc + r"\1", mtxt, count=1)
-              manifest.write_text(mtxt, encoding="utf-8")
-          print("AyaMediaService.java verified and registered.")
+          elif 'android:name=".AyaMediaService"' in mtxt and 'android:foregroundServiceType="mediaPlayback"' not in mtxt:
+              mtxt = re.sub(
+                  r'(<service\s+android:name="\.AyaMediaService"[^>]*)(/?>)',
+                  r'\1\n        android:foregroundServiceType="mediaPlayback"\2',
+                  mtxt,
+                  count=1
+              )
+          manifest.write_text(mtxt, encoding="utf-8")
+          print("AyaMediaService.java restored and verified without overwriting it later.")
 
           # ============================================================
           # MICROPHONE — Android RECORD_AUDIO + Capacitor WebView capture
@@ -716,30 +592,51 @@ jobs:
           print("MainActivity.java fixed: no onTaskRemoved override.")
           PY
 
-      - name: Add media library for system media panel
+      - name: Add required AndroidX Media library
         run: |
+          set -e
           python3 << 'PY'
           from pathlib import Path
           import re
+
           gradle = Path("android-app/android/app/build.gradle")
+          is_kts = False
           if not gradle.exists():
               gradle = Path("android-app/android/app/build.gradle.kts")
+              is_kts = True
+
+          if not gradle.exists():
+              raise SystemExit("ERROR: app Gradle file not found.")
+
           text = gradle.read_text(encoding="utf-8")
-          dep = 'implementation "androidx.media:media:1.7.0"'
+
           if "androidx.media:media" not in text:
-              if "dependencies {" in text:
-                  text = text.replace("dependencies {", "dependencies {\n    " + dep, 1)
-              elif "dependencies {" in text.replace("'", '"'):
-                  pass
+              if is_kts:
+                  dep = '    implementation("androidx.media:media:1.7.0")'
               else:
-                  # kts
-                  dep_kts = 'implementation("androidx.media:media:1.7.0")'
-                  text = text.replace("dependencies {", "dependencies {\n    " + dep_kts, 1)
+                  dep = '    implementation "androidx.media:media:1.7.0"'
+
+              if "dependencies {" not in text:
+                  raise SystemExit("ERROR: dependencies block not found in app Gradle file.")
+
+              text = text.replace("dependencies {", "dependencies {\n" + dep, 1)
               gradle.write_text(text, encoding="utf-8")
-              print("media dependency added")
-          else:
-              print("media dependency already present")
+
+          final = gradle.read_text(encoding="utf-8")
+          if "androidx.media:media:1.7.0" not in final:
+              raise SystemExit("ERROR: androidx.media:media:1.7.0 was not added to app Gradle.")
+          print("AndroidX Media 1.7.0 dependency is present.")
           PY
+
+          echo "Checking AndroidX Media on the release compile classpath..."
+          cd android-app/android
+          ./gradlew :app:dependencies --configuration releaseCompileClasspath --no-daemon > /tmp/aya-deps.txt
+          grep -q "androidx.media:media:1.7.0" /tmp/aya-deps.txt || {
+            echo "::error::androidx.media:media:1.7.0 is not on releaseCompileClasspath"
+            exit 1
+          }
+          echo "AndroidX Media dependency verified on releaseCompileClasspath."
+          cd ../..
 
 
       - name: Verify Android media service and microphone files
@@ -747,11 +644,32 @@ jobs:
           set -e
           test -f android-app/android/app/src/main/java/com/aya/alquran/MainActivity.java
           test -f android-app/android/app/src/main/java/com/aya/alquran/AyaMediaService.java
-          grep -q "public class AyaMediaService" android-app/android/app/src/main/java/com/aya/alquran/AyaMediaService.java
+
+          SERVICE="android-app/android/app/src/main/java/com/aya/alquran/AyaMediaService.java"
+
+          grep -q "public class AyaMediaService" "$SERVICE"
+          grep -q "android.support.v4.media.session.MediaSessionCompat" "$SERVICE"
+          grep -q "android.support.v4.media.session.PlaybackStateCompat" "$SERVICE"
+          grep -q "EXTRA_POSITION" "$SERVICE"
+          grep -q "EXTRA_DURATION" "$SERVICE"
+          grep -q "onTaskRemoved(Intent rootIntent)" "$SERVICE"
+
+          if grep -q "androidx.media.session.MediaSessionCompat" "$SERVICE"; then
+            echo "::error::Invalid androidx.media.session.MediaSessionCompat import detected."
+            exit 1
+          fi
+
+          if grep -q "androidx.media.session.PlaybackStateCompat" "$SERVICE"; then
+            echo "::error::Invalid androidx.media.session.PlaybackStateCompat import detected."
+            exit 1
+          fi
+
           grep -q "android.permission.RECORD_AUDIO" android-app/android/app/src/main/AndroidManifest.xml
           grep -q 'android:name=".AyaMediaService"' android-app/android/app/src/main/AndroidManifest.xml
           grep -q "PermissionRequest.RESOURCE_AUDIO_CAPTURE" android-app/android/app/src/main/java/com/aya/alquran/MainActivity.java
-          echo "Android media service and microphone integration verified."
+
+          echo "AyaMediaService + microphone integration verified."
+
 
       # ============================================================
       # BUILD APK
