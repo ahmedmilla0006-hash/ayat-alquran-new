@@ -2562,6 +2562,7 @@ body.interface-new.night-mode .page-area {
   </div>
 </div>
 
+<!-- دليل التشغيل القديم (يُستخدم كنص احتياطي فقط) -->
 <div class="popup-overlay" id="onboardingOverlay" style="z-index:500">
   <div class="popup-box" style="width:min(96vw,420px)!important;max-width:420px!important;max-height:90dvh!important;height:auto!important;display:flex;flex-direction:column">
     <div class="popup-header" style="margin-bottom:8px">
@@ -2574,6 +2575,85 @@ body.interface-new.night-mode .page-area {
       <button type="button" class="popup-item" id="onboardPrev" style="margin:0;flex:1;text-align:center;display:none">السابق</button>
       <button type="button" class="popup-item" id="onboardNext" style="margin:0;flex:1;text-align:center;background:#2a5a3a">التالي</button>
     </div>
+  </div>
+</div>
+
+<!-- جولة إرشاد فعلية تشير للعناصر على الشاشة -->
+<style id="aya-tour-style">
+#ayaTourRoot{display:none;position:fixed;inset:0;z-index:560;pointer-events:auto}
+#ayaTourHole{
+  position:absolute;border-radius:16px;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.72);
+  border:2.5px solid #79d69a;
+  transition:top .28s ease,left .28s ease,width .28s ease,height .28s ease;
+  pointer-events:none;box-sizing:border-box;
+}
+#ayaTourTip{
+  position:absolute;max-width:min(90vw,340px);
+  background:rgba(28,42,56,.96);
+  border:1px solid rgba(200,220,235,.22);
+  border-radius:16px;padding:14px 14px 12px;
+  color:#f4f7f9;box-shadow:0 12px 36px rgba(0,0,0,.45);
+  direction:rtl;text-align:right;z-index:2;
+  transition:top .28s ease,left .28s ease;
+}
+#ayaTourTipTitle{font-weight:800;font-size:16px;margin-bottom:6px;color:#fff}
+#ayaTourTipBody{font-size:13.5px;line-height:1.75;color:#d8e0e6;margin-bottom:12px}
+#ayaTourSkip{border:0;background:transparent;color:#9ab;font-size:13px;padding:8px 6px;cursor:pointer}
+#ayaTourPrev{
+  border:0;border-radius:10px;background:rgba(255,255,255,.10);
+  color:#fff;font-size:13px;padding:9px 12px;cursor:pointer;display:none;
+}
+#ayaTourNext{
+  border:0;border-radius:10px;background:#2a5a3a;
+  color:#fff;font-size:13px;font-weight:700;padding:9px 14px;cursor:pointer;
+}
+#ayaTourDots{display:flex;justify-content:center;gap:6px;margin-top:10px}
+
+/* كلاسيكي: قوائم بنفس طابع الواجهة الكلاسيكية */
+body.interface-old #ayaTourHole{
+  border-radius:14px;
+  border:3px solid var(--green, #16803b);
+  box-shadow:0 0 0 9999px rgba(0,0,0,.78);
+}
+body.interface-old #ayaTourTip{
+  background:#202020;
+  border:1px solid #555;
+  border-radius:18px;
+  box-shadow:0 10px 40px #0009;
+  color:#eee;
+}
+body.interface-old #ayaTourTipTitle{color:var(--green, #16803b)}
+body.interface-old #ayaTourTipBody{color:#ddd}
+body.interface-old #ayaTourSkip{color:#aaa}
+body.interface-old #ayaTourPrev{
+  background:#303030;
+  border:1px solid #555;
+  border-radius:12px;
+  color:#fff;
+}
+body.interface-old #ayaTourNext{
+  background:var(--green, #16803b);
+  border-radius:12px;
+  color:#fff;
+  box-shadow:0 2px 4px #0003;
+}
+body.interface-old #ayaTourDots .tour-dot-active{
+  background:var(--green, #16803b) !important;
+}
+</style>
+<div id="ayaTourRoot" aria-hidden="true">
+  <div id="ayaTourHole"></div>
+  <div id="ayaTourTip">
+    <div id="ayaTourTipTitle"></div>
+    <div id="ayaTourTipBody"></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button type="button" id="ayaTourSkip">تخطي</button>
+      <div style="flex:1"></div>
+      <button type="button" id="ayaTourPrev">السابق</button>
+      <button type="button" id="ayaTourNext">التالي</button>
+    </div>
+    <div id="ayaTourDots"></div>
   </div>
 </div>
 
@@ -6902,7 +6982,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.127";
+  const APP_VERSION = "1.0.128";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
@@ -8799,42 +8879,64 @@ body.interface-old #downloadsPopup .download-native-select{
 
 <script id="aya-onboarding-script">
 (function(){
-  var KEY = "aya_onboarding_seen_version";
+  /*
+    مفاتيح منفصلة:
+    - aya_first_run_done  → دليل التشغيل (أول تثبيت فقط)
+    - aya_seen_version    → ما الجديد (عند كل تحديث إصدار)
+  */
+  var KEY_FIRST = "aya_first_run_done";
+  var KEY_VERSION = "aya_seen_version";
+  /* توافق مع المفتاح القديم إن وُجد */
+  var KEY_LEGACY = "aya_onboarding_seen_version";
+
   var onboardOv = document.getElementById("onboardingOverlay");
   var whatsOv = document.getElementById("whatsNewOverlay");
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.127";
+    return "1.0.128";
   }
 
-  /* دليل أول تشغيل فقط */
-  var FIRST_RUN_STEPS = [
+  /*
+    جولة إرشاد فعلية على عناصر الواجهة:
+    كل خطوة تُبرز عنصراً حقيقياً على الشاشة.
+  */
+  var TOUR_STEPS = [
     {
+      selector: null,
       title: "مرحباً بك في آية",
-      html: "تطبيق لقراءة القرآن الكريم مع التلاوة وتمييز الآيات والتفسير.<br><br>في الشاشات التالية شرح سريع لكيفية الاستخدام — يمكنك تخطيه في أي وقت."
+      body: "جولة سريعة على الأزرار الحقيقية في الشاشة. اضغط «التالي» للبدء."
     },
     {
-      title: "اللمس على المصحف",
-      html: "<b>ضغط قصير</b>: إظهار أو إخفاء الأزرار.<br><br><b>ضغط متوسط ثم رفع الإصبع</b> (حوالي 200ms): فتح <b>التفسير</b> للآية.<br><br><b>ضغط مطوّل</b> (حوالي 700ms): <b>تشغيل التلاوة</b> من الآية."
+      selector: "#menuButton",
+      title: "زر القائمة ☰",
+      body: "من هنا تفتح القائمة: السور، الأجزاء، البحث، التفسير، الحفظ، الوضع الليلي، والتنزيلات."
     },
     {
-      title: "التلاوة والقرّاء",
-      html: "اختر <b>القارئ</b> و<b>السورة</b> من الأسفل.<br><br>استخدم أزرار التشغيل والسابق والتالي.<br><br>يمكنك <b>تكرار الآية</b> أو تغيير <b>سرعة القراءة</b> من أزرار المشغّل."
+      selector: "#pageArea",
+      title: "صفحة المصحف",
+      body: "ضغط قصير: إظهار/إخفاء الأزرار.\nضغط متوسط ثم ارفع إصبعك: فتح التفسير.\nضغط مطوّل: تشغيل التلاوة من الآية."
     },
     {
-      title: "القائمة والمزيد",
-      html: "من زر القائمة ☰ تجد:<br>• السور والأجزاء والبحث<br>• <b>التفسير</b> (الطبري · ابن كثير · البغوي)<br>• حفظ الصفحة والعلامة المرجعية<br>• الوضع الليلي وإعدادات التمييز<br>• تنزيل الملحقات للعمل دون إنترنت<br>• المساعدة والتحديثات"
+      selector: "#readerInfoTop",
+      title: "اسم السورة والجزء",
+      body: "هنا يظهر اسم السورة ورقم الجزء للصفحة الحالية."
     },
     {
-      title: "جاهز للبدء",
-      html: "نصيحة: اضغط ضغطة قصيرة لإخفاء الأزرار والقراءة بهدوء.<br><br>يمكنك فتح <b>المساعدة</b> لاحقاً من القائمة في أي وقت.<br><br>بارك الله فيك 🌿"
+      selector: ".player",
+      title: "مشغّل التلاوة",
+      body: "التشغيل، السابق/التالي، التكرار، السرعة، واختيار القارئ والسورة من الأسفل."
     }
   ];
 
+  /* احتياطي للعرض النصي القديم إن لزم */
+  var FIRST_RUN_STEPS = TOUR_STEPS.map(function(s){
+    return { title: s.title, html: String(s.body || "").replace(/\n/g, "<br>") };
+  });
+
   /*
-    ملاحظات كل إصدار — تظهر في نافذة «ما الجديد» بعد التحديث فقط.
-    عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا.
+    ملاحظات كل إصدار — تظهر في «ما الجديد» بعد تثبيت تحديث جديد فقط.
+    عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
   var WHATS_NEW = {
     "1.0.126": [
@@ -8851,10 +8953,41 @@ body.interface-old #downloadsPopup .download-native-select{
       "البحث عن كلمة يظهر السورة وجميع الآيات التي تحتويها",
       "اختيار السورة من البحث يبدأ التلاوة من أولها",
       "نافذة البحث تبقى مفتوحة حتى الإغلاق لاختيار نتيجة أخرى"
+    ],
+    "1.0.128": [
+      "تحسين <b>البحث</b>: مطابقة أسماء السور والكلمات الكاملة (وليس الحروف داخل الكلمات)",
+      "إمكانية البحث عن سور بأسماء حرف واحد مثل <b>ص</b> و<b>ق</b>",
+      "مسح نص البحث والنتائج عند الإغلاق بزر ✕"
     ]
   };
 
-  /* ---- أول تشغيل (متعدد الخطوات) ---- */
+  function parseVer(v){
+    return String(v || "0").split(".").map(function(x){ return parseInt(x, 10) || 0; });
+  }
+  function cmpVer(a, b){
+    var pa = parseVer(a), pb = parseVer(b);
+    var n = Math.max(pa.length, pb.length);
+    for(var i=0;i<n;i++){
+      var da = pa[i] || 0, db = pb[i] || 0;
+      if(da > db) return 1;
+      if(da < db) return -1;
+    }
+    return 0;
+  }
+  /* يجمع ملاحظات الإصدارات بين آخر ما شوهد والحالي — الأحدث أولاً ثم الأقدم */
+  function collectWhatsNew(fromVer, toVer){
+    var keys = Object.keys(WHATS_NEW).sort(function(a, b){ return cmpVer(b, a); });
+    var out = [];
+    for(var i=0;i<keys.length;i++){
+      var k = keys[i];
+      if(fromVer && cmpVer(k, fromVer) <= 0) continue;
+      if(toVer && cmpVer(k, toVer) > 0) continue;
+      out.push({ ver: k, items: WHATS_NEW[k] || [] });
+    }
+    return out;
+  }
+
+  /* ---- أول تشغيل: جولة على العناصر الفعلية ---- */
   var titleEl = document.getElementById("onboardTitle");
   var bodyEl = document.getElementById("onboardBody");
   var dotsEl = document.getElementById("onboardDots");
@@ -8863,17 +8996,152 @@ body.interface-old #downloadsPopup .download-native-select{
   var skipBtn = document.getElementById("onboardSkip");
   var steps = FIRST_RUN_STEPS.slice();
   var step = 0;
+  var shownOnce = false;
 
-  function markSeen(){
-    try{ localStorage.setItem(KEY, currentAppVersion()); }catch(e){}
+  var tourRoot = document.getElementById("ayaTourRoot");
+  var tourHole = document.getElementById("ayaTourHole");
+  var tourTip = document.getElementById("ayaTourTip");
+  var tourTipTitle = document.getElementById("ayaTourTipTitle");
+  var tourTipBody = document.getElementById("ayaTourTipBody");
+  var tourNext = document.getElementById("ayaTourNext");
+  var tourPrev = document.getElementById("ayaTourPrev");
+  var tourSkip = document.getElementById("ayaTourSkip");
+  var tourDots = document.getElementById("ayaTourDots");
+  var tourStep = 0;
+  var tourActive = false;
+
+  function markFirstRunDone(){
+    try{
+      localStorage.setItem(KEY_FIRST, "1");
+      localStorage.setItem(KEY_VERSION, currentAppVersion());
+      localStorage.setItem(KEY_LEGACY, currentAppVersion());
+    }catch(e){}
+  }
+
+  function markVersionSeen(){
+    try{
+      localStorage.setItem(KEY_VERSION, currentAppVersion());
+      localStorage.setItem(KEY_LEGACY, currentAppVersion());
+      if(!localStorage.getItem(KEY_FIRST)) localStorage.setItem(KEY_FIRST, "1");
+    }catch(e){}
+  }
+
+  function showReadingControlsForTour(){
+    try{
+      if(typeof setReadingUIHidden === "function") setReadingUIHidden(false);
+    }catch(e){}
+    try{
+      document.querySelectorAll(".player, .menu-button, #refHeader, #refBottomBar").forEach(function(el){
+        el.classList.remove("ui-hidden");
+      });
+      document.body.classList.remove("ui-controls-hidden");
+    }catch(e){}
+  }
+
+  function placeTourTip(rect){
+    if(!tourTip) return;
+    var tipW = Math.min(window.innerWidth * 0.9, 340);
+    var tipH = tourTip.offsetHeight || 160;
+    var margin = 12;
+    var left, top;
+
+    if(!rect){
+      left = (window.innerWidth - tipW) / 2;
+      top = (window.innerHeight - tipH) / 2;
+    }else{
+      left = rect.left + (rect.width - tipW) / 2;
+      left = Math.max(margin, Math.min(left, window.innerWidth - tipW - margin));
+      /* فضّل أسفل العنصر، وإلا أعلاه */
+      if(rect.bottom + tipH + margin + 8 < window.innerHeight){
+        top = rect.bottom + 12;
+      }else if(rect.top - tipH - margin > 0){
+        top = rect.top - tipH - 12;
+      }else{
+        top = Math.max(margin, window.innerHeight - tipH - margin);
+      }
+    }
+    tourTip.style.width = tipW + "px";
+    tourTip.style.left = left + "px";
+    tourTip.style.top = top + "px";
+  }
+
+  function renderTourStep(){
+    if(!tourRoot || !tourHole) return;
+    var s = TOUR_STEPS[tourStep] || TOUR_STEPS[0];
+    if(tourTipTitle) tourTipTitle.textContent = s.title || "";
+    if(tourTipBody) tourTipBody.innerHTML = String(s.body || "").replace(/\n/g, "<br>");
+    if(tourPrev) tourPrev.style.display = tourStep > 0 ? "inline-block" : "none";
+    if(tourNext) tourNext.textContent = tourStep >= TOUR_STEPS.length - 1 ? "ابدأ القراءة" : "التالي";
+
+    if(tourDots){
+      tourDots.innerHTML = "";
+      var isClassic = document.body.classList.contains("interface-old");
+      var activeCol = isClassic ? "#16803b" : "#79d69a";
+      for(var i=0;i<TOUR_STEPS.length;i++){
+        var d = document.createElement("span");
+        if(i===tourStep) d.className = "tour-dot-active";
+        d.style.cssText = "width:7px;height:7px;border-radius:50%;display:inline-block;background:"+(i===tourStep?activeCol:"rgba(255,255,255,.28)");
+        tourDots.appendChild(d);
+      }
+    }
+
+    var el = null;
+    if(s.selector){
+      try{ el = document.querySelector(s.selector); }catch(e){ el = null; }
+    }
+
+    if(el){
+      try{ el.scrollIntoView({ block: "nearest", inline: "nearest" }); }catch(e){}
+      var r = el.getBoundingClientRect();
+      var pad = 8;
+      tourHole.style.display = "block";
+      tourHole.style.top = Math.max(4, r.top - pad) + "px";
+      tourHole.style.left = Math.max(4, r.left - pad) + "px";
+      tourHole.style.width = Math.min(window.innerWidth - 8, r.width + pad * 2) + "px";
+      tourHole.style.height = Math.min(window.innerHeight - 8, r.height + pad * 2) + "px";
+      placeTourTip(r);
+    }else{
+      /* خطوة عامة: إطار في الوسط */
+      var w = Math.min(window.innerWidth * 0.72, 280);
+      var h = Math.min(window.innerHeight * 0.18, 120);
+      tourHole.style.display = "block";
+      tourHole.style.top = (window.innerHeight - h) / 2 - 40 + "px";
+      tourHole.style.left = (window.innerWidth - w) / 2 + "px";
+      tourHole.style.width = w + "px";
+      tourHole.style.height = h + "px";
+      placeTourTip(null);
+    }
+  }
+
+  function closeTour(){
+    tourActive = false;
+    if(tourRoot){
+      tourRoot.style.display = "none";
+      tourRoot.setAttribute("aria-hidden", "true");
+    }
+    markFirstRunDone();
+  }
+
+  function openFirstRun(){
+    showReadingControlsForTour();
+    tourStep = 0;
+    tourActive = true;
+    if(onboardOv) onboardOv.classList.remove("show");
+    if(tourRoot){
+      tourRoot.style.display = "block";
+      tourRoot.setAttribute("aria-hidden", "false");
+    }
+    setTimeout(renderTourStep, 80);
+    setTimeout(renderTourStep, 320);
   }
 
   function closeOnboard(){
     if(onboardOv) onboardOv.classList.remove("show");
-    markSeen();
+    closeTour();
   }
 
   function renderOnboard(){
+    /* للتوافق إن فُتح النص القديم */
     if(!onboardOv) return;
     var s = steps[step] || { title: "", html: "" };
     if(titleEl) titleEl.textContent = s.title;
@@ -8890,13 +9158,15 @@ body.interface-old #downloadsPopup .download-native-select{
     if(nextBtn) nextBtn.textContent = step >= steps.length - 1 ? "ابدأ القراءة" : "التالي";
   }
 
-  function openFirstRun(){
-    if(!onboardOv) return;
-    steps = FIRST_RUN_STEPS.slice();
-    step = 0;
-    renderOnboard();
-    onboardOv.classList.add("show");
-  }
+  if(tourNext) tourNext.onclick = function(){
+    if(tourStep >= TOUR_STEPS.length - 1) closeTour();
+    else { tourStep++; renderTourStep(); }
+  };
+  if(tourPrev) tourPrev.onclick = function(){
+    if(tourStep > 0){ tourStep--; renderTourStep(); }
+  };
+  if(tourSkip) tourSkip.onclick = closeTour;
+  window.addEventListener("resize", function(){ if(tourActive) renderTourStep(); });
 
   if(prevBtn) prevBtn.onclick = function(){ if(step>0){ step--; renderOnboard(); } };
   if(nextBtn) nextBtn.onclick = function(){
@@ -8906,7 +9176,7 @@ body.interface-old #downloadsPopup .download-native-select{
   if(skipBtn) skipBtn.onclick = closeOnboard;
   if(onboardOv) onboardOv.addEventListener("click", function(e){ if(e.target === onboardOv) closeOnboard(); });
 
-  /* ---- نافذة ما الجديد (بعد التحديث) ---- */
+  /* ---- ما الجديد (بعد التحديث) ---- */
   var wnTitle = document.getElementById("whatsNewTitle");
   var wnVer = document.getElementById("whatsNewVersion");
   var wnBody = document.getElementById("whatsNewBody");
@@ -8915,23 +9185,45 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function closeWhatsNew(){
     if(whatsOv) whatsOv.classList.remove("show");
-    markSeen();
+    markVersionSeen();
   }
 
   function openWhatsNew(){
     if(!whatsOv) return;
     var ver = currentAppVersion();
+    var lastSeen = null;
+    try{
+      lastSeen = localStorage.getItem(KEY_VERSION) || localStorage.getItem(KEY_LEGACY) || null;
+    }catch(e){}
+
     if(wnTitle) wnTitle.textContent = "ما الجديد";
-    if(wnVer) wnVer.textContent = "الإصدار " + ver;
-    var items = WHATS_NEW[ver];
-    var html;
-    if(items && items.length){
-      html = "<ul style='margin:0;padding-right:18px'>";
-      for(var i=0;i<items.length;i++){
-        html += "<li style='margin-bottom:8px'>" + items[i] + "</li>";
+    if(wnVer) wnVer.textContent = "حتى الإصدار " + ver;
+
+    /* كل ما بين آخر إصدار شوهد والحالي (مثل 127 + 128) */
+    var groups = collectWhatsNew(lastSeen, ver);
+    /* فتح يدوي من المساعدة بعد مشاهدة الإصدار: اعرض آخر إصدارين (الأحدث أولاً) */
+    if(!groups.length){
+      var keys = Object.keys(WHATS_NEW).sort(function(a, b){ return cmpVer(b, a); });
+      groups = [];
+      for(var ki = 0; ki < keys.length && groups.length < 2; ki++){
+        groups.push({ ver: keys[ki], items: WHATS_NEW[keys[ki]] || [] });
+      }
+    }
+
+    var html = "";
+    var any = false;
+    for(var g=0;g<groups.length;g++){
+      var block = groups[g];
+      if(!block.items || !block.items.length) continue;
+      any = true;
+      html += "<div style='font-weight:800;color:#79d69a;margin:"+(g? "14px":"0")+" 0 8px;font-size:15px'>الإصدار " + block.ver + "</div>";
+      html += "<ul style='margin:0;padding-right:18px'>";
+      for(var i=0;i<block.items.length;i++){
+        html += "<li style='margin-bottom:8px'>" + block.items[i] + "</li>";
       }
       html += "</ul>";
-    }else{
+    }
+    if(!any){
       html = "<div style='color:#ccc'>تحسينات عامة واستقرار في هذا الإصدار.</div>";
     }
     if(wnBody) wnBody.innerHTML = html;
@@ -8942,30 +9234,59 @@ body.interface-old #downloadsPopup .download-native-select{
   if(wnOk) wnOk.onclick = closeWhatsNew;
   if(whatsOv) whatsOv.addEventListener("click", function(e){ if(e.target === whatsOv) closeWhatsNew(); });
 
+  /*
+    القرار:
+    - لا يوجد KEY_FIRST ولا سجل قديم → أول تثبيت → دليل التشغيل
+    - يوجد تثبيت سابق وإصدار مختلف → تحديث → ما الجديد
+    - نفس الإصدار → لا شيء
+  */
   function decide(){
     var ver = currentAppVersion();
-    var seen = null;
-    try{ seen = localStorage.getItem(KEY); }catch(e){}
-    if(!seen) return "first";
-    if(seen === ver) return null;
+    var firstDone = null;
+    var seenVer = null;
+    var legacy = null;
+    try{
+      firstDone = localStorage.getItem(KEY_FIRST);
+      seenVer = localStorage.getItem(KEY_VERSION);
+      legacy = localStorage.getItem(KEY_LEGACY);
+    }catch(e){}
+
+    /* ترحيل من المفتاح القديم */
+    if(!firstDone && !seenVer && legacy){
+      try{
+        localStorage.setItem(KEY_FIRST, "1");
+        localStorage.setItem(KEY_VERSION, legacy);
+      }catch(e){}
+      firstDone = "1";
+      seenVer = legacy;
+    }
+
+    if(!firstDone && !seenVer && !legacy) return "first";
+    var last = seenVer || legacy || "";
+    if(last === ver) return null;
     return "update";
   }
 
   function schedule(){
+    if(shownOnce) return;
     var m = decide();
     if(!m) return;
     var run = function(){
+      if(shownOnce) return;
       if(decide() !== m) return;
+      shownOnce = true;
       if(m === "first") openFirstRun();
       else openWhatsNew();
     };
-    setTimeout(run, 2400);
-    setTimeout(run, 4000);
+    /* بعد شاشة الافتتاح */
+    setTimeout(run, 2500);
+    setTimeout(run, 4500);
   }
 
   if(document.readyState === "complete") schedule();
   else window.addEventListener("load", schedule);
 
+  /* من المساعدة: عرض يدوي دون تغيير حالة «أول تشغيل» إلا عند الإغلاق الطبيعي */
   window.__ayaShowOnboarding = openFirstRun;
   window.__ayaShowWhatsNew = openWhatsNew;
 })();
