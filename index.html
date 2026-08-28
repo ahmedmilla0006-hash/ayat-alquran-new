@@ -543,6 +543,23 @@ html,body{
     border-radius:16px;
   }
 
+  /* كلاسيكي: لا تكبير زائد للمستطيلات على الموبايل */
+  body.interface-old .side-menu{
+    width:min(78vw,300px) !important;
+    padding:18px 14px 20px !important;
+  }
+  body.interface-old .side-menu h2{
+    font-size:22px !important;
+    margin:6px 0 20px !important;
+  }
+  body.interface-old .menu-item{
+    min-height:48px !important;
+    margin:0 0 8px !important;
+    padding:12px 14px !important;
+    font-size:15px !important;
+    border-radius:14px !important;
+  }
+
   .menu-button{
     top:14px;
     left:14px;
@@ -1732,18 +1749,41 @@ body.interface-new #downloadsPopup .search-hint{
   border-radius: 12px !important;
 }
 @media (max-width: 600px) {
+  /* لا تطبّق حد 340px على قوائم القارئ/السورة */
   .popup-box{
     width: min(96vw, 340px) !important;
     padding: 14px 12px 16px !important;
     border-radius: 18px !important;
+  }
+  #readerPickerOverlay .popup-box,
+  #surahPickerOverlay .popup-box{
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 100% !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 14px 12px max(16px, env(safe-area-inset-bottom, 0px)) !important;
   }
   .popup-item{
     min-height: 46px !important;
     font-size: 14.5px !important;
     padding: 11px 12px !important;
   }
+  #readerPickerOverlay .popup-item,
+  #surahPickerOverlay .popup-item{
+    min-height: 54px !important;
+    font-size: 17px !important;
+    padding: 15px 16px !important;
+  }
   .popup-header h2{
     font-size: 18px !important;
+  }
+  #readerPickerOverlay .popup-header h2,
+  #surahPickerOverlay .popup-header h2{
+    font-size: 22px !important;
   }
 }
 
@@ -1998,7 +2038,7 @@ body.interface-old .download-picker-item.selected .download-picker-radio::after{
 .interface-style-selector{margin:0 0 16px;padding:12px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);direction:rtl}
 .interface-style-title{color:#fff;font-weight:800;font-size:15px;margin-bottom:9px;text-align:right}
 .interface-style-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.interface-style-btn{min-height:42px;border-radius:12px;border:1px solid rgba(200,220,235,.18);background:rgba(255,255,255,.07);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.interface-style-btn{min-height:42px;border-radius:12px;border:1px solid rgba(200,220,235,.18);background:rgba(255,255,255,.07);color:#fff;font:inherit;font-weight:700;cursor:pointer;font-size:13px;padding:8px 6px}
 .interface-style-btn.active{background:var(--green);border-color:var(--green);color:#fff}
 body.interface-old .glass-picker-btn{display:none !important}
 body.interface-old .reader-select,body.interface-old #surahSelect{display:block !important}
@@ -2008,6 +2048,64 @@ body.interface-old .interface-style-btn.active{background:var(--green);border-co
 body.interface-new .player .reader-select,body.interface-new #surahSelect{display:none}
 /* الصفحة نفسها: تبقى من الجديد حتى عندما تكون الواجهة قديمة */
 body.interface-old .page{width:auto !important;height:100% !important;max-height:100dvh !important;max-width:100vw !important;object-fit:contain !important;object-position:center center !important;background:#fff !important;border-radius:0 !important;box-shadow:none !important;transform:scale(var(--quran-page-scale,1)) !important;transform-origin:center center !important}
+
+/*
+  كلاسيكي: توحيد الخطوط ومستطيلات القائمة الجانبية
+  لتطابق نسب الزجاجي (أصغر وأكثر انتظاماً) مع الإبقاء على الألوان الكلاسيكية
+*/
+body.interface-old .side-menu{
+  width: min(78vw, 300px) !important;
+  padding: 18px 14px 20px !important;
+  font-family: Tahoma, Arial, sans-serif !important;
+}
+body.interface-old .side-menu h2{
+  margin: 6px 0 20px !important;
+  padding-bottom: 12px !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  font-family: Tahoma, Arial, sans-serif !important;
+  text-align: center !important;
+  border-bottom: 1px solid #444 !important;
+  color: var(--green) !important;
+}
+body.interface-old .menu-item{
+  display: block !important;
+  width: 100% !important;
+  min-height: 48px !important;
+  margin: 0 0 8px !important;
+  padding: 12px 14px !important;
+  border-radius: 14px !important;
+  border: 0 !important;
+  background: var(--green) !important;
+  color: #fff !important;
+  font-family: Tahoma, Arial, sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  text-align: right !important;
+  line-height: 1.45 !important;
+  box-shadow: 0 2px 4px #0003 !important;
+  box-sizing: border-box !important;
+}
+body.interface-old .menu-item:active{
+  background: var(--green-dark) !important;
+  transform: scale(.99);
+}
+body.interface-old .menu-item:last-child{
+  margin-bottom: 0 !important;
+}
+body.interface-old .interface-style-title{
+  font-family: Tahoma, Arial, sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+}
+body.interface-old .interface-style-btn{
+  font-family: Tahoma, Arial, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  min-height: 42px !important;
+  border-radius: 12px !important;
+}
+
 </style>
 
 <style id="old-mode-remove-bottom-background">
@@ -2039,16 +2137,17 @@ body.interface-new.night-mode .page-area {
 
 
 <style id="picker-fullscreen-force">
-/* إجبار قوائم القارئ والسورة على ملء الشاشة */
+/* قوائم القارئ والسورة — شاشة واسعة (تقريباً ملء الشاشة) */
 #readerPickerOverlay.popup-overlay,
 #surahPickerOverlay.popup-overlay{
   align-items: stretch !important;
   justify-content: stretch !important;
   padding: 0 !important;
-  padding-top: env(safe-area-inset-top, 0px) !important;
-  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
   inset: 0 !important;
-  z-index: 300 !important;
+  z-index: 400 !important;
+  background: rgba(0,0,0,.55) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
 }
 #readerPickerOverlay .popup-box,
 #surahPickerOverlay .popup-box{
@@ -2060,6 +2159,7 @@ body.interface-new.night-mode .page-area {
   min-height: 100% !important;
   border-radius: 0 !important;
   margin: 0 !important;
+  padding: 14px 12px 16px !important;
   display: flex !important;
   flex-direction: column !important;
   box-sizing: border-box !important;
@@ -2067,6 +2167,11 @@ body.interface-new.night-mode .page-area {
 #readerPickerOverlay .popup-header,
 #surahPickerOverlay .popup-header{
   flex: 0 0 auto !important;
+  margin-bottom: 12px !important;
+}
+#readerPickerOverlay .popup-header h2,
+#surahPickerOverlay .popup-header h2{
+  font-size: 22px !important;
 }
 #readerPickerOverlay .popup-list,
 #surahPickerOverlay .popup-list{
@@ -2074,6 +2179,7 @@ body.interface-new.night-mode .page-area {
   min-height: 0 !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
+  padding: 4px 2px 20px !important;
 }
 #readerPickerOverlay .popup-item,
 #surahPickerOverlay .popup-item{
@@ -2081,6 +2187,8 @@ body.interface-new.night-mode .page-area {
   margin-bottom: 10px !important;
   padding: 16px 18px !important;
   font-size: 18px !important;
+  min-height: 56px !important;
+  box-sizing: border-box !important;
 }
 </style>
 
@@ -2252,28 +2360,6 @@ body.interface-new.night-mode .page-area {
   </div>
 </div>
 
-<!-- نافذة اختيار القارئ الزجاجية -->
-<div class="popup-overlay" id="readerPickerOverlay">
-  <div class="popup-box">
-    <div class="popup-header">
-      <h2>اختيار القارئ</h2>
-      <button type="button" class="popup-close" id="readerPickerClose" aria-label="إغلاق">×</button>
-    </div>
-    <div class="popup-list" id="readerPickerList"></div>
-  </div>
-</div>
-
-<!-- نافذة اختيار السورة الزجاجية -->
-<div class="popup-overlay" id="surahPickerOverlay">
-  <div class="popup-box">
-    <div class="popup-header">
-      <h2>اختيار السورة</h2>
-      <button type="button" class="popup-close" id="surahPickerClose" aria-label="إغلاق">×</button>
-    </div>
-    <div class="popup-list" id="surahPickerList"></div>
-  </div>
-</div>
-
   </section>
 
 </div>
@@ -2348,7 +2434,7 @@ body.interface-new.night-mode .page-area {
   </button>
 
   <div id="interfaceStyleSelector" class="interface-style-selector">
-    <div class="interface-style-title">🎨 تصميم الواجهة</div>
+    <div class="interface-style-title">🎨 الثيم</div>
     <div class="interface-style-buttons">
       <button type="button" class="interface-style-btn" data-interface-style="new">زجاجي</button>
       <button type="button" class="interface-style-btn" data-interface-style="old">كلاسيكي</button>
@@ -2715,7 +2801,7 @@ body.interface-old #ayaTourDots .tour-dot-active{
         <li><b>الوضع الليلي</b>: خلفية داكنة مع إبقاء المصحف واضحاً.</li>
         <li><b>إعدادات التمييز</b>: لون وطريقة تمييز الآية أثناء التلاوة.</li>
         <li><b>تكبير / تصغير / الحجم الطبيعي</b>: ضبط حجم صفحة المصحف.</li>
-        <li><b>تصميم الواجهة</b>: من أسفل القائمة اختر <b>زجاجي</b> أو <b>كلاسيكي</b>.</li>
+        <li><b>الثيم</b>: من أسفل القائمة اختر <b>زجاجي</b> أو <b>كلاسيكي</b>.</li>
         <li>في الوضع الزجاجي تظهر قوائم القارئ والسورة كبطاقات أسفل المشغّل.</li>
       </ul>
 
@@ -7179,7 +7265,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.137";
+  const APP_VERSION = "1.0.138";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
@@ -8160,19 +8246,51 @@ document.addEventListener("DOMContentLoaded",()=>{
     el.classList.add("show");
     el.classList.add("picker-fullscreen");
     try{
+      /* لا نستخدم cssText على الـ overlay حتى لا يتعطل الإغلاق */
+      el.style.setProperty("display", "flex", "important");
+      el.style.setProperty("align-items", "stretch", "important");
+      el.style.setProperty("justify-content", "stretch", "important");
+      el.style.setProperty("padding", "0", "important");
+      el.style.setProperty("inset", "0", "important");
+      el.style.setProperty("z-index", "400", "important");
+      el.style.setProperty("pointer-events", "auto", "important");
+      el.style.setProperty("background", "rgba(0,0,0,0.55)", "important");
       var box = el.querySelector(".popup-box");
       if(box){
-        box.style.width = "100%";
-        box.style.maxWidth = "100%";
-        box.style.height = "100%";
-        box.style.maxHeight = "100%";
-        box.style.borderRadius = "0";
+        box.style.setProperty("width", "100%", "important");
+        box.style.setProperty("max-width", "100%", "important");
+        box.style.setProperty("min-width", "100%", "important");
+        box.style.setProperty("height", "100%", "important");
+        box.style.setProperty("max-height", "100%", "important");
+        box.style.setProperty("min-height", "100%", "important");
+        box.style.setProperty("border-radius", "0", "important");
+        box.style.setProperty("margin", "0", "important");
+        box.style.setProperty("display", "flex", "important");
+        box.style.setProperty("flex-direction", "column", "important");
+        box.style.setProperty("box-sizing", "border-box", "important");
+        box.style.setProperty("pointer-events", "auto", "important");
+        box.style.setProperty("padding", "14px 12px 16px", "important");
+      }
+      var list = el.querySelector(".popup-list");
+      if(list){
+        list.style.setProperty("flex", "1 1 auto", "important");
+        list.style.setProperty("min-height", "0", "important");
+        list.style.setProperty("overflow-y", "auto", "important");
+        list.style.setProperty("pointer-events", "auto", "important");
       }
     }catch(e){}
   }
   function closeOverlay(el){
     if(!el) return;
     el.classList.remove("show");
+    el.classList.remove("picker-fullscreen");
+    try{
+      el.removeAttribute("style");
+      var box = el.querySelector(".popup-box");
+      if(box) box.removeAttribute("style");
+      var list = el.querySelector(".popup-list");
+      if(list) list.removeAttribute("style");
+    }catch(e){}
   }
 
   function syncReaderLabel(){
@@ -8268,7 +8386,6 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(!list || !sel) return;
     list.innerHTML = "";
     const current = String(sel.value || "");
-    /* إن لم يُحدَّد شيء، خذ السورة الحالية من الصفحة */
     let fallback = current;
     if(!fallback){
       try{
@@ -8282,41 +8399,49 @@ document.addEventListener("DOMContentLoaded",()=>{
       }catch(e){ fallback = ""; }
     }
 
-    /* ابنِ من surahs مباشرة لضمان ظهور الفاتحة والبقرة */
-    if(typeof surahs !== "undefined" && Array.isArray(surahs) && surahs.length){
-      surahs.forEach(function(s, i){
-        const num = String(i + 1);
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "popup-item" + (num === fallback ? " glass-selected" : "");
-        btn.textContent = num + " - " + s[0];
+    /* قائمة ثابتة من 1 إلى 114 — الفاتحة أولاً دائماً */
+    var names = null;
+    if(typeof surahs !== "undefined" && Array.isArray(surahs) && surahs.length >= 114){
+      names = surahs.map(function(s){ return s[0]; });
+    }
+    if(!names || names.length < 114){
+      names = [];
+      for(var oi = 0; oi < sel.options.length; oi++){
+        var op = sel.options[oi];
+        if(!op.value) continue;
+        names[parseInt(op.value, 10) - 1] = (op.textContent || "").replace(/^\d+\s*[-–—.]\s*/, "").trim();
+      }
+    }
+    /* أسماء احتياطية إن نقصت */
+    var fallbackNames = ["الفاتحة","البقرة","آل عمران","النساء","المائدة"];
+    for(var n = 1; n <= 114; n++){
+      var label = (names && names[n - 1]) ? names[n - 1] : (fallbackNames[n - 1] || ("سورة " + n));
+      var num = String(n);
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "popup-item" + (num === String(fallback) ? " glass-selected" : "");
+      btn.textContent = num + " - " + label;
+      btn.setAttribute("data-surah", num);
+      (function(surahNum){
         btn.onclick = function(){
           ensureSurahOptions();
-          sel.value = num;
+          sel.value = surahNum;
           try{ sel.dispatchEvent(new Event("change", { bubbles: true })); }catch(e){}
           syncSurahLabel();
           closeOverlay($("surahPickerOverlay"));
         };
-        list.appendChild(btn);
-      });
-    }else{
-      Array.from(sel.options).forEach(function(opt){
-        if(!opt.value) return;
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "popup-item" + (String(opt.value) === fallback ? " glass-selected" : "");
-        btn.textContent = opt.textContent;
-        btn.onclick = function(){
-          sel.value = opt.value;
-          try{ sel.dispatchEvent(new Event("change", { bubbles: true })); }catch(e){}
-          syncSurahLabel();
-          closeOverlay($("surahPickerOverlay"));
-        };
-        list.appendChild(btn);
-      });
+      })(num);
+      list.appendChild(btn);
     }
+    /* ابدأ من أعلى القائمة حتى تظهر الفاتحة */
+    list.scrollTop = 0;
     requestAnimationFrame(function(){
       list.scrollTop = 0;
+      try{
+        var first = list.querySelector('.popup-item[data-surah="1"]');
+        if(first) first.scrollIntoView({ block: "start" });
+        list.scrollTop = 0;
+      }catch(e){}
     });
   }
 
@@ -8415,6 +8540,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     const oldMode=style==='old';
     document.body.classList.toggle('interface-old',oldMode);
     document.body.classList.toggle('interface-new',!oldMode);
+    document.body.classList.remove('theme-makkah','theme-uthmani','theme-fajr');
     if(newStyle) newStyle.disabled=oldMode;
     visibility(oldMode);
     if(oldMode){
@@ -8426,7 +8552,10 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(save){try{localStorage.setItem(KEY,style)}catch(e){}}
   }
   let saved='new';
-  try{if(localStorage.getItem(KEY)==='old')saved='old';}catch(e){}
+  try{
+    const s=localStorage.getItem(KEY);
+    if(s==='old'||s==='new') saved=s;
+  }catch(e){}
   buttons.forEach(b=>b.addEventListener('click',()=>apply(b.dataset.interfaceStyle,true)));
   apply(saved,false);
 })();
@@ -9091,7 +9220,7 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.137";
+    return "1.0.138";
   }
 
   /*
@@ -9159,6 +9288,10 @@ body.interface-old #downloadsPopup .download-native-select{
       "المطابقة الجزئية لأسماء السور والكلمات تبدأ من <b>3 أحرف</b> فقط",
       "عرض <b>عدد النتائج</b> أعلى قائمة البحث",
       "مسح نص البحث والنتائج عند الإغلاق بزر ✕"
+    ],
+    "1.0.138": [
+      "قوائم <b>اختيار القارئ</b> و<b>اختيار السورة</b> في الثيم الزجاجي أصبحت <b>ملء الشاشة</b> مثل الثيم الكلاسيكي",
+      "إصلاح حصر القوائم داخل المشغّل الذي كان يمنع ملء الشاشة"
     ]
   };
 
@@ -9523,7 +9656,158 @@ body.interface-old #downloadsPopup .download-native-select{
 })();
 </script>
 
+
+<style id="picker-wide-final-override">
+/* قائمة القراء والسور — لوحة واسعة قابلة للضغط والإغلاق */
+#readerPickerOverlay.popup-overlay,
+#surahPickerOverlay.popup-overlay{
+  z-index: 400 !important;
+  pointer-events: none;
+}
+#readerPickerOverlay.popup-overlay.show,
+#surahPickerOverlay.popup-overlay.show{
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  padding: 0 !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.55) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  pointer-events: auto !important;
+}
+#readerPickerOverlay.popup-overlay.show .popup-box,
+#surahPickerOverlay.popup-overlay.show .popup-box{
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 14px 12px max(18px, env(safe-area-inset-bottom, 0px)) !important;
+  padding-top: max(14px, env(safe-area-inset-top, 0px)) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+  overflow: hidden !important;
+}
+#readerPickerOverlay .popup-header,
+#surahPickerOverlay .popup-header{
+  flex: 0 0 auto !important;
+  pointer-events: auto !important;
+}
+#readerPickerOverlay .popup-close,
+#surahPickerOverlay .popup-close{
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  z-index: 2 !important;
+}
+#readerPickerOverlay .popup-list,
+#surahPickerOverlay .popup-list{
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  pointer-events: auto !important;
+}
+#readerPickerOverlay .popup-item,
+#surahPickerOverlay .popup-item{
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 16px 18px !important;
+  font-size: 17px !important;
+  min-height: 54px !important;
+  margin-bottom: 9px !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  touch-action: manipulation !important;
+}
+</style>
+
+
+
+<!-- قوائم القارئ والسورة خارج المشغّل حتى تملأ الشاشة -->
+<!-- نافذة اختيار القارئ الزجاجية -->
+<div class="popup-overlay" id="readerPickerOverlay">
+  <div class="popup-box">
+    <div class="popup-header">
+      <h2>اختيار القارئ</h2>
+      <button type="button" class="popup-close" id="readerPickerClose" aria-label="إغلاق">×</button>
+    </div>
+    <div class="popup-list" id="readerPickerList"></div>
+  </div>
+</div>
+
+<!-- نافذة اختيار السورة الزجاجية -->
+<div class="popup-overlay" id="surahPickerOverlay">
+  <div class="popup-box">
+    <div class="popup-header">
+      <h2>اختيار السورة</h2>
+      <button type="button" class="popup-close" id="surahPickerClose" aria-label="إغلاق">×</button>
+    </div>
+    <div class="popup-list" id="surahPickerList"></div>
+  </div>
+</div>
+
 </body>
+
+<style id="picker-classic-fullscreen-match">
+/* مطابقة الثيم الكلاسيكي: قوائم القارئ والسور ملء الشاشة على الموبايل */
+@media (max-width: 900px) {
+  #readerPickerOverlay.popup-overlay.show,
+  #surahPickerOverlay.popup-overlay.show {
+    display: flex !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    padding: 0 !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: none !important;
+    max-height: none !important;
+    z-index: 99999 !important;
+    background: rgba(0,0,0,.55) !important;
+    pointer-events: auto !important;
+  }
+  #readerPickerOverlay.popup-overlay.show .popup-box,
+  #surahPickerOverlay.popup-overlay.show .popup-box {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    max-height: none !important;
+    min-height: 100% !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 16px 14px max(18px, env(safe-area-inset-bottom, 0px)) !important;
+    padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+    pointer-events: auto !important;
+  }
+  #readerPickerOverlay .popup-list,
+  #surahPickerOverlay .popup-list {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  #readerPickerOverlay .popup-item,
+  #surahPickerOverlay .popup-item {
+    width: 100% !important;
+    min-height: 54px !important;
+    font-size: 17px !important;
+    padding: 15px 16px !important;
+    margin-bottom: 10px !important;
+    box-sizing: border-box !important;
+  }
+}
+</style>
+
 </html>
 
 
