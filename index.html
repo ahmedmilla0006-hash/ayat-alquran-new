@@ -1,4 +1,3 @@
-<!-- Word highlighting: quran-timings-api word timestamps + Quran-coordinate word boxes. -->
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -2193,29 +2192,6 @@ body.interface-new.night-mode .page-area {
 }
 </style>
 
-<style id="reader-picker-screenshot-style">
-#readerPickerOverlay{align-items:center!important;justify-content:center!important;padding:16px!important;background:rgba(0,0,0,.38)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-#readerPickerOverlay.show{display:flex!important}
-#readerPickerOverlay .reader-picker-box{position:relative!important;width:min(88vw,520px)!important;height:auto!important;max-height:88dvh!important;min-height:0!important;margin:0!important;padding:0 0 12px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important;display:flex!important;flex-direction:column!important;color:#1e1e1e!important}
-#readerPickerOverlay .reader-picker-title{position:relative;z-index:2;width:92%;margin:0 auto -1px;padding:14px 18px;min-height:62px;display:flex;align-items:center;justify-content:center;border-radius:28px 28px 18px 18px;background:#5aa05f;color:#fff;font-size:22px;font-weight:800;box-shadow:0 3px 8px rgba(0,0,0,.12)}
-#readerPickerOverlay .reader-picker-card{width:100%;max-height:calc(88dvh - 28px);padding:22px 20px 20px;border-radius:26px;background:#f4e8bf;box-shadow:0 12px 38px rgba(0,0,0,.24);overflow:hidden;display:flex;flex-direction:column}
-#readerPickerOverlay .reader-picker-search-wrap{position:relative;flex:0 0 auto;margin:0 0 18px}
-#readerPickerOverlay .reader-picker-search{width:100%;height:70px;padding:10px 58px 10px 18px;border:0;outline:0;border-radius:25px;background:#fff9e9;color:#222;font:inherit;font-size:18px;direction:rtl;box-shadow:inset 0 1px 2px rgba(0,0,0,.02)}
-#readerPickerOverlay .reader-picker-search-icon{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#66ad70;font-size:40px;line-height:1;font-weight:400;pointer-events:none}
-#readerPickerOverlay .reader-picker-list{flex:1 1 auto!important;min-height:0!important;max-height:none!important;overflow-y:auto!important;padding:0 2px 2px!important;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-#readerPickerOverlay .reader-picker-list::-webkit-scrollbar{display:none}
-#readerPickerOverlay .reader-picker-item{width:100%;min-height:96px;margin:0 0 9px;padding:13px 14px 13px 18px;display:flex;align-items:center;gap:12px;direction:ltr;border-radius:18px;border:0;background:#fff9e9;color:#171717;cursor:pointer;text-align:right;box-sizing:border-box;transition:transform .12s ease,background .15s ease}
-#readerPickerOverlay .reader-picker-item.active{background:#c2d5b4}
-#readerPickerOverlay .reader-picker-item:active{transform:scale(.995)}
-#readerPickerOverlay .reader-picker-body{flex:1;min-width:0;direction:rtl;text-align:right}
-#readerPickerOverlay .reader-picker-name{font-size:20px;line-height:1.35;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#readerPickerOverlay .reader-picker-meta{margin-top:7px;color:#3d8548;font-size:14px;line-height:1.3;font-weight:800}
-#readerPickerOverlay .reader-favorite{flex:0 0 42px;width:42px;height:42px;padding:0;border:0;background:transparent;color:#b9b8af;font-size:40px;line-height:42px;font-family:Arial,sans-serif;cursor:pointer;direction:ltr}
-#readerPickerOverlay .reader-favorite.favorite{color:#d1a93c}
-#readerPickerOverlay .reader-picker-empty{padding:30px 10px;text-align:center;color:#6c6b62;font-size:16px;font-weight:700}
-#readerPickerOverlay .reader-picker-close{position:absolute!important;top:13px!important;right:16px!important;z-index:5!important;width:36px!important;height:36px!important;min-width:36px!important;padding:0!important;border:0!important;border-radius:50%!important;background:rgba(255,255,255,.18)!important;color:#fff!important;font-size:24px!important;line-height:36px!important;box-shadow:none!important}
-@media(max-width:600px){#readerPickerOverlay{padding:10px!important}#readerPickerOverlay .reader-picker-box{width:min(88vw,520px)!important;max-height:90dvh!important}#readerPickerOverlay .reader-picker-title{width:92%;min-height:64px;padding:14px 16px;font-size:21px;border-radius:27px 27px 18px 18px}#readerPickerOverlay .reader-picker-card{padding:22px 18px 18px;border-radius:25px;max-height:calc(90dvh - 20px)}#readerPickerOverlay .reader-picker-search{height:70px;border-radius:25px;font-size:17px}#readerPickerOverlay .reader-picker-item{min-height:96px;padding:12px 10px 12px 12px;border-radius:18px}#readerPickerOverlay .reader-picker-name{font-size:19px}#readerPickerOverlay .reader-picker-meta{font-size:13px;margin-top:6px}}
-</style>
 </head>
 
 <body>
@@ -2565,7 +2541,7 @@ body.interface-new.night-mode .page-area {
     </div>
     <div class="highlight-settings-list">
       <button class="highlight-option" data-highlight-mode="ayah-highlight">🟨 تظليل الآية المقروءة</button>
-      <button class="highlight-option" data-highlight-mode="word-color">🎨 تلوين الكلمة أثناء القراءة</button>
+      <button class="highlight-option" data-highlight-mode="word-color">🎨 تلوين حروف الآية كاملة</button>
       <button class="highlight-option" data-highlight-mode="none">🚫 بدون تمييز</button>
       <div class="highlight-color-title">لون التمييز</div>
       <div class="highlight-colors" id="highlightColors">
@@ -3568,9 +3544,8 @@ function findAyahAtClientPoint(clientX, clientY){
 }
 
 /* تشغيل الصوت من الموضع الحالي مع إعادة محاولة عند الرفض المؤقت */
-async function playFromCurrentPosition(){
+function playFromCurrentPosition(){
   if(!audio) return;
-  try{ await ensureRealWordTimingReady(); }catch(e){}
   const tryPlay = (attempt)=>{
     audio.play().then(()=>{
       if(playButton) playButton.textContent = "Ⅱ";
@@ -4422,9 +4397,9 @@ function applyHighlightColor(){document.documentElement.style.setProperty("--aya
 applyHighlightColor();
 
 /*
-  متابعة الكلمة — التوقيت الحقيقي
-  توقيت الكلمة من quran-timings-api، وإحداثياتها من Quran-coordinate.
-  عند فشل المصدر الخارجي نرجع تلقائياً إلى تمييز الآية حتى لا تتعطل القراءة.
+  متابعة الكلمة أثناء التلاوة (تقديري):
+  مصدر التوقيت يعطي الآية فقط، لذلك نتابع التقدّم داخل الآية
+  ونلوّن مقطعاً يتحرك مع الصوت (يمين→يسار، أعلى→أسفل).
 */
 function getAyahProgress(item){
   const start = Number(item.start_time);
@@ -4446,73 +4421,35 @@ function polygonBBox(pts){
   return {minX, maxX, minY, maxY, w: Math.max(1, maxX - minX), h: Math.max(1, maxY - minY)};
 }
 
-/* ============================================================
-   محرك تظليل الكلمة الحقيقي
-   ============================================================ */
-const WORD_TIMINGS_BASE="https://cdn.jsdelivr.net/gh/spa5k/quran-timings-api@main/data";
-const WORD_COORDS_BASE="https://raw.githubusercontent.com/bodoorzahera/Quran-coordinate/master/data/coords";
-const WORD_TIMING_ALIASES={
-  minshawi:["minshawi","minshawy"],husary:["husary","husari"],
-  shatri:["shatri","abu_bakr_al_shatri","abu_bakr_ash_shaatree","ash_shaatree"],
-  afasy:["afasy","alafasy"],abdulbasitMujawwad:["abdulbasit_mujawwad","abdul_basit_mujawwad","abdulbasit_mojawwad"],
-  shuraim:["shuraim","shuraym"],idrees:["idrees","abkr"],fares:["fares_abbad","faris_abbad"],
-  yasser:["yasser","dussary","dossary"],khalidJalil:["khalid_al_jalil","khalid_jalil","jleel"],
-  maher:["maher","maher_almuaiqly"],hudhaify:["hudhaify","huthfi","huthayfi"],qatami:["qatami","nasser_alqatami"],
-  ghamdi:["ghamdi","saad_alghamdi"],ajmy:["ajmy","ajmi"],ayyub:["ayyub","muhammad_ayyub"],
-  juhany:["juhany","juhani"],kurdi:["kurdi","raad_alkurdi"],salimi:["salimi","mansour_alsalmi","mansor"],
-  aliJaber:["ali_jaber","ali_jabir"],wadee:["wadee","wadi_yamani","wadee3"]
-};
-let wordTimingCatalog=null,wordTimingCatalogPromise=null;
-const wordTimingSlugCache=Object.create(null),wordTimingSurahCache=Object.create(null),wordCoordsCache=Object.create(null);
-let currentWordTimings=[],currentWordTimingSlug=null,currentWordTimingAudioUrl="",currentWordHighlightKey="";
-function normalizeWordTimingKey(v){return String(v||"").toLowerCase().replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه").replace(/[^a-z0-9_]+/g,"_").replace(/^_+|_+$/g,"");}
-async function loadWordTimingCatalog(){
-  if(wordTimingCatalog)return wordTimingCatalog;if(wordTimingCatalogPromise)return wordTimingCatalogPromise;
-  wordTimingCatalogPromise=fetch(WORD_TIMINGS_BASE+"/reciters.json",{cache:"force-cache"}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(d=>{const a=Array.isArray(d)?d:(d.reciters||d.data||[...(Array.isArray(d.quran_com_reciters)?d.quran_com_reciters:[]),...(Array.isArray(d.everyayah_reciters)?d.everyayah_reciters:[]),...(Array.isArray(d.quranicaudio_reciters)?d.quranicaudio_reciters:[])]);wordTimingCatalog=Array.isArray(a)?a:[];return wordTimingCatalog;}).catch(()=>{wordTimingCatalog=[];return wordTimingCatalog;});
-  return wordTimingCatalogPromise;
-}
-function getReaderWordAliases(k){return(WORD_TIMING_ALIASES[k]||[]).map(normalizeWordTimingKey);}
-function reciterSlugOf(e){return String((e&& (e.slug||e.reciter_slug||e.id||e.key))||"");}
-function reciterSearchText(e){return normalizeWordTimingKey([e&&e.slug,e&&e.reciter_slug,e&&e.name,e&&e.name_ar,e&&e.name_en,e&&e.display_name,e&&e.display_name_ar,e&&e.display_name_en,e&&e.reciter_name,e&&e.server].filter(Boolean).join(" "));}
-async function getWordTimingSlug(k){
-  if(wordTimingSlugCache[k]!==undefined)return wordTimingSlugCache[k]||null;
-  const aliases=getReaderWordAliases(k);if(!aliases.length)return(wordTimingSlugCache[k]=null);
-  const list=await loadWordTimingCatalog();let best=null,scoreBest=0;
-  for(const e of list){const slug=reciterSlugOf(e),hay=reciterSearchText(e);if(!slug||!hay)continue;for(const a of aliases){let sc=0,ns=normalizeWordTimingKey(slug);if(ns===a)sc=100;else if(ns.includes(a))sc=80;else if(hay.includes(a))sc=60;if(sc>scoreBest){scoreBest=sc;best=slug;}}}
-  wordTimingSlugCache[k]=best||null;return best||null;
-}
-async function readerHasRealWordTiming(k){return!!(await getWordTimingSlug(k));}
-async function loadWordCoordinates(n){n=Number(n);if(!Number.isFinite(n)||n<1||n>TOTAL_PAGES)return null;if(wordCoordsCache[n])return wordCoordsCache[n];const u=WORD_COORDS_BASE+"/page-"+String(n).padStart(3,"0")+".json";try{const r=await fetch(u,{cache:"force-cache"});if(!r.ok)return null;const d=await r.json();wordCoordsCache[n]=d||{};return wordCoordsCache[n];}catch(e){return null;}}
-function getWordCoordBox(c,s,a,w){const x=c&&c[String(s)+":"+String(a)+":"+String(w)];return x?(x.h||x.highlight||x):null;}
-function mapWordCoordBoxToPage(b){if(!b)return null;const x=Number(b.x),y=Number(b.y),w=Number(b.w),h=Number(b.h);if(![x,y,w,h].every(Number.isFinite)||w<=0||h<=0)return null;const m=getHighlightMapping(currentPage);return{x:x*m.viewW/900,y:y*m.viewH/1437,w:w*m.viewW/900,h:h*m.viewH/1437};}
-async function loadRealWordTimingForSurah(s){
-  s=Number(s);if(!s||s<1||s>114)return false;const slug=await getWordTimingSlug(selectedReader);if(!slug){currentWordTimings=[];currentWordTimingSlug=null;currentWordTimingAudioUrl="";return false;}
-  const key=slug+":"+s;let p=wordTimingSurahCache[key];if(!p){const u=WORD_TIMINGS_BASE+"/api/reciters/"+encodeURIComponent(slug)+"/surahs/"+s+"/timings.json";try{const r=await fetch(u,{cache:"force-cache"});if(!r.ok)return false;p=await r.json();wordTimingSurahCache[key]=p;}catch(e){return false;}}
-  const words=Array.isArray(p&&p.words)?p.words.filter(w=>w&&Number(w.surah)===s&&Number.isFinite(Number(w.start_s))&&Number.isFinite(Number(w.end_s))&&Number(w.end_s)>Number(w.start_s)&&Number.isFinite(Number(w.word_index_in_ayah))):[];if(!words.length)return false;
-  currentWordTimings=words;currentWordTimingSlug=slug;currentWordTimingAudioUrl=Array.isArray(p.ayahs)?String((p.ayahs.find(a=>a&&a.audio_url)||{}).audio_url||""):"";
-  if(currentAudioSurah===s&&audio&&audio.paused&&(audio.currentTime||0)<.05&&currentWordTimingAudioUrl&&audio.src!==currentWordTimingAudioUrl){try{audio.src=currentWordTimingAudioUrl;audio.load();}catch(e){}}
-  return true;
-}
-async function ensureRealWordTimingReady(){const s=Number(currentAudioSurah||getSurahNumberForPage(currentPage));if(!s)return false;return await loadRealWordTimingForSurah(s);}
-function getActiveRealWordTiming(){if(!currentWordTimings.length||!audio)return null;const t=Number(audio.currentTime||0);let lo=0,hi=currentWordTimings.length-1;while(lo<=hi){const m=(lo+hi)>>1,w=currentWordTimings[m],st=Number(w.start_s),en=Number(w.end_s);if(t<st)hi=m-1;else if(t>=en)lo=m+1;else return w;}return null;}
-function clearRealWordState(){currentWordTimings=[];currentWordTimingSlug=null;currentWordTimingAudioUrl="";currentWordHighlightKey="";}
-async function drawRealWordHighlight(item){
-  if(highlightMode==="none"||!currentWordTimings.length||!page.complete)return false;const w=getActiveRealWordTiming();if(!w)return false;
-  const s=Number(w.surah||item&&item._surah||currentAudioSurah||0),a=Number(w.ayah||0),wi=Number(w.word_index_in_ayah||0);if(!s||!a||!wi)return false;
-  const highlightKey=s+":"+a+":"+wi+":"+String(getAyahDisplayColor());
-  if(highlightKey===currentWordHighlightKey&&ayahHighlightLayer.style.display==="block")return true;
-  const target=pageFromTiming(item,s)||currentPage;if(target!==currentPage)return false;const coords=await loadWordCoordinates(currentPage);if(!coords)return false;const box=mapWordCoordBoxToPage(getWordCoordBox(coords,s,a,wi));if(!box)return false;
-  clearAyahHighlight();const ns="http://www.w3.org/2000/svg",m=getHighlightMapping(currentPage),c=getAyahDisplayColor(),ink=hexToRgb(c),defs=document.createElementNS(ns,"defs"),clipId="rwclip_"+Date.now(),filterId="rwfilter_"+Date.now();
-  const clip=document.createElementNS(ns,"clipPath");clip.setAttribute("id",clipId);clip.setAttribute("clipPathUnits","userSpaceOnUse");const r=document.createElementNS(ns,"rect");r.setAttribute("x",box.x-1.5);r.setAttribute("y",box.y-1.5);r.setAttribute("width",box.w+3);r.setAttribute("height",box.h+3);clip.appendChild(r);
-  const f=document.createElementNS(ns,"filter");f.setAttribute("id",filterId);f.setAttribute("x","-10%");f.setAttribute("y","-10%");f.setAttribute("width","120%");f.setAttribute("height","120%");const mx=document.createElementNS(ns,"feColorMatrix");mx.setAttribute("type","matrix");mx.setAttribute("values","0.299 0.587 0.114 0 "+(ink.r/255).toFixed(6)+"\n0.299 0.587 0.114 0 "+(ink.g/255).toFixed(6)+"\n0.299 0.587 0.114 0 "+(ink.b/255).toFixed(6)+"\n0 0 0 1 0");f.appendChild(mx);defs.appendChild(clip);defs.appendChild(f);ayahHighlightLayer.appendChild(defs);
-  const img=document.createElementNS(ns,"image");img.setAttribute("href",page.src||quranPageSvgUrl(currentPage));img.setAttribute("x","0");img.setAttribute("y","0");img.setAttribute("width",m.viewW);img.setAttribute("height",m.viewH);img.setAttribute("preserveAspectRatio","none");img.setAttribute("filter",`url(#${filterId})`);img.setAttribute("clip-path",`url(#${clipId})`);img.setAttribute("pointer-events","none");ayahHighlightLayer.appendChild(img);ayahHighlightLayer.style.display="block";currentWordHighlightKey=highlightKey;return true;
+/*
+  مقطع الكلمة الحالية داخل الآية حسب التقدّم.
+  نقسم الآية إلى أسطر ثم مقاطع أفقية (اتجاه المصحف).
+*/
+function estimateWordWindow(pts, progress){
+  const b = polygonBBox(pts);
+  const lineH = 36;
+  const lines = Math.max(1, Math.round(b.h / lineH));
+  /* عدد مقاطع تقريبي حسب عرض السطر */
+  const segsPerLine = Math.max(3, Math.min(12, Math.round(b.w / 28)));
+  const totalSegs = lines * segsPerLine;
+  const idx = Math.min(totalSegs - 1, Math.floor(progress * totalSegs));
+  const line = Math.floor(idx / segsPerLine);
+  const seg = idx % segsPerLine;
+  const segW = b.w / segsPerLine;
+  const segH = b.h / lines;
+  /* من اليمين إلى اليسار */
+  const x2 = b.maxX - seg * segW;
+  const x1 = b.maxX - (seg + 1) * segW;
+  const y1 = b.minY + line * segH;
+  return {
+    x: x1 - 2,
+    y: y1 - 1,
+    w: Math.max(4, segW + 4),
+    h: Math.max(8, segH + 2)
+  };
 }
 
-async function drawAyahHighlight(item){
-  if(highlightMode === "word-color" && currentWordTimings.length){
-    const real=await drawRealWordHighlight(item);
-    if(real)return;
-  }
+function drawAyahHighlight(item){
   clearAyahHighlight();
   const displayColor=getAyahDisplayColor();
 
@@ -4555,6 +4492,7 @@ async function drawAyahHighlight(item){
        الـ polygon الذي أعاده Timing API، ثم نستخدم فلترًا
        يحوّل الحبر الداكن داخل المنطقة إلى أخضر ويترك الخلفية
        البيضاء بيضاء تقريبًا.
+     - في وضع word-by-word: نضيّق القصّ إلى مستطيل الكلمة الحالية.
   */
   const ns = "http://www.w3.org/2000/svg";
   const clipId = "ayahColorClip_" + Date.now();
@@ -4569,7 +4507,33 @@ async function drawAyahHighlight(item){
     m.mapX(p[0]) + "," + m.mapY(p[1])
   ).join(" "));
 
-  clip.appendChild(poly);
+  const isWordFollow = highlightMode === "word-by-word";
+  let wordWindow = null;
+
+  if(isWordFollow){
+    const progress = getAyahProgress(item);
+    wordWindow = estimateWordWindow(pts, progress);
+
+    /* طبقة خفيفة لكل الآية */
+    const softPoly = document.createElementNS(ns,"polygon");
+    softPoly.setAttribute("points", pts.map(p =>
+      m.mapX(p[0]) + "," + m.mapY(p[1])
+    ).join(" "));
+    softPoly.setAttribute("fill", colorToRgba(displayColor, 0.18));
+    softPoly.setAttribute("stroke", colorToRgba(displayColor, 0.2));
+    softPoly.setAttribute("stroke-width", ".6");
+    ayahHighlightLayer.appendChild(softPoly);
+
+    /* قص المقطع الحالي فقط للتلوين القوي */
+    const rect = document.createElementNS(ns,"rect");
+    rect.setAttribute("x", wordWindow.x);
+    rect.setAttribute("y", wordWindow.y);
+    rect.setAttribute("width", wordWindow.w);
+    rect.setAttribute("height", wordWindow.h);
+    clip.appendChild(rect);
+  }else{
+    clip.appendChild(poly);
+  }
 
   /* يحوّل البكسلات الداكنة إلى اللون المختار، مع إبقاء الأبيض أبيض */
   const filterId = "ayahInkGreen_" + Date.now();
@@ -4715,7 +4679,6 @@ async function loadTimingForCurrentSurah(){
 
   if(timingCache[cacheKey]){
     currentTiming = tagTimingItems(timingCache[cacheKey], surah);
-    loadRealWordTimingForSurah(surah).catch(()=>{});
     /* حمّل أيضاً توقيت باقي سور الصفحة للضغط المطوّل */
     loadPageHitTiming(currentPage);
     return;
@@ -4758,7 +4721,6 @@ async function loadTimingForCurrentSurah(){
 
     timingCache[cacheKey] = raw;
     currentTiming = tagTimingItems(raw, surah);
-    loadRealWordTimingForSurah(surah).catch(()=>{});
 
     /* إعادة المحاولة مهمة للفـاتحة وأول البقرة بعد وصول التوقيت */
     requestAnimationFrame(()=>{
@@ -4897,19 +4859,26 @@ function getActiveTiming(){
   ) || null;
 }
 
-let realWordLoadToken=0;
-async function syncHighlight(){
-  if(!audio || !currentTiming.length)return;
-  const active=getActiveTiming();if(!active)return;
-  const targetPage=pageFromTiming(active);
-  if(targetPage&&targetPage!==currentPage){loadPage(targetPage,{keepAudio:true});return;}
-  if(targetPage===currentPage){
-    if(highlightMode==="word-color"&&!currentWordTimings.length){
-      const token=++realWordLoadToken;
-      const ok=await loadRealWordTimingForSurah(Number(active._surah||currentAudioSurah||getSurahNumberForPage(currentPage)));
-      if(token!==realWordLoadToken)return;if(!ok){clearAyahHighlight();drawAyahHighlight(active);return;}
-    }
-    await drawAyahHighlight(active);
+function syncHighlight(){
+  if(!audio || !currentTiming.length) return;
+
+  const active = getActiveTiming();
+
+  if(!active) return;
+
+  const targetPage =
+    pageFromTiming(active);
+
+  if(targetPage && targetPage !== currentPage){
+    loadPage(
+      targetPage,
+      {keepAudio:true}
+    );
+    return;
+  }
+
+  if(targetPage === currentPage){
+    drawAyahHighlight(active);
   }
 }
 
@@ -4944,7 +4913,6 @@ function updateAudioSource(keepPosition = false, options = {}){
     progress.value = 0;
     playButton.textContent = "▶";
     clearAyahHighlight();
-    clearRealWordState();
 
     loadTimingForCurrentSurah();
 
@@ -5147,7 +5115,6 @@ readerSelect.onchange = ()=>{
   progress.value = 0;
   playButton.textContent = "▶";
   clearAyahHighlight();
-  clearRealWordState();
 
   const applyAyahSeek = ()=>{
     if(targetAyah == null || !currentTiming.length){
@@ -5329,22 +5296,31 @@ audio.addEventListener(
    التشغيل
 ========================= */
 
-playButton.onclick = async ()=>{
+playButton.onclick = ()=>{
 
   if(!audio.src){
     updateAudioSource(false);
   }
 
   if(audio.paused){
-    try{ await ensureRealWordTimingReady(); }catch(e){}
+
     audio.play().then(()=>{
+
       playButton.textContent = "Ⅱ";
+
     }).catch(()=>{
-      alert("تعذر تشغيل التلاوة. تأكد من اتصال الإنترنت ثم جرّب مرة أخرى.");
+
+      alert(
+        "تعذر تشغيل التلاوة. تأكد من اتصال الإنترنت ثم جرّب مرة أخرى."
+      );
+
     });
+
   }else{
+
     audio.pause();
     playButton.textContent = "▶";
+
   }
 
 };
@@ -8268,8 +8244,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   function openOverlay(el){
     if(!el) return;
     el.classList.add("show");
-    /* اختيار القارئ بتصميم البطاقة العائمة مثل الصورة المرجعية */
-    if(el.id === "readerPickerOverlay") return;
     el.classList.add("picker-fullscreen");
     try{
       /* لا نستخدم cssText على الـ overlay حتى لا يتعطل الإغلاق */
@@ -8377,35 +8351,32 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(!list || !sel) return;
     list.innerHTML = "";
     const current = sel.value;
-    const search = $("readerPickerSearch");
-    const query = search ? String(search.value || "").trim().toLowerCase() : "";
-    let readers = Array.from(sel.options).filter(function(opt){
+    let selectedBtn = null;
+    Array.from(sel.options).forEach(function(opt){
+      /* لا تتخطّ أي خيار له نص — حتى لو value فاضي نادر */
       const val = opt.value;
       const name = (opt.textContent || "").trim();
-      return name && !(val === "" && name.indexOf("اختر") === 0);
+      if(!name) return;
+      if(val === "" && name.indexOf("اختر") === 0) return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "popup-item" + (val && val === current ? " glass-selected" : "");
+      btn.textContent = name;
+      btn.onclick = function(){
+        if(val){
+          sel.value = val;
+          try{ sel.dispatchEvent(new Event("change", { bubbles: true })); }catch(e){}
+        }
+        syncReaderLabel();
+        closeOverlay($("readerPickerOverlay"));
+      };
+      list.appendChild(btn);
+      if(val && val === current) selectedBtn = btn;
     });
-    if(query){ readers = readers.filter(function(opt){ return (opt.textContent || "").trim().toLowerCase().indexOf(query) !== -1; }); }
-    let favorites = [];
-    try{ favorites = JSON.parse(localStorage.getItem("ayaFavoriteReaders") || "[]"); }catch(e){ favorites=[]; }
-    const isFavorite = v => favorites.indexOf(v) !== -1;
-    const saveFavorites = () => { try{ localStorage.setItem("ayaFavoriteReaders", JSON.stringify(favorites)); }catch(e){} };
-    if(!readers.length){
-      const empty=document.createElement("div"); empty.className="reader-picker-empty"; empty.textContent="لا يوجد قارئ مطابق للبحث"; list.appendChild(empty); return;
-    }
-    readers.forEach(function(opt){
-      const val=opt.value, name=(opt.textContent||"").trim();
-      const row=document.createElement("div");
-      row.className="reader-picker-item"+(val===current?" active":"");
-      const star=document.createElement("button"); star.type="button"; star.className="reader-favorite"+(isFavorite(val)?" favorite":""); star.setAttribute("aria-label",isFavorite(val)?"إزالة من المفضلة":"إضافة إلى المفضلة"); star.innerHTML=isFavorite(val)?"★":"☆";
-      star.onclick=function(e){ e.preventDefault(); e.stopPropagation(); const i=favorites.indexOf(val); if(i===-1) favorites.push(val); else favorites.splice(i,1); saveFavorites(); buildReaderList(); };
-      const body=document.createElement("div"); body.className="reader-picker-body";
-      const title=document.createElement("div"); title.className="reader-picker-name"; title.textContent=name;
-      const meta=document.createElement("div"); meta.className="reader-picker-meta"; meta.style.display="none"; if(wordTimingCatalog){ readerHasRealWordTiming(val).then(ok=>{ if(ok){meta.textContent="يدعم تظليل الكلمة";meta.style.display="block";} }); }
-      body.appendChild(title); body.appendChild(meta); row.appendChild(star); row.appendChild(body);
-      row.onclick=function(){ sel.value=val; try{ sel.dispatchEvent(new Event("change",{bubbles:true})); }catch(e){} syncReaderLabel(); closeOverlay($("readerPickerOverlay")); };
-      list.appendChild(row);
+    /* ابدأ من أعلى القائمة دائماً حتى تظهر أول الأسماء */
+    requestAnimationFrame(function(){
+      list.scrollTop = 0;
     });
-    requestAnimationFrame(function(){ list.scrollTop=0; });
   }
 
   function buildSurahList(){
@@ -8492,14 +8463,12 @@ document.addEventListener("DOMContentLoaded",()=>{
       buildSurahList();
       openOverlay(sOv);
     };
-    if(rClose) rClose.onclick = function(){ if($("readerPickerSearch")) $("readerPickerSearch").value=""; closeOverlay(rOv); };
+    if(rClose) rClose.onclick = function(){ closeOverlay(rOv); };
     if(sClose) sClose.onclick = function(){ closeOverlay(sOv); };
-    if(rOv) rOv.addEventListener("click", function(e){ if(e.target === rOv){ if($("readerPickerSearch")) $("readerPickerSearch").value=""; closeOverlay(rOv); } });
+    if(rOv) rOv.addEventListener("click", function(e){ if(e.target === rOv) closeOverlay(rOv); });
     if(sOv) sOv.addEventListener("click", function(e){ if(e.target === sOv) closeOverlay(sOv); });
 
     if(rSel) rSel.addEventListener("change", syncReaderLabel);
-    const rSearch = $("readerPickerSearch");
-    if(rSearch) rSearch.addEventListener("input", function(){ buildReaderList(); });
     if(sSel) sSel.addEventListener("change", syncSurahLabel);
 
     const recitersBtn = $("recitersButton");
@@ -8514,11 +8483,6 @@ document.addEventListener("DOMContentLoaded",()=>{
     ensureSurahOptions();
     syncReaderLabel();
     syncSurahLabel();
-    /* تحميل فهرس Word Timing الحقيقي ثم تحديث قائمة القراء لإظهار
-       «يدعم تظليل الكلمة» فقط للقراء الذين لديهم بيانات فعلية. */
-    loadWordTimingCatalog().then(function(){
-      try{ buildReaderList(); }catch(e){}
-    });
     setTimeout(function(){ ensureSurahOptions(); syncSurahLabel(); }, 300);
     setTimeout(function(){ ensureSurahOptions(); syncSurahLabel(); }, 1000);
   }
@@ -9768,16 +9732,12 @@ body.interface-old #downloadsPopup .download-native-select{
 <!-- قوائم القارئ والسورة خارج المشغّل حتى تملأ الشاشة -->
 <!-- نافذة اختيار القارئ الزجاجية -->
 <div class="popup-overlay" id="readerPickerOverlay">
-  <div class="popup-box reader-picker-box">
-    <div class="reader-picker-title">اختر القارئ</div>
-    <div class="reader-picker-card">
-      <div class="reader-picker-search-wrap">
-        <input id="readerPickerSearch" class="reader-picker-search" type="search" inputmode="search" autocomplete="off" placeholder="" aria-label="البحث عن قارئ">
-        <span class="reader-picker-search-icon" aria-hidden="true">⌕</span>
-      </div>
-      <div class="popup-list reader-picker-list" id="readerPickerList"></div>
+  <div class="popup-box">
+    <div class="popup-header">
+      <h2>اختيار القارئ</h2>
+      <button type="button" class="popup-close" id="readerPickerClose" aria-label="إغلاق">×</button>
     </div>
-    <button type="button" class="popup-close reader-picker-close" id="readerPickerClose" aria-label="إغلاق">×</button>
+    <div class="popup-list" id="readerPickerList"></div>
   </div>
 </div>
 
