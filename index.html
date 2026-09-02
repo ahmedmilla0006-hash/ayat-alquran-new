@@ -1198,7 +1198,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(180deg, rgba(5,14,22,.10), rgba(4,12,19,.26));
+  background: linear-gradient(180deg, rgba(5,14,22,.18), rgba(4,12,19,.38));
   pointer-events: none;
 }
 
@@ -1757,15 +1757,15 @@ body.interface-new #downloadsPopup .search-hint{
   }
   #readerPickerOverlay .popup-box,
   #surahPickerOverlay .popup-box{
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 100% !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    min-height: 100% !important;
-    border-radius: 0 !important;
+    width: 90% !important;
+    max-width: 90% !important;
+    min-width: 0 !important;
+    height: 90% !important;
+    max-height: 90% !important;
+    min-height: 0 !important;
+    border-radius: 18px !important;
     margin: 0 !important;
-    padding: 14px 12px max(16px, env(safe-area-inset-bottom, 0px)) !important;
+    padding: 14px 12px 16px !important;
   }
   .popup-item{
     min-height: 46px !important;
@@ -1791,17 +1791,16 @@ body.interface-new #downloadsPopup .search-hint{
 
 /* نوافذ اختيار القارئ والسورة — ملء الشاشة تقريباً */
 .popup-overlay.picker-fullscreen{
-  align-items: stretch !important;
-  justify-content: stretch !important;
-  padding: 8px !important;
-  padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
-  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
 }
 .popup-overlay.picker-fullscreen .popup-box{
-  width: 100% !important;
-  max-width: none !important;
-  height: 100% !important;
-  max-height: none !important;
+  width: 90% !important;
+  max-width: 90% !important;
+  height: 90% !important;
+  max-height: 90% !important;
+  min-height: 0 !important;
   border-radius: 18px !important;
   display: flex !important;
   flex-direction: column !important;
@@ -2137,27 +2136,27 @@ body.interface-new.night-mode .page-area {
 
 
 <style id="picker-fullscreen-force">
-/* قوائم القارئ والسورة — شاشة واسعة (تقريباً ملء الشاشة) */
+/* قوائم القارئ والسورة — 90% من الشاشة */
 #readerPickerOverlay.popup-overlay,
 #surahPickerOverlay.popup-overlay{
-  align-items: stretch !important;
-  justify-content: stretch !important;
+  align-items: center !important;
+  justify-content: center !important;
   padding: 0 !important;
   inset: 0 !important;
   z-index: 400 !important;
   background: rgba(0,0,0,.55) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 #readerPickerOverlay .popup-box,
 #surahPickerOverlay .popup-box{
-  width: 100% !important;
-  max-width: 100% !important;
+  width: 90% !important;
+  max-width: 90% !important;
   min-width: 0 !important;
-  height: 100% !important;
-  max-height: 100% !important;
-  min-height: 100% !important;
-  border-radius: 0 !important;
+  height: 90% !important;
+  max-height: 90% !important;
+  min-height: 0 !important;
+  border-radius: 18px !important;
   margin: 0 !important;
   padding: 14px 12px 16px !important;
   display: flex !important;
@@ -6264,15 +6263,11 @@ function searchLocal(query){
     const qBare = qStr.replace(/^ال/, "");
     if(bare === qBare && qBare.length > 0) return 95;
     /*
-      المطابقة الجزئية (بداية الاسم أو includes)
-      تبدأ من 3 أحرف فأكثر فقط.
-      حرفان: تطابق كامل للكلمة/الاسم فقط (مثل ص، ق، عم عبر الاسم المستعار).
+      المطابقة الحرفية فقط:
+      - لا نطابق جزءاً من اسم السورة.
+      - «عمر» لا يطابق «عمران».
+      - يبقى التطبيع العربي (إ/أ/آ/ى/ة والتشكيل) معمولاً به.
     */
-    if(qStr.length >= 3){
-      if(nameNorm.indexOf(qStr) === 0) return 80;
-      if(qBare.length >= 3 && bare.indexOf(qBare) === 0) return 70;
-      if(nameNorm.indexOf(qStr) >= 0 || (qBare.length >= 3 && bare.indexOf(qBare) >= 0)) return 40;
-    }
     return 0;
   }
 
@@ -6363,24 +6358,22 @@ async function searchWord(query){
   }
 
   /*
-    ترتيب أدق:
-    - تطابق كلمة كاملة = أعلى دائماً
-    - حرفان أو أقل: كلمة كاملة فقط (لا جزئي داخل كلمة أطول)
-    - 3 أحرف فأكثر: يُسمح بالتطابق الجزئي داخل النص
+    البحث بكلمة/عبارة كاملة فقط:
+    - «عمر» يطابق «عمر» فقط، ولا يطابق «عمران».
+    - لا يوجد أي بحث عن جزء داخل الكلمة.
+    - إذا كان البحث عدة كلمات، يجب أن تظهر العبارة كاملة وبنفس الترتيب.
+    - التطبيع العربي يستمر كما هو، لذلك «ادم» يطابق «آدم».
   */
   function rankMatch(text){
     const t = normalizeArabic(text);
     if(!t || !qNorm) return 0;
-    const parts = t.split(/\s+/).filter(Boolean);
-    /* كلمة كاملة مطابقة */
-    if(parts.some(function(w){ return w === qNorm; })) return 3;
-    /* حدود كلمة بمسافات */
-    if(
-      (" " + t + " ").indexOf(" " + qNorm + " ") >= 0
-    ) return 2;
-    /* تطابق جزئي — من 3 أحرف فقط */
-    if(qNorm.length >= 3 && t.indexOf(qNorm) >= 0) return 1;
-    return 0;
+
+    const escaped = qNorm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const exactPattern = new RegExp(
+      "(^|\\s)" + escaped + "(?=\\s|$)"
+    );
+
+    return exactPattern.test(t) ? 3 : 0;
   }
 
   /*
@@ -6388,7 +6381,7 @@ async function searchWord(query){
     https://api.alquran.cloud/v1/search/{word}/all/quran-simple-clean
   */
   async function searchAlQuranCloud(){
-    /* جرّب النص الأصلي ثم المطبّع لزيادة دقة النتائج */
+    /* جرّب النص الأصلي ثم المطبّع، ثم نتحقق محلياً من تطابق الكلمة/العبارة كاملة */
     const queries = [query];
     if(qNorm && qNorm !== normalizeArabic(query) || qNorm !== query){
       if(queries.indexOf(qNorm) < 0) queries.push(qNorm);
@@ -6680,40 +6673,9 @@ searchForm.onsubmit = async e => {
     return;
   }
 
-  /* دائماً ابحث عن الآيات التي تحتوي الكلمة */
+  /* دائماً ابحث عن الآيات التي تحتوي الكلمة فقط
+     (لا نجلب كل آيات السورة عند مطابقة اسمها — يكفي نتيجة «بداية السورة») */
   await searchWord(query);
-
-  /*
-    إذا طابق الاستعلام اسم السورة الحقيقي بالكامل (مثل «الناس» أو «النبأ»)
-    اجلب كل آياتها. الأسماء المستعارة مثل «عم» تظهر السورة فقط + الآيات التي فيها الكلمة.
-  */
-  try{
-    const exactList = (localInfo && localInfo.exactSurahs) ? localInfo.exactSurahs : [];
-    if(exactList.length){
-      const seen = new Set();
-      searchResults.querySelectorAll(".search-result").forEach(function(btn){
-        const t = (btn.getAttribute("data-ayah-key") || "");
-        if(t) seen.add(t);
-      });
-      for(let si = 0; si < exactList.length; si++){
-        const sn = exactList[si];
-        const ayahs = await fetchAllAyahsOfSurah(sn);
-        ayahs.forEach(function(a){
-          const key = a.surahNumber + ":" + a.ayahNumber;
-          if(seen.has(key)) return;
-          seen.add(key);
-          addSearchResult(
-            "سورة " + a.surahName,
-            "الآية " + a.ayahNumber + (a.page ? (" — الصفحة " + a.page) : ""),
-            a.text || "",
-            a.page || 1,
-            a.surahNumber,
-            a.ayahNumber
-          );
-        });
-      }
-    }
-  }catch(e){}
 
   updateSearchResultCount();
 
@@ -7265,7 +7227,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.140";
+  const APP_VERSION = "1.0.141";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
@@ -8246,24 +8208,26 @@ document.addEventListener("DOMContentLoaded",()=>{
     el.classList.add("show");
     el.classList.add("picker-fullscreen");
     try{
-      /* لا نستخدم cssText على الـ overlay حتى لا يتعطل الإغلاق */
+      /* قائمة القارئ/السورة في المشغّل: 90% من الشاشة وليس 100% */
       el.style.setProperty("display", "flex", "important");
-      el.style.setProperty("align-items", "stretch", "important");
-      el.style.setProperty("justify-content", "stretch", "important");
+      el.style.setProperty("align-items", "center", "important");
+      el.style.setProperty("justify-content", "center", "important");
       el.style.setProperty("padding", "0", "important");
       el.style.setProperty("inset", "0", "important");
       el.style.setProperty("z-index", "400", "important");
       el.style.setProperty("pointer-events", "auto", "important");
       el.style.setProperty("background", "rgba(0,0,0,0.55)", "important");
+      el.style.setProperty("backdrop-filter", "none", "important");
+      el.style.setProperty("-webkit-backdrop-filter", "none", "important");
       var box = el.querySelector(".popup-box");
       if(box){
-        box.style.setProperty("width", "100%", "important");
-        box.style.setProperty("max-width", "100%", "important");
-        box.style.setProperty("min-width", "100%", "important");
-        box.style.setProperty("height", "100%", "important");
-        box.style.setProperty("max-height", "100%", "important");
-        box.style.setProperty("min-height", "100%", "important");
-        box.style.setProperty("border-radius", "0", "important");
+        box.style.setProperty("width", "90%", "important");
+        box.style.setProperty("max-width", "90%", "important");
+        box.style.setProperty("min-width", "0", "important");
+        box.style.setProperty("height", "90%", "important");
+        box.style.setProperty("max-height", "90%", "important");
+        box.style.setProperty("min-height", "0", "important");
+        box.style.setProperty("border-radius", "18px", "important");
         box.style.setProperty("margin", "0", "important");
         box.style.setProperty("display", "flex", "important");
         box.style.setProperty("flex-direction", "column", "important");
@@ -9220,7 +9184,7 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.138";
+    return "1.0.141";
   }
 
   /*
@@ -9292,6 +9256,9 @@ body.interface-old #downloadsPopup .download-native-select{
     "1.0.138": [
       "قوائم <b>اختيار القارئ</b> و<b>اختيار السورة</b> في الثيم الزجاجي أصبحت <b>ملء الشاشة</b> مثل الثيم الكلاسيكي",
       "إصلاح حصر القوائم داخل المشغّل الذي كان يمنع ملء الشاشة"
+    ],
+    "1.0.141": [
+      "تحسين <b>البحث في القرآن</b>: النتائج أصبحت تطابق الكلمة أو العبارة <b>كاملة</b> فقط"
     ]
   };
 
@@ -9667,27 +9634,26 @@ body.interface-old #downloadsPopup .download-native-select{
 #readerPickerOverlay.popup-overlay.show,
 #surahPickerOverlay.popup-overlay.show{
   display: flex !important;
-  align-items: stretch !important;
-  justify-content: stretch !important;
+  align-items: center !important;
+  justify-content: center !important;
   padding: 0 !important;
   inset: 0 !important;
   background: rgba(0, 0, 0, 0.55) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   pointer-events: auto !important;
 }
 #readerPickerOverlay.popup-overlay.show .popup-box,
 #surahPickerOverlay.popup-overlay.show .popup-box{
-  width: 100% !important;
-  max-width: 100% !important;
+  width: 90% !important;
+  max-width: 90% !important;
   min-width: 0 !important;
-  height: 100% !important;
-  max-height: 100% !important;
-  min-height: 100% !important;
-  border-radius: 0 !important;
+  height: 90% !important;
+  max-height: 90% !important;
+  min-height: 0 !important;
+  border-radius: 18px !important;
   margin: 0 !important;
-  padding: 14px 12px max(18px, env(safe-area-inset-bottom, 0px)) !important;
-  padding-top: max(14px, env(safe-area-inset-top, 0px)) !important;
+  padding: 14px 12px 16px !important;
   display: flex !important;
   flex-direction: column !important;
   box-sizing: border-box !important;
@@ -9755,13 +9721,13 @@ body.interface-old #downloadsPopup .download-native-select{
 </body>
 
 <style id="picker-classic-fullscreen-match">
-/* مطابقة الثيم الكلاسيكي: قوائم القارئ والسور ملء الشاشة على الموبايل */
+/* قوائم القارئ والسور — 90% من الشاشة */
 @media (max-width: 900px) {
   #readerPickerOverlay.popup-overlay.show,
   #surahPickerOverlay.popup-overlay.show {
     display: flex !important;
-    align-items: stretch !important;
-    justify-content: stretch !important;
+    align-items: center !important;
+    justify-content: center !important;
     padding: 0 !important;
     inset: 0 !important;
     width: 100vw !important;
@@ -9774,16 +9740,15 @@ body.interface-old #downloadsPopup .download-native-select{
   }
   #readerPickerOverlay.popup-overlay.show .popup-box,
   #surahPickerOverlay.popup-overlay.show .popup-box {
-    width: 100% !important;
-    max-width: none !important;
+    width: 90% !important;
+    max-width: 90% !important;
     min-width: 0 !important;
-    height: 100% !important;
-    max-height: none !important;
-    min-height: 100% !important;
-    border-radius: 0 !important;
+    height: 90% !important;
+    max-height: 90% !important;
+    min-height: 0 !important;
+    border-radius: 18px !important;
     margin: 0 !important;
-    padding: 16px 14px max(18px, env(safe-area-inset-bottom, 0px)) !important;
-    padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
+    padding: 14px 12px 16px !important;
     display: flex !important;
     flex-direction: column !important;
     box-sizing: border-box !important;
