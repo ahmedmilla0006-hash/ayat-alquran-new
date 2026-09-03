@@ -509,6 +509,90 @@ jobs:
           print("MainActivity.java fixed: no onTaskRemoved override.")
           PY
 
+      # ============================================================
+      # BACKGROUND UPDATE NOTIFICATIONS — فحص التحديثات في الخلفية
+      # ============================================================
+
+      - name: Enable background update notification
+        run: |
+          set -e
+          python3 << 'PY'
+          from pathlib import Path
+          import re
+
+          java_dir = Path("android-app/android/app/src/main/java/com/aya/alquran")
+          activity = java_dir / "MainActivity.java"
+          worker = java_dir / "UpdateCheckWorker.java"
+          activity_text = activity.read_text(encoding="utf-8")
+
+          imports = """import androidx.work.Constraints;
+          import androidx.work.ExistingPeriodicWorkPolicy;
+          import androidx.work.NetworkType;
+          import androidx.work.PeriodicWorkRequest;
+          import androidx.work.WorkManager;
+          import java.util.concurrent.TimeUnit;
+          """
+
+          if "import androidx.work.WorkManager;" not in activity_text:
+              package_end = activity_text.find("\n", activity_text.find("package "))
+              if package_end == -1: raise SystemExit("ERROR: package declaration not found.")
+              activity_text = activity_text[:package_end + 1] + imports + activity_text[package_end + 1:]
+
+          method = """
+              private void scheduleBackgroundUpdateCheck() {
+                  try {
+                      Constraints constraints = new Constraints.Builder()
+                              .setRequiredNetworkType(NetworkType.CONNECTED)
+                              .build();
+                      PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(
+                              UpdateCheckWorker.class, 6, TimeUnit.HOURS)
+                              .setConstraints(constraints)
+                              .build();
+                      WorkManager.getInstance(getApplicationContext())
+                              .enqueueUniquePeriodicWork(
+                                      "aya_background_update_check",
+                                      ExistingPeriodicWorkPolicy.KEEP,
+                                      request);
+                  } catch (Exception ignored) {
+                  }
+              }
+          """
+
+          if "private void scheduleBackgroundUpdateCheck()" not in activity_text:
+              pos = activity_text.rfind("\n}")
+              if pos == -1: raise SystemExit("ERROR: MainActivity closing brace not found.")
+              activity_text = activity_text[:pos] + method + activity_text[pos:]
+
+          if "scheduleBackgroundUpdateCheck();" not in activity_text:
+              m = re.search(r"(protected|public)\s+void\s+onCreate\s*\([^)]*\)\s*\{", activity_text)
+              if not m: raise SystemExit("ERROR: onCreate() not found.")
+              activity_text = activity_text[:m.end()] + "\n        scheduleBackgroundUpdateCheck();" + activity_text[m.end():]
+
+          activity.write_text(activity_text, encoding="utf-8")
+
+          UPDATE_INSTALL_ACTIVITY_CODE = __import__("base64").b64decode("cGFja2FnZSBjb20uYXlhLmFscXVyYW47CgppbXBvcnQgYW5kcm9pZC5hcHAuQWN0aXZpdHk7CmltcG9ydCBhbmRyb2lkLmNvbnRlbnQuSW50ZW50OwppbXBvcnQgYW5kcm9pZC5uZXQuVXJpOwppbXBvcnQgYW5kcm9pZC5vcy5CdWlsZDsKaW1wb3J0IGFuZHJvaWQub3MuQnVuZGxlOwppbXBvcnQgYW5kcm9pZC5wcm92aWRlci5TZXR0aW5nczsKaW1wb3J0IGFuZHJvaWR4LmNvcmUuY29udGVudC5GaWxlUHJvdmlkZXI7CgppbXBvcnQgamF2YS5pby5CdWZmZXJlZElucHV0U3RyZWFtOwppbXBvcnQgamF2YS5pby5GaWxlOwppbXBvcnQgamF2YS5pby5GaWxlT3V0cHV0U3RyZWFtOwppbXBvcnQgamF2YS5pby5JbnB1dFN0cmVhbTsKaW1wb3J0IGphdmEubmV0Lkh0dHBVUkxDb25uZWN0aW9uOwppbXBvcnQgamF2YS5uZXQuVVJMOwoKcHVibGljIGNsYXNzIFVwZGF0ZUluc3RhbGxBY3Rpdml0eSBleHRlbmRzIEFjdGl2aXR5IHsKICAgIEBPdmVycmlkZQogICAgcHJvdGVjdGVkIHZvaWQgb25DcmVhdGUoQnVuZGxlIHNhdmVkSW5zdGFuY2VTdGF0ZSkgewogICAgICAgIHN1cGVyLm9uQ3JlYXRlKHNhdmVkSW5zdGFuY2VTdGF0ZSk7CiAgICAgICAgU3RyaW5nIGFwa1VybCA9IGdldEludGVudCgpID09IG51bGwgPyAiIiA6IGdldEludGVudCgpLmdldFN0cmluZ0V4dHJhKCJhcGtfdXJsIik7CiAgICAgICAgaWYgKGFwa1VybCA9PSBudWxsIHx8IGFwa1VybC50cmltKCkuaXNFbXB0eSgpKSB7IGZpbmlzaCgpOyByZXR1cm47IH0KICAgICAgICBkb3dubG9hZEFuZEluc3RhbGwoYXBrVXJsLnRyaW0oKSk7CiAgICB9CgogICAgcHJpdmF0ZSB2b2lkIGRvd25sb2FkQW5kSW5zdGFsbChTdHJpbmcgYXBrVXJsKSB7CiAgICAgICAgbmV3IFRocmVhZCgoKSAtPiB7CiAgICAgICAgICAgIEh0dHBVUkxDb25uZWN0aW9uIGNvbm4gPSBudWxsOwogICAgICAgICAgICBGaWxlIGFwayA9IG5ldyBGaWxlKGdldENhY2hlRGlyKCksICJheWEtdXBkYXRlLmFwayIpOwogICAgICAgICAgICB0cnkgewogICAgICAgICAgICAgICAgaWYgKGFway5leGlzdHMoKSkgYXBrLmRlbGV0ZSgpOwogICAgICAgICAgICAgICAgY29ubiA9IChIdHRwVVJMQ29ubmVjdGlvbikgbmV3IFVSTChhcGtVcmwpLm9wZW5Db25uZWN0aW9uKCk7CiAgICAgICAgICAgICAgICBjb25uLnNldEluc3RhbmNlRm9sbG93UmVkaXJlY3RzKHRydWUpOwogICAgICAgICAgICAgICAgY29ubi5zZXRDb25uZWN0VGltZW91dCgzMDAwMCk7CiAgICAgICAgICAgICAgICBjb25uLnNldFJlYWRUaW1lb3V0KDE4MDAwMCk7CiAgICAgICAgICAgICAgICBjb25uLnNldFJlcXVlc3RQcm9wZXJ0eSgiVXNlci1BZ2VudCIsICJBeWEtQW5kcm9pZC1VcGRhdGVyIik7CiAgICAgICAgICAgICAgICBjb25uLnNldFJlcXVlc3RQcm9wZXJ0eSgiQ2FjaGUtQ29udHJvbCIsICJuby1jYWNoZSIpOwogICAgICAgICAgICAgICAgY29ubi5jb25uZWN0KCk7CiAgICAgICAgICAgICAgICBpZiAoY29ubi5nZXRSZXNwb25zZUNvZGUoKSAhPSBIdHRwVVJMQ29ubmVjdGlvbi5IVFRQX09LKSB7IGZpbmlzaFNhZmUoKTsgcmV0dXJuOyB9CiAgICAgICAgICAgICAgICB0cnkgKElucHV0U3RyZWFtIGluID0gbmV3IEJ1ZmZlcmVkSW5wdXRTdHJlYW0oY29ubi5nZXRJbnB1dFN0cmVhbSgpKTsKICAgICAgICAgICAgICAgICAgICAgRmlsZU91dHB1dFN0cmVhbSBvdXQgPSBuZXcgRmlsZU91dHB1dFN0cmVhbShhcGspKSB7CiAgICAgICAgICAgICAgICAgICAgYnl0ZVtdIGJ1ZmZlciA9IG5ldyBieXRlWzE2Mzg0XTsKICAgICAgICAgICAgICAgICAgICBpbnQgbjsKICAgICAgICAgICAgICAgICAgICB3aGlsZSAoKG4gPSBpbi5yZWFkKGJ1ZmZlcikpICE9IC0xKSBvdXQud3JpdGUoYnVmZmVyLCAwLCBuKTsKICAgICAgICAgICAgICAgICAgICBvdXQuZmx1c2goKTsKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIGlmICghYXBrLmV4aXN0cygpIHx8IGFway5sZW5ndGgoKSA8IDEwMDApIHsgZmluaXNoU2FmZSgpOyByZXR1cm47IH0KICAgICAgICAgICAgICAgIHJ1bk9uVWlUaHJlYWQoKCkgLT4gaW5zdGFsbEFwayhhcGspKTsKICAgICAgICAgICAgfSBjYXRjaCAoRXhjZXB0aW9uIGUpIHsKICAgICAgICAgICAgICAgIGZpbmlzaFNhZmUoKTsKICAgICAgICAgICAgfSBmaW5hbGx5IHsKICAgICAgICAgICAgICAgIGlmIChjb25uICE9IG51bGwpIHRyeSB7IGNvbm4uZGlzY29ubmVjdCgpOyB9IGNhdGNoIChFeGNlcHRpb24gaWdub3JlZCkge30KICAgICAgICAgICAgfQogICAgICAgIH0pLnN0YXJ0KCk7CiAgICB9CgogICAgcHJpdmF0ZSB2b2lkIGluc3RhbGxBcGsoRmlsZSBhcGspIHsKICAgICAgICB0cnkgewogICAgICAgICAgICBpZiAoQnVpbGQuVkVSU0lPTi5TREtfSU5UID49IEJ1aWxkLlZFUlNJT05fQ09ERVMuTyAmJiAhZ2V0UGFja2FnZU1hbmFnZXIoKS5jYW5SZXF1ZXN0UGFja2FnZUluc3RhbGxzKCkpIHsKICAgICAgICAgICAgICAgIEludGVudCBzZXR0aW5ncyA9IG5ldyBJbnRlbnQoU2V0dGluZ3MuQUNUSU9OX01BTkFHRV9VTktOT1dOX0FQUF9TT1VSQ0VTLAogICAgICAgICAgICAgICAgICAgICAgICBVcmkucGFyc2UoInBhY2thZ2U6IiArIGdldFBhY2thZ2VOYW1lKCkpKTsKICAgICAgICAgICAgICAgIHN0YXJ0QWN0aXZpdHkoc2V0dGluZ3MpOwogICAgICAgICAgICAgICAgZmluaXNoKCk7CiAgICAgICAgICAgICAgICByZXR1cm47CiAgICAgICAgICAgIH0KICAgICAgICAgICAgVXJpIHVyaSA9IEZpbGVQcm92aWRlci5nZXRVcmlGb3JGaWxlKHRoaXMsCiAgICAgICAgICAgICAgICAgICAgZ2V0UGFja2FnZU5hbWUoKSArICIuZmlsZXByb3ZpZGVyIiwgYXBrKTsKICAgICAgICAgICAgSW50ZW50IGluc3RhbGwgPSBuZXcgSW50ZW50KEludGVudC5BQ1RJT05fVklFVyk7CiAgICAgICAgICAgIGluc3RhbGwuc2V0RGF0YUFuZFR5cGUodXJpLCAiYXBwbGljYXRpb24vdm5kLmFuZHJvaWQucGFja2FnZS1hcmNoaXZlIik7CiAgICAgICAgICAgIGluc3RhbGwuYWRkRmxhZ3MoSW50ZW50LkZMQUdfR1JBTlRfUkVBRF9VUklfUEVSTUlTU0lPTik7CiAgICAgICAgICAgIHN0YXJ0QWN0aXZpdHkoaW5zdGFsbCk7CiAgICAgICAgICAgIGZpbmlzaCgpOwogICAgICAgIH0gY2F0Y2ggKEV4Y2VwdGlvbiBlKSB7CiAgICAgICAgICAgIGZpbmlzaCgpOwogICAgICAgIH0KICAgIH0KCiAgICBwcml2YXRlIHZvaWQgZmluaXNoU2FmZSgpIHsgcnVuT25VaVRocmVhZCh0aGlzOjpmaW5pc2gpOyB9Cn0K").decode("utf-8")
+
+          WORKER_CODE = 'package com.aya.alquran;\n\nimport android.app.NotificationChannel;\nimport android.app.NotificationManager;\nimport android.app.PendingIntent;\nimport android.content.Context;\nimport android.content.Intent;\nimport android.content.SharedPreferences;\nimport android.content.pm.PackageInfo;\nimport android.os.Build;\n\nimport androidx.annotation.NonNull;\nimport androidx.core.app.NotificationCompat;\nimport androidx.work.Worker;\nimport androidx.work.WorkerParameters;\n\nimport org.json.JSONObject;\n\nimport java.io.BufferedReader;\nimport java.io.InputStream;\nimport java.io.InputStreamReader;\nimport java.net.HttpURLConnection;\nimport java.net.URL;\n\npublic class UpdateCheckWorker extends Worker {\n    private static final String UPDATE_URL =\n            "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";\n    private static final String CHANNEL_ID = "aya_updates";\n    private static final int NOTIFICATION_ID = 7703;\n    private static final String PREFS = "aya_background_updates";\n    private static final String LAST_NOTIFIED = "last_notified_version";\n\n    public UpdateCheckWorker(@NonNull Context context, @NonNull WorkerParameters params) {\n        super(context, params);\n    }\n\n    @NonNull\n    @Override\n    public Result doWork() {\n        HttpURLConnection connection = null;\n        try {\n            URL url = new URL(UPDATE_URL + "?t=" + System.currentTimeMillis());\n            connection = (HttpURLConnection) url.openConnection();\n            connection.setRequestMethod("GET");\n            connection.setConnectTimeout(15000);\n            connection.setReadTimeout(20000);\n            connection.setUseCaches(false);\n            connection.setRequestProperty("Cache-Control", "no-cache");\n            connection.setRequestProperty("User-Agent", "Aya-Android-UpdateChecker");\n\n            int code = connection.getResponseCode();\n            if (code == 408 || code == 429 || code == 500 || code == 502\n                    || code == 503 || code == 504) return Result.retry();\n            if (code != HttpURLConnection.HTTP_OK) return Result.success();\n\n            InputStream input = connection.getInputStream();\n            BufferedReader reader = new BufferedReader(new InputStreamReader(input, "UTF-8"));\n            StringBuilder jsonText = new StringBuilder();\n            String line;\n            while ((line = reader.readLine()) != null) jsonText.append(line);\n            reader.close();\n            input.close();\n\n            JSONObject data = new JSONObject(jsonText.toString());\n            String remoteVersion = data.optString("version", "").trim();\n            if (remoteVersion.length() == 0) return Result.success();\n\n            String installedVersion = getInstalledVersion();\n            if (!isNewer(remoteVersion, installedVersion)) return Result.success();\n\n            SharedPreferences prefs = getApplicationContext().getSharedPreferences(\n                    PREFS, Context.MODE_PRIVATE);\n            if (remoteVersion.equals(prefs.getString(LAST_NOTIFIED, ""))) return Result.success();\n\n            String title = data.optString("title", "آية — تحديث جديد");\n            String notes = data.optString("body",\n                    data.optString("message", "يتوفر إصدار جديد من تطبيق آية."));\n            String apkUrl = data.optString("url", "").trim();\n            if (apkUrl.length() == 0) apkUrl = data.optString("apkUrl", "").trim();\n            if (apkUrl.length() == 0) apkUrl = data.optString("download_url", "").trim();\n\n            showUpdateNotification(remoteVersion, title, notes, apkUrl);\n            prefs.edit().putString(LAST_NOTIFIED, remoteVersion).apply();\n            return Result.success();\n        } catch (Exception e) {\n            return Result.retry();\n        } finally {\n            if (connection != null) connection.disconnect();\n        }\n    }\n\n    private String getInstalledVersion() {\n        try {\n            PackageInfo info = getApplicationContext().getPackageManager().getPackageInfo(\n                    getApplicationContext().getPackageName(), 0);\n            return info.versionName == null ? "0" : info.versionName;\n        } catch (Exception e) {\n            return "0";\n        }\n    }\n\n    private boolean isNewer(String remote, String installed) {\n        try {\n            String[] r = remote.split("\\\\.");\n            String[] i = installed.split("\\\\.");\n            int count = Math.max(r.length, i.length);\n            for (int n = 0; n < count; n++) {\n                int rv = n < r.length ? parsePart(r[n]) : 0;\n                int iv = n < i.length ? parsePart(i[n]) : 0;\n                if (rv > iv) return true;\n                if (rv < iv) return false;\n            }\n            return false;\n        } catch (Exception e) {\n            return !remote.equals(installed);\n        }\n    }\n\n    private int parsePart(String value) {\n        String digits = value.replaceAll("[^0-9].*$", "");\n        return digits.length() == 0 ? 0 : Integer.parseInt(digits);\n    }\n\n    private void showUpdateNotification(String version, String title, String notes, String apkUrl) {\n        Context context = getApplicationContext();\n        NotificationManager manager =\n                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);\n        if (manager == null) return;\n\n        if (Build.VERSION.SDK_INT >= 26) {\n            NotificationChannel channel = new NotificationChannel(\n                    CHANNEL_ID, "تحديثات تطبيق آية", NotificationManager.IMPORTANCE_DEFAULT);\n            channel.setDescription("إشعارات توفر إصدارات جديدة من تطبيق آية");\n            manager.createNotificationChannel(channel);\n        }\n\n        Intent intent = new Intent(context, UpdateInstallActivity.class);\n        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);\n        intent.putExtra("apk_url", apkUrl);\n        intent.putExtra("version", version);\n\n        PendingIntent pendingIntent = PendingIntent.getActivity(\n                context, NOTIFICATION_ID, intent,\n                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);\n\n        String body = "يتوفر إصدار جديد (" + version + ")";\n        if (notes != null && notes.trim().length() > 0) body += " — " + notes.trim();\n\n        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)\n                .setSmallIcon(android.R.drawable.stat_sys_download_done)\n                .setContentTitle(title == null || title.trim().length() == 0\n                        ? "آية — تحديث جديد" : title)\n                .setContentText(body)\n                .setStyle(new NotificationCompat.BigTextStyle().bigText(body))\n                .setContentIntent(pendingIntent)\n                .addAction(android.R.drawable.stat_sys_download, "تحديث الآن", pendingIntent)\n                .setAutoCancel(true)\n                .setPriority(NotificationCompat.PRIORITY_DEFAULT);\n\n        manager.notify(NOTIFICATION_ID, builder.build());\n    }\n}\n'
+          worker.write_text(WORKER_CODE, encoding="utf-8")
+
+          install_activity = java_dir / "UpdateInstallActivity.java"
+          install_activity.write_text(UPDATE_INSTALL_ACTIVITY_CODE, encoding="utf-8")
+
+          manifest = Path("android-app/android/app/src/main/AndroidManifest.xml")
+          manifest_text = manifest.read_text(encoding="utf-8")
+          if 'android:name=".UpdateInstallActivity"' not in manifest_text:
+              activity_xml = (
+                  '        <activity\n'
+                  '            android:name=".UpdateInstallActivity"\n'
+                  '            android:exported="false"\n'
+                  '            android:theme="@android:style/Theme.Translucent.NoTitleBar" />\n'
+              )
+              manifest_text = manifest_text.replace("</application>", activity_xml + "    </application>", 1)
+              manifest.write_text(manifest_text, encoding="utf-8")
+
+          print("Background update notification enabled with instant update action.")
+          PY
+
       - name: Add required AndroidX Media library
         run: |
           set -e
@@ -527,22 +611,25 @@ jobs:
 
           text = gradle.read_text(encoding="utf-8")
 
+          additions = []
           if "androidx.media:media" not in text:
-              if is_kts:
-                  dep = '    implementation("androidx.media:media:1.7.0")'
-              else:
-                  dep = '    implementation "androidx.media:media:1.7.0"'
+              additions.append('    implementation("androidx.media:media:1.7.0")' if is_kts else '    implementation "androidx.media:media:1.7.0"')
+          if "androidx.work:work-runtime" not in text:
+              additions.append('    implementation("androidx.work:work-runtime:2.9.0")' if is_kts else '    implementation "androidx.work:work-runtime:2.9.0"')
 
+          if additions:
               if "dependencies {" not in text:
                   raise SystemExit("ERROR: dependencies block not found in app Gradle file.")
-
-              text = text.replace("dependencies {", "dependencies {\n" + dep, 1)
+              text = text.replace("dependencies {", "dependencies {\n" + "\n".join(additions), 1)
               gradle.write_text(text, encoding="utf-8")
 
           final = gradle.read_text(encoding="utf-8")
           if "androidx.media:media:1.7.0" not in final:
               raise SystemExit("ERROR: androidx.media:media:1.7.0 was not added to app Gradle.")
+          if "androidx.work:work-runtime:2.9.0" not in final:
+              raise SystemExit("ERROR: androidx.work:work-runtime:2.9.0 was not added to app Gradle.")
           print("AndroidX Media 1.7.0 dependency is present.")
+          print("WorkManager 2.9.0 dependency is present.")
           PY
 
           echo "Checking AndroidX Media on the release compile classpath..."
@@ -553,6 +640,11 @@ jobs:
             exit 1
           }
           echo "AndroidX Media dependency verified on releaseCompileClasspath."
+          grep -q "androidx.work:work-runtime:2.9.0" /tmp/aya-deps.txt || {
+            echo "::error::androidx.work:work-runtime:2.9.0 is not on releaseCompileClasspath"
+            exit 1
+          }
+          echo "WorkManager dependency verified on releaseCompileClasspath."
           cd ../..
 
 
@@ -561,6 +653,13 @@ jobs:
           set -e
           test -f android-app/android/app/src/main/java/com/aya/alquran/MainActivity.java
           test -f android-app/android/app/src/main/java/com/aya/alquran/AyaMediaService.java
+          test -f android-app/android/app/src/main/java/com/aya/alquran/UpdateCheckWorker.java
+          test -f android-app/android/app/src/main/java/com/aya/alquran/UpdateInstallActivity.java
+          grep -q "public class UpdateCheckWorker" android-app/android/app/src/main/java/com/aya/alquran/UpdateCheckWorker.java
+          grep -q "public class UpdateInstallActivity" android-app/android/app/src/main/java/com/aya/alquran/UpdateInstallActivity.java
+          grep -q "update.json" android-app/android/app/src/main/java/com/aya/alquran/UpdateCheckWorker.java
+          grep -q "تحديث الآن" android-app/android/app/src/main/java/com/aya/alquran/UpdateCheckWorker.java
+          grep -q 'android:name=".UpdateInstallActivity"' android-app/android/app/src/main/AndroidManifest.xml
 
           SERVICE="android-app/android/app/src/main/java/com/aya/alquran/AyaMediaService.java"
 
