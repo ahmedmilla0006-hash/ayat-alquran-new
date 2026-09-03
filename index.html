@@ -2191,6 +2191,51 @@ body.interface-new.night-mode .page-area {
 }
 </style>
 
+
+<style id="settings-switch-style">
+.setting-toggle-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  text-align:right;
+}
+.setting-toggle-item > span{
+  flex:1;
+}
+.setting-switch{
+  appearance:none;
+  -webkit-appearance:none;
+  flex:none;
+  width:50px;
+  height:28px;
+  margin:0;
+  border:0;
+  border-radius:999px;
+  background:#777;
+  position:relative;
+  cursor:pointer;
+  pointer-events:none;
+}
+.setting-switch::after{
+  content:"";
+  position:absolute;
+  top:3px;
+  right:25px;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 1px 4px #0004;
+  transition:right .2s ease;
+}
+.setting-switch:checked{
+  background:#0b6f34;
+}
+.setting-switch:checked::after{
+  right:3px;
+}
+</style>
 </head>
 
 <body>
@@ -2393,8 +2438,14 @@ body.interface-new.night-mode .page-area {
     🕘 الذهاب إلى العلامة المرجعية
   </button>
 
-  <button class="menu-item" id="nightButton">
-    🌙 الوضع الليلي
+  <button class="menu-item setting-toggle-item" id="nightButton" type="button">
+    <span>🌙 الوضع الليلي</span>
+    <input class="setting-switch" id="nightToggle" type="checkbox" tabindex="-1" aria-hidden="true">
+  </button>
+
+  <button class="menu-item setting-toggle-item" id="keepScreenSetting" type="button">
+    <span>🔆 إبقاء الشاشة مضاءة</span>
+    <input class="setting-switch" id="keepScreenToggle" type="checkbox" tabindex="-1" aria-hidden="true">
   </button>
 
   <button class="menu-item" id="highlightSettingsButton">
@@ -3041,7 +3092,8 @@ function loadPage(n, options = {}){
     false,
     {
       autoContinue: !!options.autoContinue,
-      surahNumber: options.surahNumber || null
+      surahNumber: options.surahNumber || null,
+      startAyah: options.startAyah || null
     }
   );
 }
@@ -4894,6 +4946,7 @@ function updateAudioSource(keepPosition = false, options = {}){
   const wasPlaying = !audio.paused;
   const autoContinue = !!options.autoContinue;
   const explicitSurah = options.surahNumber || null;
+  const explicitAyah = Number(options.startAyah) || null;
 
   /*
     عند فتح/قلب صفحة بدون سورة محددة:
@@ -4965,6 +5018,36 @@ function updateAudioSource(keepPosition = false, options = {}){
   };
 
   if(explicitSurah){
+    /* عند اختيار جزء: ملف الصوت هو ملف السورة، لكن البداية يجب أن تكون
+       من أول آية للجزء داخل السورة، وليس من أول السورة. */
+    if(explicitAyah){
+      const partToken = ++audioPageToken;
+      const partTargetPage = currentPage;
+      (async ()=>{
+        let seekMs = 0;
+        try{
+          const cacheKey = selectedReader + ":" + Number(explicitSurah);
+          let list = timingCache[cacheKey];
+          if(!list){
+            list = await fetchTimingForSurah(Number(explicitSurah));
+          }
+          if(partToken !== audioPageToken || currentPage !== partTargetPage){
+            return;
+          }
+          const item = (list || []).find(x => Number(x.ayah) === explicitAyah);
+          if(item && Number.isFinite(Number(item.start_time))){
+            seekMs = Number(item.start_time);
+          }
+        }catch(e){}
+
+        if(partToken !== audioPageToken){
+          return;
+        }
+        applySource(explicitSurah, seekMs);
+      })();
+      return;
+    }
+
     /* عند انتهاء سورة أو اختيار سورة: ابدأ دائماً من أول ملف التلاوة */
     applySource(explicitSurah, 0);
     return;
@@ -5516,9 +5599,12 @@ const nightButton = document.getElementById("nightButton");
 
 function updateNightButton(){
   const isNight = document.body.classList.contains("night-mode");
-  nightButton.textContent = isNight
-    ? "☀️ الوضع النهاري"
-    : "🌙 الوضع الليلي";
+  const nightLabel = nightButton.querySelector("span");
+  if(nightLabel){
+    nightLabel.textContent = isNight ? "☀️ الوضع النهاري" : "🌙 الوضع الليلي";
+  }
+  const nightToggle = document.getElementById("nightToggle");
+  if(nightToggle) nightToggle.checked = isNight;
   nightButton.setAttribute("aria-label", isNight ? "التبديل إلى الوضع النهاري" : "التبديل إلى الوضع الليلي");
 }
 
@@ -5860,7 +5946,6 @@ const juz = [
 
 ];
 
-
 /* بناء قائمة الأجزاء */
 
 function buildJuzList(){
@@ -5886,9 +5971,29 @@ function buildJuzList(){
 
       button.onclick = ()=>{
 
-        loadPage(
-          item[1]
-        );
+        /* انتقال الجزء مستقل تماماً عن انتقال السور.
+           نلغي أي تزامن قديم للصوت/التظليل حتى لا يعيد الصفحة السابقة،
+           ثم نرسل صفحة بداية الجزء فقط إلى المسار الطبيعي لتحميل المصحف. */
+        const juzPage = Number(item[1]);
+        if(!Number.isFinite(juzPage) || juzPage < 1 || juzPage > TOTAL_PAGES) return;
+
+        /* إبطال أي عمليات صوتية/تظليل معلقة من الصفحة السابقة */
+        if(typeof audioPageToken !== "undefined") audioPageToken++;
+        if(typeof currentTiming !== "undefined") currentTiming = [];
+        if(typeof pageHitTiming !== "undefined") pageHitTiming = [];
+        if(typeof timingSurahLoaded !== "undefined") timingSurahLoaded = 0;
+        if(typeof audio !== "undefined" && audio){
+          try{ audio.pause(); }catch(e){}
+        }
+
+        if(typeof prefetchQuranPage === "function") {
+          prefetchQuranPage(juzPage);
+        }
+
+        /* الجزء = صفحة فقط، بدون surahNumber أو startAyah.
+           وعند الانتقال من قائمة الأجزاء يبدأ تشغيل التلاوة تلقائياً
+           من موضع الصفحة الجديدة، دون استخدام منطق السور. */
+        loadPage(juzPage,{ autoContinue: true });
 
         juzOverlay.classList.remove(
           "show"
@@ -5904,6 +6009,7 @@ function buildJuzList(){
   );
 
 }
+
 
 
 /* فتح الأجزاء */
@@ -6391,6 +6497,24 @@ async function searchWord(query){
     مصدر أساسي: AlQuran Cloud (نص عربي بدون تشكيل = نتائج أدق للكلمات)
     https://api.alquran.cloud/v1/search/{word}/all/quran-simple-clean
   */
+  /* استبعاد نتائج البسملة من البحث */
+  function isBasmalaSearchResult(text, surahNumber, ayahNumber){
+    const t = normalizeArabic(String(text || ""))
+      .replace(/[إأآٱ]/g, "ا")
+      .replace(/ـ/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    // بسملة الفاتحة (1:1) آية حقيقية، لذلك تبقى في نتائج البحث.
+    if(surahNumber === 1 && ayahNumber === 1) return false;
+    /* البسملة الخاصة ببداية السور تُستبعد، لكن بسملة الفاتحة 1:1 تبقى.
+       نتحقق من بداية النص أيضاً لأن بعض مصادر البحث تُرجع البسملة
+       ملحقة بأول آية من السورة بدلاً من إرجاعها كسطر مستقل. */
+    if(ayahNumber === 1 && surahNumber !== 1){
+      return /^بسم الله الرحمن الرحيم(?:\s|[.،؛;:!؟]|$)/i.test(t);
+    }
+    return /^بسم الله الرحمن الرحيم[.،؛;:!؟]?$/i.test(t);
+  }
+
   async function searchAlQuranCloud(){
     /* جرّب النص الأصلي ثم المطبّع، ثم نتحقق محلياً من تطابق الكلمة/العبارة كاملة */
     const queries = [query];
@@ -6424,7 +6548,7 @@ async function searchWord(query){
           const surahNumber = Number(item.surah && item.surah.number);
           const ayahNumber = Number(item.numberInSurah || 0);
           const text = String(item.text || "").replace(/^\uFEFF/, "").trim();
-          if(surahNumber >= 1 && ayahNumber >= 1){
+          if(surahNumber >= 1 && ayahNumber >= 1 && !isBasmalaSearchResult(text, surahNumber, ayahNumber)){
             all.push({
               verseKey: surahNumber + ":" + ayahNumber,
               surahNumber: surahNumber,
@@ -6491,6 +6615,7 @@ async function searchWord(query){
     }).filter(item =>
       item.surahNumber >= 1 &&
       item.ayahNumber >= 1 &&
+      !isBasmalaSearchResult(item.text, item.surahNumber, item.ayahNumber) &&
       (item.rank > 0 || !qNorm)
     );
   }
@@ -6557,7 +6682,7 @@ async function searchWord(query){
     const ld2 = document.getElementById("searchWordLoading");
     if(ld2) ld2.textContent = "جاري تجهيز نتائج الآيات…";
 
-    const top = matches.slice(0, 40);
+    const top = matches;
 
     /* جلب أرقام الصفحات دفعة واحدة */
     const withPages = await Promise.all(
@@ -7238,7 +7363,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.142";
+  const APP_VERSION = "1.0.143";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
@@ -9195,7 +9320,7 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.142";
+    return "1.0.143";
   }
 
   /*
@@ -9267,6 +9392,13 @@ body.interface-old #downloadsPopup .download-native-select{
     "1.0.138": [
       "قوائم <b>اختيار القارئ</b> و<b>اختيار السورة</b> في الثيم الزجاجي أصبحت <b>ملء الشاشة</b> مثل الثيم الكلاسيكي",
       "إصلاح حصر القوائم داخل المشغّل الذي كان يمنع ملء الشاشة"
+    ],
+    "1.0.143": [
+      "تحسين سرعة وثبات الانتقال بين الأجزاء",
+      "عرض جميع نتائج البحث",
+      "إضافة خيار <b>إبقاء الشاشة مضاءة</b> من الإعدادات لمنع انطفاء الشاشة أثناء القراءة",
+      "إضافة زر تبديل <b>الوضع الليلي</b> داخل الإعدادات",
+      "تحسين عرض حالة الإعدادات من خلال مفاتيح تشغيل وإيقاف واضحة"
     ],
     "1.0.142": [
       "إضافة التواصل مع أبو إسلام عبر تيليجرام من القائمة الجانبية",
@@ -9733,6 +9865,60 @@ body.interface-old #downloadsPopup .download-native-select{
   </div>
 </div>
 
+
+<script id="settings-switch-script">
+(function(){
+  const nightToggle = document.getElementById("nightToggle");
+  const keepScreenSetting = document.getElementById("keepScreenSetting");
+  const keepScreenToggle = document.getElementById("keepScreenToggle");
+
+  if(nightToggle){
+    function syncNightToggle(){
+      nightToggle.checked = document.body.classList.contains("night-mode");
+    }
+    syncNightToggle();
+    const nightButton = document.getElementById("nightButton");
+    if(nightButton){
+      nightButton.addEventListener("click", function(){
+        setTimeout(syncNightToggle, 0);
+      });
+    }
+  }
+
+  let keepScreenWakeLock = null;
+
+  async function releaseKeepScreen(){
+    if(keepScreenWakeLock){
+      try{ await keepScreenWakeLock.release(); }catch(e){}
+      keepScreenWakeLock = null;
+    }
+  }
+
+  async function requestKeepScreen(){
+    if(!keepScreenToggle || !keepScreenToggle.checked) return;
+    if(!("wakeLock" in navigator)) return;
+    try{
+      keepScreenWakeLock = await navigator.wakeLock.request("screen");
+    }catch(e){}
+  }
+
+  if(keepScreenToggle){
+    keepScreenToggle.checked = localStorage.getItem("ayaKeepScreenOn") === "1";
+    keepScreenSetting.addEventListener("click", async function(){
+      keepScreenToggle.checked = !keepScreenToggle.checked;
+      localStorage.setItem("ayaKeepScreenOn", keepScreenToggle.checked ? "1" : "0");
+      if(keepScreenToggle.checked) await requestKeepScreen();
+      else await releaseKeepScreen();
+    });
+
+    document.addEventListener("visibilitychange", function(){
+      if(document.visibilityState === "visible" && keepScreenToggle.checked){
+        requestKeepScreen();
+      }
+    });
+  }
+})();
+</script>
 </body>
 
 <style id="picker-classic-fullscreen-match">
