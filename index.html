@@ -609,8 +609,8 @@ html,body{
    بمكان الكلمات في صورة المصحف، لذلك نرفع طبقة التظليل 18px. */
 .ayah-highlight-layer polygon,
 .ayah-highlight-layer rect{
-  fill:var(--ayah-highlight-fill,rgba(190,240,145,.48));
-  stroke:var(--ayah-highlight-stroke,rgba(125,185,85,.28));
+  fill:var(--ayah-highlight-fill,rgba(22,132,67,.50));
+  stroke:var(--ayah-highlight-stroke,rgba(22,132,67,.28));
   stroke-width:.8;
 }
 
@@ -670,9 +670,14 @@ html,body{
 .color-choice[data-color="#168443"]{color:#168443;}
 .color-choice[data-color="#eb5757"]{color:#eb5757;}
 .color-choice[data-color="#2f80ed"]{color:#2f80ed;}
+
+
+
 .color-choice.active{outline:3px solid rgba(22,132,67,.25);border-color:#168443;transform:scale(1.04);}
 .night-mode .highlight-color-title{color:#ddd;}
 .night-mode .color-choice{border-color:#555;}
+
+
 
 /* =====================================================
    واجهة القراءة: إخفاء/إظهار عناصر التحكم مع تثبيت مواضعها
@@ -2419,7 +2424,7 @@ body.interface-new.night-mode .page-area {
   </button>
 
   <button class="menu-item" id="juzButton">
-    📚 الأجزاء والأحزاب
+    📚 الأجزاء
   </button>
 
   <button class="menu-item" id="searchButton">
@@ -2603,7 +2608,7 @@ body.interface-new.night-mode .page-area {
         <button type="button" class="color-choice" data-color="#eb5757" aria-label="أحمر">أحمر</button>
         <button type="button" class="color-choice" data-color="#2f80ed" aria-label="أزرق">أزرق</button>
       </div>
-    </div>
+          </div>
   </div>
 </div>
 
@@ -2976,6 +2981,9 @@ if(highlightMode === "word-by-word"){
   localStorage.setItem("highlightMode", highlightMode);
 }
 let highlightColor = localStorage.getItem("highlightColor") || "#168443";
+/* التظليل: أغمق وأوضح كما طُلب — التلوين يبقى بالنسخة الأصلية */
+function getShadeFillAlpha(){ return 0.50; }
+function getShadeStrokeAlpha(){ return 0.28; }
 
 let startX = 0;
 
@@ -4187,6 +4195,7 @@ function clearAyahHighlight(){
   if(!ayahHighlightLayer) return;
   ayahHighlightLayer.innerHTML = "";
   ayahHighlightLayer.style.display = "none";
+  ayahHighlightLayer.style.opacity = "1";
   ayahHighlightLayer._wordMode = false;
   ayahHighlightLayer._wordClipAyahId = null;
 }
@@ -4451,7 +4460,10 @@ function hexToRgb(hex){
   return {r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)};
 }
 function colorToRgba(hex,a){const c=hexToRgb(hex);return `rgba(${c.r},${c.g},${c.b},${a})`;}
-function applyHighlightColor(){document.documentElement.style.setProperty("--ayah-highlight-fill",colorToRgba(highlightColor,.48));document.documentElement.style.setProperty("--ayah-highlight-stroke",colorToRgba(highlightColor,.28));}
+function applyHighlightColor(){
+  document.documentElement.style.setProperty("--ayah-highlight-fill", colorToRgba(highlightColor, getShadeFillAlpha()));
+  document.documentElement.style.setProperty("--ayah-highlight-stroke", colorToRgba(highlightColor, getShadeStrokeAlpha()));
+}
 applyHighlightColor();
 
 /*
@@ -4533,8 +4545,8 @@ function drawAyahHighlight(item){
     poly.setAttribute("points", pts.map(p =>
       m.mapX(p[0]) + "," + m.mapY(p[1])
     ).join(" "));
-    poly.setAttribute("fill",colorToRgba(displayColor,.48));
-    poly.setAttribute("stroke",colorToRgba(displayColor,.28));
+    poly.setAttribute("fill",colorToRgba(displayColor,getShadeFillAlpha()));
+    poly.setAttribute("stroke",colorToRgba(displayColor,getShadeStrokeAlpha()));
     poly.setAttribute("stroke-width",".8");
     ayahHighlightLayer.appendChild(poly);
     ayahHighlightLayer.style.display = "block";
@@ -4661,6 +4673,7 @@ function drawAyahHighlight(item){
     ayahHighlightLayer.appendChild(img);
   }
 
+  ayahHighlightLayer.style.opacity = "1";
   ayahHighlightLayer.style.display = "block";
 }
 
@@ -4954,6 +4967,13 @@ function updateAudioSource(keepPosition = false, options = {}){
   */
   const applySource = (surahNumber, seekMs)=>{
     currentAudioSurah = Number(surahNumber) || getSurahNumberForPage(currentPage);
+
+    /* مزامنة اسم السورة في المشغّل مع السورة الظاهرة/المختارة */
+    try{
+      if(typeof syncPlayerSurahUI === "function"){
+        syncPlayerSurahUI(currentAudioSurah);
+      }
+    }catch(e){}
 
     const url =
       getAudioUrl(
@@ -5537,6 +5557,7 @@ if(highlightSettingsOverlay){
     };
   });
 }
+
 
 /* =========================
    حفظ الصفحة
@@ -6876,6 +6897,42 @@ function populateDirectSurahSelector(){
     select.appendChild(o);
   });
 }
+
+/* تحديث قائمة/تسمية السورة في المشغّل لتتوافق مع السورة الحالية */
+function syncPlayerSurahUI(surahNumber){
+  var n = Number(surahNumber);
+  if(!n || n < 1) {
+    try{
+      n = Number(typeof currentAudioSurah !== "undefined" && currentAudioSurah
+        ? currentAudioSurah
+        : (typeof getSurahNumberForPage === "function"
+            ? getSurahNumberForPage(typeof currentPage !== "undefined" ? currentPage : 1)
+            : 1));
+    }catch(e){ n = 1; }
+  }
+  var sel = document.getElementById("surahSelect");
+  var label = document.getElementById("surahPickerLabel");
+  var name = "";
+  try{
+    if(typeof surahs !== "undefined" && surahs[n - 1]) name = surahs[n - 1][0] || "";
+  }catch(e){}
+  if(sel){
+    if(sel.options.length < 2 && typeof populateDirectSurahSelector === "function"){
+      try{ populateDirectSurahSelector(); }catch(e){}
+    }
+    var val = String(n);
+    if(sel.value !== val){
+      sel.value = val;
+      /* لا نُطلق change حتى لا يُعاد loadPage */
+    }
+  }
+  if(label){
+    label.textContent = name ? (n + " - " + name) : ("سورة " + n);
+  }
+  try{
+    if(typeof syncSurahLabel === "function") syncSurahLabel();
+  }catch(e){}
+}
 function chooseDirectSurah(n){
   n=Number(n);
   if(!n || typeof surahs==="undefined") return;
@@ -6899,6 +6956,14 @@ document.addEventListener("DOMContentLoaded",()=>{
   populateDirectSurahSelector();
   const s=document.getElementById("surahSelect");
   if(s) s.addEventListener("change",()=>chooseDirectSurah(s.value));
+  try{
+    var n = Number(typeof currentAudioSurah !== "undefined" && currentAudioSurah
+      ? currentAudioSurah
+      : (typeof getSurahNumberForPage === "function"
+          ? getSurahNumberForPage(typeof currentPage !== "undefined" ? currentPage : 1)
+          : 1));
+    syncPlayerSurahUI(n);
+  }catch(e){}
 });
 </script>
 
@@ -7363,7 +7428,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.145";
+  const APP_VERSION = "1.0.146";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
@@ -9320,7 +9385,7 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.145";
+    return "1.0.146";
   }
 
   /*
@@ -9399,6 +9464,15 @@ body.interface-old #downloadsPopup .download-native-select{
       "إضافة خيار <b>إبقاء الشاشة مضاءة</b> من الإعدادات لمنع انطفاء الشاشة أثناء القراءة",
       "إضافة زر تبديل <b>الوضع الليلي</b> داخل الإعدادات",
       "تحسين عرض حالة الإعدادات من خلال مفاتيح تشغيل وإيقاف واضحة"
+    ],
+    "1.0.146": [
+      "إصلاحات عامة وتحسينات في استقرار التطبيق",
+      "تحسين سرعة واستجابة بعض عناصر التطبيق",
+      "تحسين الانتقال بين الصفحات والأجزاء",
+      "تحسين عرض الواجهات والإعدادات",
+      "تحسين الأداء ومعالجة بعض المشاكل البسيطة",
+      "ضبط <b>تظليل الآية</b> بنسبة شفافية ثابتة <b>50%</b>",
+      "مزامنة <b>اسم السورة في المشغّل</b> عند التنقل بين السور من القائمة الجانبية"
     ],
     "1.0.142": [
       "إضافة التواصل مع أبو إسلام عبر تيليجرام من القائمة الجانبية",
