@@ -1158,6 +1158,65 @@ body.update-banner-visible .page-area{
   to{opacity:1;transform:translateY(0)}
 }
 
+
+
+
+.play-button.is-loading{
+  opacity:1;
+  pointer-events:none;
+  position:relative;
+  font-size:0 !important;
+  color:transparent !important;
+  overflow:visible;
+}
+/*
+  نقاط على قوس غير مكتمل تدور
+  (8 نقاط تتلاشى تدريجياً → إحساس بالدوران غير المكتمل)
+*/
+.play-button.is-loading::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:26px;
+  height:26px;
+  margin:-13px 0 0 -13px;
+  border-radius:50%;
+  background:
+    radial-gradient(circle closest-side, #fff 92%, transparent 100%) 50% 0 / 5px 5px no-repeat,
+    radial-gradient(circle closest-side, rgba(255,255,255,.85) 92%, transparent 100%) 85% 15% / 5px 5px no-repeat,
+    radial-gradient(circle closest-side, rgba(255,255,255,.7) 92%, transparent 100%) 100% 50% / 5px 5px no-repeat,
+    radial-gradient(circle closest-side, rgba(255,255,255,.55) 92%, transparent 100%) 85% 85% / 5px 5px no-repeat,
+    radial-gradient(circle closest-side, rgba(255,255,255,.4) 92%, transparent 100%) 50% 100% / 5px 5px no-repeat,
+    radial-gradient(circle closest-side, rgba(255,255,255,.28) 92%, transparent 100%) 15% 85% / 5px 5px no-repeat,
+    radial-gradient(circle closest-side, rgba(255,255,255,.16) 92%, transparent 100%) 0 50% / 5px 5px no-repeat,
+    radial-gradient(circle closest-side, rgba(255,255,255,.08) 92%, transparent 100%) 15% 15% / 5px 5px no-repeat;
+  animation: ayaArcDotsSpin .75s linear infinite;
+}
+@keyframes ayaArcDotsSpin{
+  to{ transform: rotate(360deg); }
+}
+  20%{
+    box-shadow:
+      -10px 0 0 #fff,
+       0px 0 0 rgba(255,255,255,.25),
+      10px 0 0 rgba(255,255,255,.25);
+  }
+  40%{
+    box-shadow:
+      -10px 0 0 rgba(255,255,255,.25),
+       0px 0 0 #fff,
+      10px 0 0 rgba(255,255,255,.25);
+  }
+  60%{
+    box-shadow:
+      -10px 0 0 rgba(255,255,255,.25),
+       0px 0 0 rgba(255,255,255,.25),
+      10px 0 0 #fff;
+  }
+}
+}
+
 </style>
 <style id="quran-page-new-style">
 /* صفحة المصحف نفسها من التصميم الجديد في الوضعين */
@@ -3098,10 +3157,15 @@ function loadPage(n, options = {}){
     return;
   }
 
+  const navShouldContinue =
+    !!options.autoContinue ||
+    !!(typeof userWantsPlay !== "undefined" && userWantsPlay) ||
+    !!(typeof audio !== "undefined" && audio && !audio.paused);
+
   updateAudioSource(
     false,
     {
-      autoContinue: !!options.autoContinue,
+      autoContinue: navShouldContinue,
       surahNumber: options.surahNumber || null,
       startAyah: options.startAyah || null
     }
@@ -3200,6 +3264,7 @@ pageArea.addEventListener(
 function openMenu(){
 
   sideMenu.classList.add("open");
+  try{ clearReadingUIAutoHide(); }catch(e){}
 
   overlay.classList.add("show");
 
@@ -3208,6 +3273,7 @@ function openMenu(){
 function closeSideMenu(){
 
   sideMenu.classList.remove("open");
+  try{ if(!readingUIHidden) scheduleReadingUIAutoHide(); }catch(e){}
 
   overlay.classList.remove("show");
 
@@ -3236,6 +3302,46 @@ const readingUI = {
 
 let readingUIHidden =
   localStorage.getItem("readingUIHidden") === "1";
+
+
+/* إخفاء تلقائي للمشغّل وزر القائمة مع الإبقاء على الإظهار/الإخفاء بالضغط */
+let readingUIAutoHideTimer = null;
+const READING_UI_AUTO_HIDE_MS = 4000;
+
+function clearReadingUIAutoHide(){
+  if(readingUIAutoHideTimer){
+    clearTimeout(readingUIAutoHideTimer);
+    readingUIAutoHideTimer = null;
+  }
+}
+
+function scheduleReadingUIAutoHide(){
+  clearReadingUIAutoHide();
+  /* لا نخفي تلقائياً والقائمة الجانبية مفتوحة */
+  try{
+    if(readingUI.sideMenu && readingUI.sideMenu.classList.contains("open")){
+      return;
+    }
+  }catch(e){}
+  /* أثناء تحميل الصوت (نت ضعيف) أبقِ الواجهة ظاهرة */
+  try{
+    if(typeof audioIsLoading !== "undefined" && audioIsLoading){
+      return;
+    }
+  }catch(e){}
+  if(readingUIHidden) return;
+  readingUIAutoHideTimer = setTimeout(function(){
+    readingUIAutoHideTimer = null;
+    try{
+      if(readingUI.sideMenu && readingUI.sideMenu.classList.contains("open")){
+        return;
+      }
+    }catch(e){}
+    if(!readingUIHidden){
+      setReadingUIHidden(true);
+    }
+  }, READING_UI_AUTO_HIDE_MS);
+}
 
 function setReadingUIHidden(hidden){
   readingUIHidden = !!hidden;
@@ -3279,6 +3385,12 @@ function setReadingUIHidden(hidden){
     "readingUIHidden",
     readingUIHidden ? "1" : "0"
   );
+
+  if(readingUIHidden){
+    clearReadingUIAutoHide();
+  }else{
+    scheduleReadingUIAutoHide();
+  }
 }
 
 function toggleReadingUI(){
@@ -3296,6 +3408,23 @@ function toggleReadingUI(){
 
 /* تطبيق الحالة المحفوظة بعد تحميل الواجهة */
 setReadingUIHidden(readingUIHidden);
+
+/* أي تفاعل مع المشغّل يعيد عدّاد الإخفاء التلقائي */
+(function(){
+  function bump(){
+    try{
+      if(!readingUIHidden) scheduleReadingUIAutoHide();
+    }catch(e){}
+  }
+  document.addEventListener("pointerdown", function(e){
+    var t = e.target;
+    if(!t || !t.closest) return;
+    if(t.closest(".player") || t.closest("#menuButton") || t.closest(".side-menu") || t.closest(".menu-button")){
+      bump();
+    }
+  }, true);
+})();
+
 
 /*
   ============================================================
@@ -4965,8 +5094,19 @@ function syncHighlight(){
 function updateAudioSource(keepPosition = false, options = {}){
 
   const oldTime = audio.currentTime || 0;
-  const wasPlaying = !audio.paused;
+  const wasPlaying =
+    !audio.paused ||
+    !!(typeof userWantsPlay !== "undefined" && userWantsPlay);
   const autoContinue = !!options.autoContinue;
+  /* أثناء تبديل المصدر بسبب التنقل لا تُفسَّر pause على أنها إيقاف من المستخدم */
+  var __continueAfterSource =
+    !!(wasPlaying || autoContinue);
+  try{
+    if(typeof userWantsPlay !== "undefined" && __continueAfterSource){
+      userWantsPlay = true;
+    }
+  }catch(e){}
+  try{ window.__ayaAudioSourceSwitching = true; }catch(e){}
   const explicitSurah = options.surahNumber || null;
   const explicitAyah = Number(options.startAyah) || null;
 
@@ -5015,16 +5155,26 @@ function updateAudioSource(keepPosition = false, options = {}){
 
     const tryPlay = (attempt)=>{
       if(audio._ayaLoadToken !== loadToken) return;
-      if(!(wasPlaying || autoContinue)) return;
+      if(!(wasPlaying || autoContinue || __continueAfterSource)) return;
+      try{
+        if(typeof userWantsPlay !== "undefined") userWantsPlay = true;
+        if(typeof __notifPlayLockUntil !== "undefined"){
+          __notifPlayLockUntil = Date.now() + 800;
+        }
+      }catch(e){}
       const p = audio.play();
       if(p && typeof p.then === "function"){
         p.then(()=>{
           if(audio._ayaLoadToken !== loadToken) return;
+          try{ window.__ayaAudioSourceSwitching = false; }catch(e){}
+          try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
           playButton.textContent = "Ⅱ";
         }).catch(()=>{
           if(audio._ayaLoadToken !== loadToken) return;
           if(attempt < 3){
             setTimeout(()=>tryPlay(attempt + 1), 250 * (attempt + 1));
+          }else{
+            try{ window.__ayaAudioSourceSwitching = false; }catch(e){}
           }
         });
       }
@@ -5053,7 +5203,11 @@ function updateAudioSource(keepPosition = false, options = {}){
       }catch(e){}
 
       try{ syncHighlight(); }catch(e){}
-      tryPlay(0);
+      if(wasPlaying || autoContinue || __continueAfterSource){
+        tryPlay(0);
+      }else{
+        try{ window.__ayaAudioSourceSwitching = false; }catch(e){}
+      }
     };
 
     const onMeta = ()=>{
@@ -5463,6 +5617,82 @@ audio.addEventListener(
    التشغيل
 ========================= */
 
+
+/* حالة تحميل الصوت: إبقاء الواجهة + أيقونة تحميل على زر التشغيل */
+let audioIsLoading = false;
+let __ayaPlayBtnSaved = null;
+
+function setAudioLoading(on){
+  audioIsLoading = !!on;
+  try{
+    if(!playButton) return;
+    if(audioIsLoading){
+      if(__ayaPlayBtnSaved == null){
+        __ayaPlayBtnSaved = playButton.textContent;
+      }
+      playButton.textContent = "";
+      playButton.classList.add("is-loading");
+      playButton.setAttribute("aria-busy", "true");
+      /* أظهر الواجهة أثناء التحميل ولا تُخفِها */
+      try{
+        if(typeof setReadingUIHidden === "function" && readingUIHidden){
+          setReadingUIHidden(false);
+        }else{
+          if(typeof clearReadingUIAutoHide === "function") clearReadingUIAutoHide();
+        }
+      }catch(e){}
+    }else{
+      playButton.classList.remove("is-loading");
+      playButton.removeAttribute("aria-busy");
+      if(audio && !audio.paused){
+        playButton.textContent = "Ⅱ";
+      }else if(__ayaPlayBtnSaved != null && __ayaPlayBtnSaved !== ""){
+        playButton.textContent = __ayaPlayBtnSaved === "Ⅱ" ? "▶" : (__ayaPlayBtnSaved || "▶");
+      }else{
+        playButton.textContent = (audio && !audio.paused) ? "Ⅱ" : "▶";
+      }
+      __ayaPlayBtnSaved = null;
+      try{
+        if(typeof scheduleReadingUIAutoHide === "function" && !readingUIHidden){
+          scheduleReadingUIAutoHide();
+        }
+      }catch(e){}
+    }
+  }catch(e){}
+}
+
+function bindAudioLoadingUI(){
+  if(!audio || audio.__ayaLoadingBound) return;
+  audio.__ayaLoadingBound = true;
+
+  audio.addEventListener("loadstart", function(){
+    /* تحميل مصدر جديد */
+    setAudioLoading(true);
+  });
+  audio.addEventListener("waiting", function(){
+    setAudioLoading(true);
+  });
+  audio.addEventListener("stalled", function(){
+    setAudioLoading(true);
+  });
+  audio.addEventListener("seeking", function(){
+    if(audio.readyState < 3) setAudioLoading(true);
+  });
+  audio.addEventListener("canplay", function(){
+    setAudioLoading(false);
+  });
+  audio.addEventListener("canplaythrough", function(){
+    setAudioLoading(false);
+  });
+  audio.addEventListener("playing", function(){
+    setAudioLoading(false);
+  });
+  audio.addEventListener("error", function(){
+    setAudioLoading(false);
+  });
+}
+try{ bindAudioLoadingUI(); }catch(e){}
+
 playButton.onclick = ()=>{
 
   if(!audio.src){
@@ -5471,35 +5701,18 @@ playButton.onclick = ()=>{
   }
 
   if(audio.paused){
-
-    const attemptPlay = (n)=>{
-      const p = audio.play();
-      if(p && typeof p.then === "function"){
-        p.then(()=>{
-          playButton.textContent = "Ⅱ";
-        }).catch(()=>{
-          if(n < 2){
-            setTimeout(()=>attemptPlay(n + 1), 300);
-          }else{
-            /* أعد تحميل المصدر ثم حاول مرة أخيرة */
-            try{
-              updateAudioSource(true, { autoContinue: true });
-            }catch(e){
-              alert(
-                "تعذر تشغيل التلاوة. تأكد من اتصال الإنترنت ثم جرّب مرة أخرى."
-              );
-            }
-          }
-        });
-      }
-    };
-    attemptPlay(0);
-
+    if(typeof safePlay === "function"){
+      safePlay();
+    }else{
+      audio.play().then(()=>{ playButton.textContent = "Ⅱ"; }).catch(()=>{});
+    }
   }else{
-
-    audio.pause();
-    playButton.textContent = "▶";
-
+    if(typeof safePause === "function"){
+      safePause();
+    }else{
+      audio.pause();
+      playButton.textContent = "▶";
+    }
   }
 
 };
@@ -7359,24 +7572,16 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   function safePlay(){
     userWantsPlay = true;
-    __notifPlayLockUntil = Date.now() + 2500;
+    /* قفل قصير جداً فقط ضد pause عابر عند بدء التشغيل */
+    __notifPlayLockUntil = Date.now() + 600;
     return audio.play().then(()=>{
       const pb = document.getElementById("playButton");
       if(pb) pb.textContent = "Ⅱ";
       updateMediaSession();
-      setTimeout(function(){
-        if(userWantsPlay && audio.paused && audio.src){
-          audio.play().catch(function(){});
-          updateMediaSession();
-        }
-      }, 400);
-      setTimeout(function(){
-        if(userWantsPlay && audio.paused && audio.src){
-          audio.play().catch(function(){});
-          updateMediaSession();
-        }
-      }, 1200);
-    }).catch(()=>{});
+    }).catch(()=>{
+      userWantsPlay = false;
+      updateMediaSession();
+    });
   }
 
   function safePause(){
@@ -7389,9 +7594,28 @@ document.addEventListener("DOMContentLoaded",()=>{
   }
 
   audio.addEventListener("pause", function(){
-    if(userWantsPlay && Date.now() < __notifPlayLockUntil && audio.src){
+    /* تبديل ملف الصوت عند التنقل بين الصفحات/السور/الأجزاء */
+    try{
+      if(window.__ayaAudioSourceSwitching){
+        return;
+      }
+    }catch(e){}
+    /*
+      إن أوقف المستخدم التشغيل (من الإشعار أو الزر) بعد انتهاء قفل الاستئناف القصير
+      نحفظ حالة الإيقاف ولا نعيد التشغيل.
+    */
+    if(Date.now() >= __notifPlayLockUntil){
+      userWantsPlay = false;
+      try{
+        const pb = document.getElementById("playButton");
+        if(pb && !pb.classList.contains("is-loading")) pb.textContent = "▶";
+      }catch(e){}
+      return;
+    }
+    /* قفل قصير فقط لحماية انقطاع عابر أثناء بدء التشغيل */
+    if(userWantsPlay && audio.src){
       setTimeout(function(){
-        if(userWantsPlay && audio.paused){
+        if(userWantsPlay && audio.paused && Date.now() < __notifPlayLockUntil){
           audio.play().catch(function(){});
         }
       }, 50);
@@ -7473,7 +7697,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.addEventListener("visibilitychange", function(){
     if(document.visibilityState === "visible"){
       updateMediaSession();
-      if(userWantsPlay && audio.paused && audio.src) safePlay();
+      /* لا نستأنف التشغيل تلقائياً بعد الإيقاف من الإشعار أو التطبيق */
       try{
         var img = document.getElementById("page");
         if(img && (!img.complete || !img.naturalWidth) && typeof currentPage !== "undefined"){
@@ -7491,7 +7715,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   window.addEventListener("pageshow", function(){
     updateMediaSession();
-    if(userWantsPlay && audio.paused && audio.src) safePlay();
+    /* الحفاظ على حالة الإيقاف — بلا استئناف تلقائي */
   });
 
   const playBtn = document.getElementById("playButton");
@@ -7516,7 +7740,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.147";
+  const APP_VERSION = "1.0.148";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
@@ -7571,15 +7795,10 @@ document.addEventListener("DOMContentLoaded",()=>{
 
     let dismissed = "";
     try{ dismissed = localStorage.getItem(DISMISS_KEY) || ""; }catch(e){}
+    /* لا نعرض شريط/إشعار تحديث داخل واجهة القراءة — الإشعار من نظام أندرويد فقط */
     if(updatesBanner){
-      if(available && dismissed !== remoteVersion){
-        updatesBanner.classList.add("show");
-        updatesBanner.innerHTML = "🎉 يتوفر إصدار جديد <strong>" + remoteVersion + "</strong> — اضغط هنا للتحديث";
-        try{ document.body.classList.add("update-banner-visible"); }catch(e){}
-      }else{
-        updatesBanner.classList.remove("show");
-        try{ document.body.classList.remove("update-banner-visible"); }catch(e){}
-      }
+      updatesBanner.classList.remove("show");
+      try{ document.body.classList.remove("update-banner-visible"); }catch(e){}
     }
 
     if(available){
@@ -7647,7 +7866,8 @@ document.addEventListener("DOMContentLoaded",()=>{
   function notifyUpdateAvailable(remoteVersion, notes){
     const title = "آية";
     const body = "يتوفر إصدار جديد (" + remoteVersion + ")";
-    showWaStyleNotif(remoteVersion, notes);
+    /* بدون نافذة داخل التطبيق — إشعار شريط النظام فقط */
+    try{ hideWaStyleNotif(); }catch(e){}
     /* إشعار نظام أندرويد (يحتاج دعم في كود التطبيق الأصلي) */
     postAndroid("notify-update", {
       title: title,
@@ -9473,7 +9693,7 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.147";
+    return "1.0.148";
   }
 
   /*
@@ -9552,6 +9772,9 @@ body.interface-old #downloadsPopup .download-native-select{
       "إضافة خيار <b>إبقاء الشاشة مضاءة</b> من الإعدادات لمنع انطفاء الشاشة أثناء القراءة",
       "إضافة زر تبديل <b>الوضع الليلي</b> داخل الإعدادات",
       "تحسين عرض حالة الإعدادات من خلال مفاتيح تشغيل وإيقاف واضحة"
+    ],
+    "1.0.148": [
+      "إخفاء تلقائي للمشغّل وزر القائمة بعد <b>4</b> ثوانٍ مع إمكانية الإظهار والإخفاء بالضغط"
     ],
     "1.0.147": [
       "إصلاح <b>تشغيل التلاوة</b> عندما كان يتوقف أحياناً أو لا يعمل بعد التنقل",
