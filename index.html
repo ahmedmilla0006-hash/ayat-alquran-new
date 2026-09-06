@@ -896,8 +896,8 @@ body{
   position:fixed;
   left:50%;
   transform:translateX(-50%);
-  bottom:calc(var(--player-height, 0px) + 6px);
-  z-index:14;
+  bottom:calc(var(--player-height, 0px) + 8px);
+  z-index:50;
   padding:4px 11px;
   border-radius:9px;
   background:rgba(255,255,255,.94);
@@ -1222,7 +1222,9 @@ body {
   color: #fff !important;
   border: 1px solid rgba(200,220,235,.14) !important;
   border-radius: 10px !important;
-  z-index: 35 !important;
+  z-index: 50 !important;
+  /* يبقى فوق المحتوى وتحت أزرار القوائم المنبثقة */
+  pointer-events: none;
 }
 
 /* زر القائمة — زجاجي */
@@ -3262,8 +3264,15 @@ function setReadingUIHidden(hidden){
   if(readingUIHidden){
     document.documentElement.style.setProperty("--player-height", "0px");
   }else if(readingUI.player){
-    const h = readingUI.player.getBoundingClientRect().height || 0;
-    document.documentElement.style.setProperty("--player-height", h + "px");
+    try{
+      const rect = readingUI.player.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+      const gap = Math.max(0, vh - rect.top);
+      document.documentElement.style.setProperty("--player-height", Math.ceil(gap) + "px");
+    }catch(e){
+      const h = readingUI.player.getBoundingClientRect().height || 0;
+      document.documentElement.style.setProperty("--player-height", h + "px");
+    }
   }
 
   localStorage.setItem(
@@ -4982,10 +4991,17 @@ function updateAudioSource(keepPosition = false, options = {}){
         currentAudioSurah
       );
 
+    if(!url){
+      try{ playButton.textContent = "▶"; }catch(e){}
+      return;
+    }
+
     resetRepeat();
-    audio.pause();
-    audio.src = url;
-    audio.load();
+    try{ audio.pause(); }catch(e){}
+
+    /* رمز تحميل لكل مصدر جديد — يمنع تشغيل مصدر قديم بعد قلب الصفحة */
+    const loadToken = ++audioPageToken;
+    audio._ayaLoadToken = loadToken;
 
     currentTime.textContent = "0:00";
     duration.textContent = "0:00";
@@ -4996,45 +5012,87 @@ function updateAudioSource(keepPosition = false, options = {}){
     loadTimingForCurrentSurah();
 
     let seekDone = false;
-    const doSeekAndPlay = ()=>{
-      if(seekDone) return;
-      seekDone = true;
 
-      if(keepPosition){
-        try{
-          audio.currentTime = Math.min(oldTime, audio.duration || oldTime);
-        }catch(e){}
-      }else if(Number.isFinite(seekMs)){
-        /* seekMs === 0 يعني بداية السورة (ملف التلاوة من أوله) */
-        try{
-          audio.currentTime = Math.max(0, seekMs / 1000);
-        }catch(e){}
-      }else{
-        seekAudioToCurrentPage();
-      }
-
-      syncHighlight();
-
-      if(wasPlaying || autoContinue){
-        audio.play().then(()=>{
+    const tryPlay = (attempt)=>{
+      if(audio._ayaLoadToken !== loadToken) return;
+      if(!(wasPlaying || autoContinue)) return;
+      const p = audio.play();
+      if(p && typeof p.then === "function"){
+        p.then(()=>{
+          if(audio._ayaLoadToken !== loadToken) return;
           playButton.textContent = "Ⅱ";
-        }).catch(()=>{});
+        }).catch(()=>{
+          if(audio._ayaLoadToken !== loadToken) return;
+          if(attempt < 3){
+            setTimeout(()=>tryPlay(attempt + 1), 250 * (attempt + 1));
+          }
+        });
       }
     };
 
-    audio.addEventListener("loadedmetadata", function onMeta(){
+    const doSeekAndPlay = ()=>{
+      if(seekDone) return;
+      if(audio._ayaLoadToken !== loadToken) return;
+      /* انتظر بيانات كافية قبل القفز/التشغيل */
+      if(audio.readyState < 1) return;
+      seekDone = true;
+
+      try{
+        if(keepPosition){
+          const d = audio.duration;
+          audio.currentTime = Math.min(
+            oldTime,
+            Number.isFinite(d) && d > 0 ? d : oldTime
+          );
+        }else if(Number.isFinite(seekMs)){
+          /* seekMs === 0 يعني بداية السورة (ملف التلاوة من أوله) */
+          audio.currentTime = Math.max(0, seekMs / 1000);
+        }else if(typeof seekAudioToCurrentPage === "function"){
+          seekAudioToCurrentPage();
+        }
+      }catch(e){}
+
+      try{ syncHighlight(); }catch(e){}
+      tryPlay(0);
+    };
+
+    const onMeta = ()=>{
+      if(audio._ayaLoadToken !== loadToken) return;
       audio.removeEventListener("loadedmetadata", onMeta);
       doSeekAndPlay();
-    });
-    audio.addEventListener("canplay", function onCanPlay(){
+    };
+    const onCanPlay = ()=>{
+      if(audio._ayaLoadToken !== loadToken) return;
       audio.removeEventListener("canplay", onCanPlay);
       doSeekAndPlay();
-    });
-
-    /* إن كانت البيانات جاهزة فوراً من الكاش */
-    if(audio.readyState >= 1){
+    };
+    const onCanPlayThrough = ()=>{
+      if(audio._ayaLoadToken !== loadToken) return;
+      audio.removeEventListener("canplaythrough", onCanPlayThrough);
       doSeekAndPlay();
-    }
+    };
+
+    /* اربط المستمعين قبل تعيين المصدر حتى لا يضيع حدث الكاش */
+    audio.addEventListener("loadedmetadata", onMeta);
+    audio.addEventListener("canplay", onCanPlay);
+    audio.addEventListener("canplaythrough", onCanPlayThrough);
+
+    try{
+      if(audio.src !== url){
+        audio.src = url;
+      }else{
+        /* إعادة نفس الرابط أحياناً لا يطلق الأحداث — أعد التحميل صراحة */
+        audio.removeAttribute("src");
+        audio.src = url;
+      }
+      audio.load();
+    }catch(e){}
+
+    /* احتياط: إن كانت البيانات جاهزة بعد التحميل مباشرة */
+    setTimeout(()=>{
+      if(audio._ayaLoadToken !== loadToken) return;
+      if(audio.readyState >= 2) doSeekAndPlay();
+    }, 120);
   };
 
   if(explicitSurah){
@@ -5408,22 +5466,34 @@ audio.addEventListener(
 playButton.onclick = ()=>{
 
   if(!audio.src){
-    updateAudioSource(false);
+    updateAudioSource(false, { autoContinue: true });
+    return;
   }
 
   if(audio.paused){
 
-    audio.play().then(()=>{
-
-      playButton.textContent = "Ⅱ";
-
-    }).catch(()=>{
-
-      alert(
-        "تعذر تشغيل التلاوة. تأكد من اتصال الإنترنت ثم جرّب مرة أخرى."
-      );
-
-    });
+    const attemptPlay = (n)=>{
+      const p = audio.play();
+      if(p && typeof p.then === "function"){
+        p.then(()=>{
+          playButton.textContent = "Ⅱ";
+        }).catch(()=>{
+          if(n < 2){
+            setTimeout(()=>attemptPlay(n + 1), 300);
+          }else{
+            /* أعد تحميل المصدر ثم حاول مرة أخيرة */
+            try{
+              updateAudioSource(true, { autoContinue: true });
+            }catch(e){
+              alert(
+                "تعذر تشغيل التلاوة. تأكد من اتصال الإنترنت ثم جرّب مرة أخرى."
+              );
+            }
+          }
+        });
+      }
+    };
+    attemptPlay(0);
 
   }else{
 
@@ -7075,11 +7145,22 @@ document.addEventListener("DOMContentLoaded",()=>{
       document.documentElement.style.setProperty("--player-height", "0px");
       return;
     }
-    const h = player.getBoundingClientRect().height || 0;
-    document.documentElement.style.setProperty(
-      "--player-height",
-      h + "px"
-    );
+    /*
+      المسافة من أسفل الشاشة إلى أعلى المشغّل (وليس ارتفاع العنصر فقط)
+      حتى لا يبقى رقم الصفحة خلف المشغّل العائم أو فوق شريط النظام.
+    */
+    try{
+      const rect = player.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+      const gap = Math.max(0, vh - rect.top);
+      document.documentElement.style.setProperty(
+        "--player-height",
+        Math.ceil(gap) + "px"
+      );
+    }catch(e){
+      const h = player.getBoundingClientRect().height || 0;
+      document.documentElement.style.setProperty("--player-height", h + "px");
+    }
   }
 
   /* نراقب تغيير الصفحة أو السورة المُشغَّلة */
@@ -7108,6 +7189,13 @@ document.addEventListener("DOMContentLoaded",()=>{
     Number(typeof currentPage !== "undefined" ? currentPage : 1) || 1
   );
   watchPage();
+
+  try{
+    if(player && typeof ResizeObserver !== "undefined"){
+      const ro = new ResizeObserver(function(){ updatePlayerHeight(); });
+      ro.observe(player);
+    }
+  }catch(e){}
 
   window.addEventListener("resize", updatePlayerHeight);
   window.addEventListener("orientationchange", updatePlayerHeight);
@@ -7428,7 +7516,7 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.146";
+  const APP_VERSION = "1.0.147";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
@@ -9385,7 +9473,7 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.146";
+    return "1.0.147";
   }
 
   /*
@@ -9464,6 +9552,11 @@ body.interface-old #downloadsPopup .download-native-select{
       "إضافة خيار <b>إبقاء الشاشة مضاءة</b> من الإعدادات لمنع انطفاء الشاشة أثناء القراءة",
       "إضافة زر تبديل <b>الوضع الليلي</b> داخل الإعدادات",
       "تحسين عرض حالة الإعدادات من خلال مفاتيح تشغيل وإيقاف واضحة"
+    ],
+    "1.0.147": [
+      "إصلاح <b>تشغيل التلاوة</b> عندما كان يتوقف أحياناً أو لا يعمل بعد التنقل",
+      "تحسين ثبات تحميل الصوت عند قلب الصفحات وتغيير السور بسرعة",
+      "إعادة محاولة التشغيل تلقائياً عند فشل بدء التلاوة"
     ],
     "1.0.146": [
       "إصلاحات عامة وتحسينات في استقرار التطبيق",
