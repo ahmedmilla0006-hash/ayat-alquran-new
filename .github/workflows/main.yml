@@ -531,6 +531,7 @@ jobs:
           import androidx.work.PeriodicWorkRequest;
           import androidx.work.WorkManager;
           import java.util.concurrent.TimeUnit;
+          import android.os.Build;
           """
 
           if "import androidx.work.WorkManager;" not in activity_text:
@@ -541,18 +542,27 @@ jobs:
           method = """
               private void scheduleBackgroundUpdateCheck() {
                   try {
+                      if (Build.VERSION.SDK_INT >= 33) {
+                          try {
+                              if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                                      != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                  requestPermissions(
+                                          new String[]{ android.Manifest.permission.POST_NOTIFICATIONS },
+                                          4401);
+                              }
+                          } catch (Exception ignoredPerm) {}
+                      }
                       Constraints constraints = new Constraints.Builder()
                               .setRequiredNetworkType(NetworkType.CONNECTED)
                               .build();
                       PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(
                               UpdateCheckWorker.class, 6, TimeUnit.HOURS)
                               .setConstraints(constraints)
-                              .setInitialDelay(15, TimeUnit.MINUTES)
                               .build();
                       WorkManager.getInstance(getApplicationContext())
                               .enqueueUniquePeriodicWork(
                                       "aya_background_update_check",
-                                      ExistingPeriodicWorkPolicy.UPDATE,
+                                      ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
                                       request);
                       // فحص فوري مرة عند فتح التطبيق
                       androidx.work.OneTimeWorkRequest once =
@@ -562,7 +572,7 @@ jobs:
                       WorkManager.getInstance(getApplicationContext())
                               .enqueueUniqueWork(
                                       "aya_background_update_check_once",
-                                      androidx.work.ExistingWorkPolicy.KEEP,
+                                      androidx.work.ExistingWorkPolicy.REPLACE,
                                       once);
                   } catch (Exception ignored) {
                   }
