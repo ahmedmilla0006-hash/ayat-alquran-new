@@ -922,6 +922,44 @@ body{
   line-height:18px;text-align:center;box-shadow:0 0 0 2px rgba(0,0,0,.25)
 }
 #updatesButton.has-update .update-badge{display:inline-block}
+
+/* تذييل القائمة: رقم الإصدار + رابط التحديث */
+.side-menu-footer{
+  margin-top:18px;
+  padding:14px 6px 10px;
+  text-align:center;
+  direction:rtl;
+  border-top:1px solid rgba(255,255,255,.12);
+}
+.side-menu-version{
+  color:rgba(220,230,240,.85);
+  font-size:14px;
+  font-weight:700;
+  letter-spacing:.3px;
+  margin-bottom:6px;
+  font-family:Tahoma,Arial,sans-serif;
+}
+.side-menu-update-link{
+  display:none;
+  margin:0 auto;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:#7ec8ff;
+  font:inherit;
+  font-size:13.5px;
+  font-weight:700;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  cursor:pointer;
+  direction:rtl;
+}
+.side-menu-update-link.show{display:inline-block !important}
+.side-menu-update-link:active{opacity:.75}
+body.interface-old .side-menu-footer{border-top:1px solid #444}
+body.interface-old .side-menu-version{color:#ccc}
+body.interface-old .side-menu-update-link{color:#7ec8ff}
+
 /* شريط التحديث داخل التطبيق: تحت شريط الحالة، فوق منطقة الجزء/السورة، قابل للضغط */
 #updatesBanner{
   display: none;
@@ -2565,6 +2603,11 @@ body.interface-new.night-mode .page-area {
     ✕ إغلاق
   </button>
 
+  <div class="side-menu-footer" id="sideMenuFooter">
+    <div class="side-menu-version" id="sideMenuVersion">1.0.154</div>
+    <button type="button" class="side-menu-update-link" id="sideMenuUpdateLink" aria-label="تحديث التطبيق">إصدار جديد متوفر: تحديث</button>
+  </div>
+
 </aside>
 
 <!-- نافذة السور -->
@@ -2993,6 +3036,10 @@ body.interface-old #ayaTourDots .tour-dot-active{
 
       <div class="about-developer">
         المصمم أبو إسلام
+      </div>
+
+      <div class="about-copy" id="aboutAppVersion">
+        الإصدار 1.0.154
       </div>
 
       <div class="about-copy">
@@ -7740,8 +7787,13 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
-  const APP_VERSION = "1.0.153";
+  const APP_VERSION = "1.0.154";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
+  const sideMenuVersion = document.getElementById("sideMenuVersion");
+  const sideMenuUpdateLink = document.getElementById("sideMenuUpdateLink");
+  if(sideMenuVersion) sideMenuVersion.textContent = APP_VERSION;
+  const aboutAppVersion = document.getElementById("aboutAppVersion");
+  if(aboutAppVersion) aboutAppVersion.textContent = "الإصدار " + APP_VERSION;
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
   const AUTO_CHECK_DELAY_MS = 4000;
@@ -7792,6 +7844,11 @@ document.addEventListener("DOMContentLoaded",()=>{
       updatesBadge.style.display = available ? "inline-block" : "none";
       updatesBadge.textContent = available ? "1" : "";
     }
+    if(sideMenuUpdateLink){
+      if(available) sideMenuUpdateLink.classList.add("show");
+      else sideMenuUpdateLink.classList.remove("show");
+    }
+    if(sideMenuVersion) sideMenuVersion.textContent = APP_VERSION;
 
     let dismissed = "";
     try{ dismissed = localStorage.getItem(DISMISS_KEY) || ""; }catch(e){}
@@ -7927,6 +7984,17 @@ document.addEventListener("DOMContentLoaded",()=>{
   }
 
   if(updatesButton) updatesButton.onclick = openUpdates;
+  if(sideMenuUpdateLink){
+    sideMenuUpdateLink.onclick = function(e){
+      try{ if(e && e.preventDefault) e.preventDefault(); }catch(_){}
+      openUpdates();
+      setTimeout(function(){
+        if(updateAvailable && updatesDownloadBtn && latestUpdateUrl){
+          try{ updatesDownloadBtn.click(); }catch(_){}
+        }
+      }, 220);
+    };
+  }
   if(updatesClose) updatesClose.onclick = closeUpdates;
   if(updatesOverlay){
     updatesOverlay.onclick = function(e){
@@ -9693,7 +9761,7 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.153";
+    return "1.0.154";
   }
 
   /*
@@ -9773,7 +9841,12 @@ body.interface-old #downloadsPopup .download-native-select{
       "إضافة زر تبديل <b>الوضع الليلي</b> داخل الإعدادات",
       "تحسين عرض حالة الإعدادات من خلال مفاتيح تشغيل وإيقاف واضحة"
     ],
-    "1.0.153": [
+    "1.0.154": [
+      "إصلاح <b>إبقاء الشاشة مضاءة</b>: يبقى الخيار فعّالاً بعد الخروج من التطبيق والعودة إليه",
+      "عرض <b>رقم الإصدار</b> أسفل القائمة الجانبية",
+      "رابط <b>إصدار جديد متوفر: تحديث</b> أسفل القائمة عند توفر تحديث"
+    ],
+    "1.0.148": [
       "إخفاء تلقائي للمشغّل وزر القائمة بعد <b>4</b> ثوانٍ مع إمكانية الإظهار والإخفاء بالضغط"
     ],
     "1.0.147": [
@@ -10275,37 +10348,101 @@ body.interface-old #downloadsPopup .download-native-select{
     }
   }
 
+  /* إبقاء الشاشة مضاءة — إعادة القفل بعد العودة من الخلفية */
   let keepScreenWakeLock = null;
+  let keepScreenRequesting = false;
+  let keepScreenRetryTimers = [];
+
+  function clearKeepScreenRetry(){
+    keepScreenRetryTimers.forEach(function(t){ try{ clearTimeout(t); }catch(e){} });
+    keepScreenRetryTimers = [];
+  }
 
   async function releaseKeepScreen(){
-    if(keepScreenWakeLock){
-      try{ await keepScreenWakeLock.release(); }catch(e){}
-      keepScreenWakeLock = null;
-    }
+    clearKeepScreenRetry();
+    const lock = keepScreenWakeLock;
+    keepScreenWakeLock = null;
+    if(lock){ try{ await lock.release(); }catch(e){} }
+  }
+
+  function bindWakeLockRelease(lock){
+    if(!lock || typeof lock.addEventListener !== "function") return;
+    try{
+      lock.addEventListener("release", function(){
+        if(keepScreenWakeLock === lock) keepScreenWakeLock = null;
+        if(keepScreenToggle && keepScreenToggle.checked && document.visibilityState === "visible"){
+          scheduleKeepScreenRequest(150);
+          scheduleKeepScreenRequest(600);
+        }
+      });
+    }catch(e){}
   }
 
   async function requestKeepScreen(){
     if(!keepScreenToggle || !keepScreenToggle.checked) return;
     if(!("wakeLock" in navigator)) return;
+    if(document.visibilityState !== "visible") return;
+    if(keepScreenWakeLock && keepScreenWakeLock.released === false) return;
+    if(keepScreenRequesting) return;
+    keepScreenRequesting = true;
     try{
-      keepScreenWakeLock = await navigator.wakeLock.request("screen");
-    }catch(e){}
+      const lock = await navigator.wakeLock.request("screen");
+      keepScreenWakeLock = lock;
+      bindWakeLockRelease(lock);
+    }catch(e){
+      keepScreenWakeLock = null;
+      if(keepScreenToggle && keepScreenToggle.checked && document.visibilityState === "visible"){
+        scheduleKeepScreenRequest(500);
+      }
+    }finally{
+      keepScreenRequesting = false;
+    }
+  }
+
+  function scheduleKeepScreenRequest(delay){
+    var t = setTimeout(function(){
+      var i = keepScreenRetryTimers.indexOf(t);
+      if(i >= 0) keepScreenRetryTimers.splice(i, 1);
+      requestKeepScreen();
+    }, Math.max(0, delay || 0));
+    keepScreenRetryTimers.push(t);
+  }
+
+  function ensureKeepScreenOn(){
+    if(!keepScreenToggle || !keepScreenToggle.checked) return;
+    if(document.visibilityState !== "visible") return;
+    requestKeepScreen();
+    scheduleKeepScreenRequest(200);
+    scheduleKeepScreenRequest(800);
+    scheduleKeepScreenRequest(2000);
   }
 
   if(keepScreenToggle){
     keepScreenToggle.checked = localStorage.getItem("ayaKeepScreenOn") === "1";
+
     keepScreenSetting.addEventListener("click", async function(){
       keepScreenToggle.checked = !keepScreenToggle.checked;
       localStorage.setItem("ayaKeepScreenOn", keepScreenToggle.checked ? "1" : "0");
-      if(keepScreenToggle.checked) await requestKeepScreen();
-      else await releaseKeepScreen();
+      if(keepScreenToggle.checked){
+        await requestKeepScreen();
+        scheduleKeepScreenRequest(300);
+      }else{
+        await releaseKeepScreen();
+      }
     });
 
     document.addEventListener("visibilitychange", function(){
-      if(document.visibilityState === "visible" && keepScreenToggle.checked){
-        requestKeepScreen();
-      }
+      if(document.visibilityState === "visible") ensureKeepScreenOn();
+      else { keepScreenWakeLock = null; clearKeepScreenRetry(); }
     });
+    window.addEventListener("pageshow", function(){ ensureKeepScreenOn(); });
+    window.addEventListener("focus", function(){ ensureKeepScreenOn(); });
+
+    if(keepScreenToggle.checked){
+      if(document.visibilityState === "visible") ensureKeepScreenOn();
+      setTimeout(ensureKeepScreenOn, 500);
+      setTimeout(ensureKeepScreenOn, 1500);
+    }
   }
 })();
 </script>
