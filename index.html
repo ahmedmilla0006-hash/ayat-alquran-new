@@ -2604,7 +2604,7 @@ body.interface-new.night-mode .page-area {
   </button>
 
   <div class="side-menu-footer" id="sideMenuFooter">
-    <div class="side-menu-version" id="sideMenuVersion">1.0.154</div>
+    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.154</span></div>
     <button type="button" class="side-menu-update-link" id="sideMenuUpdateLink" aria-label="تحديث التطبيق">إصدار جديد متوفر: تحديث</button>
   </div>
 
@@ -2722,7 +2722,10 @@ body.interface-new.night-mode .page-area {
 <div id="ayaSystemNotif" aria-live="polite">
   <div class="aya-notif-card">
     <div class="aya-notif-top">
-      <div class="aya-notif-icon">📖</div>
+      <div class="aya-notif-icon" id="ayaNotifIconWrap" aria-hidden="true">
+        <img id="ayaNotifIconImg" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:10px;display:none">
+        <span id="ayaNotifIconFallback">📖</span>
+      </div>
       <div class="aya-notif-body">
         <div class="aya-notif-app">آية · الآن</div>
         <div class="aya-notif-title" id="ayaNotifTitle">يتوفر إصدار جديد</div>
@@ -3039,7 +3042,7 @@ body.interface-old #ayaTourDots .tour-dot-active{
       </div>
 
       <div class="about-copy" id="aboutAppVersion">
-        الإصدار 1.0.154
+        الإصدار <span id="aboutAppVersionNum">1.0.154</span>
       </div>
 
       <div class="about-copy">
@@ -7787,13 +7790,27 @@ document.addEventListener("DOMContentLoaded",()=>{
    + فحص تلقائي + شارة + شريط + إشعار عند توفر إصدار جديد
 ===================================================== */
 (function(){
+  /* غيّر الرقم فقط هنا عند كل إصدار جديد — كلمة «الإصدار» تُضاف تلقائياً */
   const APP_VERSION = "1.0.154";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
+  /* حدّث الرقم فقط — كلمة «الإصدار» ثابتة في HTML */
+  function setAppVersionDisplays(){
+    var num = document.getElementById("sideMenuVersionNum");
+    if(num) num.textContent = APP_VERSION;
+    var aboutNum = document.getElementById("aboutAppVersionNum");
+    if(aboutNum) aboutNum.textContent = APP_VERSION;
+    var side = document.getElementById("sideMenuVersion");
+    if(side && !document.getElementById("sideMenuVersionNum")){
+      side.textContent = "الإصدار " + APP_VERSION;
+    }
+    var about = document.getElementById("aboutAppVersion");
+    if(about && !document.getElementById("aboutAppVersionNum")){
+      about.textContent = "الإصدار " + APP_VERSION;
+    }
+  }
+  setAppVersionDisplays();
   const sideMenuVersion = document.getElementById("sideMenuVersion");
   const sideMenuUpdateLink = document.getElementById("sideMenuUpdateLink");
-  if(sideMenuVersion) sideMenuVersion.textContent = APP_VERSION;
-  const aboutAppVersion = document.getElementById("aboutAppVersion");
-  if(aboutAppVersion) aboutAppVersion.textContent = "الإصدار " + APP_VERSION;
   const UPDATE_JSON_URL =
     "https://raw.githubusercontent.com/ahmedmilla0006-hash/ayat-alquran-new/main/update.json";
   const AUTO_CHECK_DELAY_MS = 4000;
@@ -7848,7 +7865,7 @@ document.addEventListener("DOMContentLoaded",()=>{
       if(available) sideMenuUpdateLink.classList.add("show");
       else sideMenuUpdateLink.classList.remove("show");
     }
-    if(sideMenuVersion) sideMenuVersion.textContent = APP_VERSION;
+    setAppVersionDisplays();
 
     let dismissed = "";
     try{ dismissed = localStorage.getItem(DISMISS_KEY) || ""; }catch(e){}
@@ -7896,10 +7913,21 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(ayaNotifSub){
       ayaNotifSub.textContent = notes
         ? String(notes).slice(0, 80)
-        : ("الإصدار " + (remoteVersion || "") + " جاهز للتحديث");
+        : ("الإصدار " + (remoteVersion || "") + " — اضغط تحديث الآن");
     }
     if(ayaNotifProgressWrap) ayaNotifProgressWrap.classList.remove("show");
     if(ayaNotifActions) ayaNotifActions.style.display = "flex";
+    /* أيقونة التطبيق من شاشة الافتتاح */
+    try{
+      var img = document.getElementById("ayaNotifIconImg");
+      var fb = document.getElementById("ayaNotifIconFallback");
+      var splashImg = document.querySelector("#splashScreen .splash-icon img, .splash-icon img");
+      if(img && splashImg && splashImg.src){
+        img.src = splashImg.src;
+        img.style.display = "block";
+        if(fb) fb.style.display = "none";
+      }
+    }catch(e){}
     ayaSystemNotif.classList.add("show");
   }
   function hideWaStyleNotif(){
@@ -7910,46 +7938,75 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(updatesDownloadProgress) updatesDownloadProgress.classList.add("show");
     if(updatesProgressBar) updatesProgressBar.style.width = p + "%";
     if(updatesProgressPct) updatesProgressPct.textContent = Math.round(p) + "%" + (message ? " — " + message : "");
-    if(ayaSystemNotif){
-      ayaSystemNotif.classList.add("show");
-      if(ayaNotifTitle) ayaNotifTitle.textContent = "جاري تحديث آية";
-      if(ayaNotifSub) ayaNotifSub.textContent = message || ("التحميل " + Math.round(p) + "%");
-      if(ayaNotifProgressWrap) ayaNotifProgressWrap.classList.add("show");
-      if(ayaNotifProgressBar) ayaNotifProgressBar.style.width = p + "%";
-      if(ayaNotifActions) ayaNotifActions.style.display = "none";
-    }
+    /* لا بطاقة داخل التطبيق — التقدم عبر إشعار النظام */
+    try{ hideWaStyleNotif(); }catch(e){}
+    postAndroid("notify-update-progress", {
+      title: "آية",
+      body: message || ("جاري التحميل… " + Math.round(p) + "%"),
+      percent: p,
+      versionName: latestRemoteVersion || "",
+      actionText: "تحديث الآن",
+      useAppIcon: true
+    });
   }
 
   function notifyUpdateAvailable(remoteVersion, notes){
     const title = "آية";
     const body = "يتوفر إصدار جديد (" + remoteVersion + ")";
-    /* بدون نافذة داخل التطبيق — إشعار شريط النظام فقط */
+    const actionText = "تحديث الآن";
+    /* لا إشعار داخل التطبيق — إشعار شريط النظام فقط */
     try{ hideWaStyleNotif(); }catch(e){}
-    /* إشعار نظام أندرويد (يحتاج دعم في كود التطبيق الأصلي) */
-    postAndroid("notify-update", {
+
+    /* حمولة غنية لتطبيق أندرويد الأصلي (أيقونة + زر تحديث الآن) */
+    var payload = {
       title: title,
       body: body,
+      contentText: body,
+      contentTitle: title,
+      bigText: body + "\nاضغط «" + actionText + "» للتحميل",
       version: remoteVersion || "",
       versionName: remoteVersion || "",
       apkUrl: latestUpdateUrl || "",
       url: latestUpdateUrl || "",
-      action: "update"
-    });
+      action: "update",
+      actionText: actionText,
+      actionLabel: actionText,
+      actionTitle: actionText,
+      button: actionText,
+      buttonText: actionText,
+      positiveButton: actionText,
+      actions: [
+        { id: "update", action: "update", title: actionText, text: actionText },
+        { id: "dismiss", action: "dismiss", title: "لاحقاً", text: "لاحقاً" }
+      ],
+      buttons: [
+        { id: "update", title: actionText },
+        { id: "dismiss", title: "لاحقاً" }
+      ],
+      /* تلميح للأيقونة — يعتمد التطبيق الأصلي على أيقونة الحزمة إن وُجدت */
+      useAppIcon: true,
+      showAppIcon: true,
+      largeIcon: "app",
+      smallIcon: "app",
+      icon: "app",
+      autoCancel: false,
+      ongoing: false,
+      priority: "high",
+      channelId: "aya_updates",
+      channelName: "تحديثات آية"
+    };
+    postAndroid("notify-update", payload);
     postAndroid("update-available", {
       versionName: remoteVersion || "",
-      apkUrl: latestUpdateUrl || ""
+      apkUrl: latestUpdateUrl || "",
+      actionText: actionText,
+      action: "update",
+      useAppIcon: true
     });
-    try{
-      if(typeof Notification !== "undefined" && Notification.permission === "granted"){
-        new Notification(title, { body: body, tag: "aya-update", renotify: true });
-      }else if(typeof Notification !== "undefined" && Notification.permission !== "denied"){
-        Notification.requestPermission().then(function(p){
-          if(p === "granted"){
-            new Notification(title, { body: body, tag: "aya-update", renotify: true });
-          }
-        });
-      }
-    }catch(e){}
+    postAndroid("show-update-notification", payload);
+
+    /* لا نستخدم Web Notification — يُنشئ إشعاراً بلا زر ولا أيقونة التطبيق.
+       الإشعار يمر عبر AndroidInterface → MainActivity فقط. */
   }
 
   if(ayaNotifDismiss){
@@ -7960,14 +8017,8 @@ document.addEventListener("DOMContentLoaded",()=>{
       try{ document.body.classList.remove("update-banner-visible"); }catch(e){}
     };
   }
-  if(ayaNotifUpdate){
-    ayaNotifUpdate.onclick = function(){
-      hideWaStyleNotif();
-      openUpdates();
-      setTimeout(function(){
-        if(updatesDownloadBtn) updatesDownloadBtn.click();
-      }, 200);
-    };
+  function closeUpdates(){
+    if(updatesOverlay) updatesOverlay.classList.remove("show");
   }
 
   function openUpdates(){
@@ -7979,20 +8030,68 @@ document.addEventListener("DOMContentLoaded",()=>{
     }
   }
 
-  function closeUpdates(){
-    if(updatesOverlay) updatesOverlay.classList.remove("show");
+  /* تنزيل فوري بدون إظهار نافذة التحديثات */
+  function startUpdateDownload(){
+    if(!latestUpdateUrl){
+      checkForUpdates({ silent: true, autoDownload: true });
+      return false;
+    }
+    try{
+      if(typeof closeSideMenu === "function") closeSideMenu();
+    }catch(e){}
+    try{
+      var menu = document.getElementById("sideMenu");
+      var ov = document.getElementById("overlay");
+      if(menu) menu.classList.remove("open");
+      if(ov) ov.classList.remove("show");
+    }catch(e){}
+    closeUpdates();
+    try{ hideWaStyleNotif(); }catch(e){}
+    try{
+      if(window.AndroidInterface && typeof window.AndroidInterface.postMessage === "function"){
+        setDownloadProgressUI(0, "بدء التحميل…");
+        postAndroid("notify-update-progress", {
+          title: "آية",
+          body: "جاري التحميل…",
+          percent: 0,
+          versionName: latestRemoteVersion || ""
+        });
+        window.AndroidInterface.postMessage(JSON.stringify({
+          cmd: "download-apk",
+          data: {
+            url: latestUpdateUrl,
+            apkUrl: latestUpdateUrl,
+            versionName: latestRemoteVersion || "",
+            version: latestRemoteVersion || ""
+          }
+        }));
+        window.AndroidInterface.postMessage(JSON.stringify({
+          cmd: "update-download",
+          data: {
+            apkUrl: latestUpdateUrl,
+            versionName: latestRemoteVersion || ""
+          }
+        }));
+        return true;
+      }
+    }catch(e){}
+    try{ window.location.href = latestUpdateUrl; return true; }catch(e){}
+    return false;
+  }
+  try{ window.__ayaStartUpdateDownload = startUpdateDownload; window.startUpdateDownload = startUpdateDownload; }catch(e){}
+
+  if(ayaNotifUpdate){
+    ayaNotifUpdate.onclick = function(){
+      hideWaStyleNotif();
+      startUpdateDownload();
+    };
   }
 
   if(updatesButton) updatesButton.onclick = openUpdates;
   if(sideMenuUpdateLink){
     sideMenuUpdateLink.onclick = function(e){
       try{ if(e && e.preventDefault) e.preventDefault(); }catch(_){}
-      openUpdates();
-      setTimeout(function(){
-        if(updateAvailable && updatesDownloadBtn && latestUpdateUrl){
-          try{ updatesDownloadBtn.click(); }catch(_){}
-        }
-      }, 220);
+      startUpdateDownload();
     };
   }
   if(updatesClose) updatesClose.onclick = closeUpdates;
@@ -8004,11 +8103,13 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(updatesBanner){
     updatesBanner.onclick = function(ev){
       try{ if(ev && ev.preventDefault) ev.preventDefault(); }catch(e){}
-      openUpdates();
+      if(updateAvailable && latestUpdateUrl) startUpdateDownload();
+      else openUpdates();
     };
     updatesBanner.ontouchend = function(ev){
       try{ if(ev && ev.preventDefault) ev.preventDefault(); }catch(e){}
-      openUpdates();
+      if(updateAvailable && latestUpdateUrl) startUpdateDownload();
+      else openUpdates();
     };
   }
 
@@ -8038,6 +8139,9 @@ document.addEventListener("DOMContentLoaded",()=>{
         try{ dismissed = localStorage.getItem(DISMISS_KEY) || ""; }catch(e){}
         if(dismissed !== remoteVersion){
           notifyUpdateAvailable(remoteVersion, notes);
+        }
+        if(opts.autoDownload){
+          setTimeout(function(){ startUpdateDownload(); }, 80);
         }
         return true;
       }else{
@@ -8104,38 +8208,12 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(updatesDownloadBtn){
     updatesDownloadBtn.onclick = function(){
       if(!latestUpdateUrl) return;
-      try{
-        if(window.AndroidInterface && typeof window.AndroidInterface.postMessage === "function"){
-          if(updatesStatus) updatesStatus.textContent = "جاري تحميل التحديث…";
-          if(updatesDownloadBtn) updatesDownloadBtn.disabled = true;
-          setDownloadProgressUI(0, "بدء التحميل…");
-          postAndroid("notify-update-progress", {
-            title: "آية",
-            body: "جاري التحميل…",
-            percent: 0,
-            versionName: latestRemoteVersion || ""
-          });
-          window.AndroidInterface.postMessage(JSON.stringify({
-            cmd: "download-apk",
-            data: {
-              url: latestUpdateUrl,
-              apkUrl: latestUpdateUrl,
-              versionName: latestRemoteVersion || "",
-              version: latestRemoteVersion || ""
-            }
-          }));
-          window.AndroidInterface.postMessage(JSON.stringify({
-            cmd: "update-download",
-            data: {
-              apkUrl: latestUpdateUrl,
-              versionName: latestRemoteVersion || ""
-            }
-          }));
-          return;
-        }
-      }catch(e){}
-      if(updatesStatus){
-        updatesStatus.textContent = "التحديث متاح داخل تطبيق Android فقط.";
+      if(updatesStatus) updatesStatus.textContent = "جاري تحميل التحديث…";
+      if(updatesDownloadBtn) updatesDownloadBtn.disabled = true;
+      var ok = startUpdateDownload();
+      if(!ok){
+        if(updatesStatus) updatesStatus.textContent = "تعذر بدء التحميل.";
+        updatesDownloadBtn.disabled = false;
       }
     };
   }
