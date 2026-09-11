@@ -1,5 +1,5 @@
 {
-  "version": "1.0.161",
-  "url": "https://github.com/ahmedmilla0006-hash/ayat-alquran-new/releases/download/v1.0.161/aya-android-1.0.161.apk",
-  "notes": "اصلاحات وتحسينات"
+  "version": "1.0.162",
+  "url": "https://github.com/ahmedmilla0006-hash/ayat-alquran-new/releases/download/v1.0.162/aya-android-1.0.162.apk",
+  "notes": "تحسين تزامن صوت الشيخ ياسر الدوسري مع ملف صوتي متوافق من مصدر موثوق. قفز أدق لأول آية في الصفحة عند قلب الصفحات بدون تقطيع في الصوت. تحسينات عامة في استقرار التشغيل والتوقيت."
 }
