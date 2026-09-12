@@ -7611,15 +7611,17 @@ document.addEventListener("DOMContentLoaded",()=>{
       بعد إيقاف المستخدم: أخفِ الإشعار فقط إن كان قد ظهر من قبل.
       لا نرسل أوامر غريبة عند فتح التطبيق (قد توقف الطبقة الأصلية).
     */
+    /*
+      الإشعار يبقى عند الإيقاف.
+      إن حذفه المستخدم يدوياً: الطبقة الأصلية لا تعيده إلا بعد media-play من التطبيق.
+    */
     if(!payload.playing && !wants){
       if(__mediaNotifActive){
         try{ nativeBridge("media-pause", payload); }catch(e){}
-        try{ nativeBridge("media-update", Object.assign({}, payload, { playing: false, clear: true })); }catch(e){}
-        __mediaNotifActive = false;
+        try{ nativeBridge("media-update", Object.assign({}, payload, { playing: false })); }catch(e){}
       }
       if("mediaSession" in navigator){
-        try{ navigator.mediaSession.playbackState = "none"; }catch(e){}
-        try{ navigator.mediaSession.metadata = null; }catch(e){}
+        try{ navigator.mediaSession.playbackState = "paused"; }catch(e){}
       }
       return;
     }
@@ -7847,7 +7849,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 ===================================================== */
 (function(){
   /* غيّر الرقم فقط هنا عند كل إصدار جديد — كلمة «الإصدار» تُضاف تلقائياً */
-  const APP_VERSION = "1.0.164";
+  const APP_VERSION = "1.0.165";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   /* حدّث الرقم فقط — كلمة «الإصدار» ثابتة في HTML */
   function setAppVersionDisplays(){
@@ -9944,13 +9946,8 @@ body.interface-old #downloadsPopup .download-native-select{
     عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
     var WHATS_NEW = {
-    "1.0.164": [
-      "إصلاح مشكلة توقف التطبيق بعد تعديل الإشعارات",
-      "إشعار التلاوة يُخفى عند الإيقاف دون التأثير على استقرار التطبيق"
-    ],
-    "1.0.163": [
-      "إشعار التحديث لا يظهر مرة أخرى بعد حذفه لنفس الإصدار",
-      "إشعار التلاوة يُخفى عند الإيقاف ولا يعود إلا عند التشغيل من التطبيق"
+    "1.0.165": [
+      "إصلاحات وتحسينات في الإشعارات"
     ],
     "1.0.162": [
       "تحسين تزامن <b>صوت الشيخ ياسر الدوسري</b> مع ملف صوتي متوافق من مصدر موثوق",
