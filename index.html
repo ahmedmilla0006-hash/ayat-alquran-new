@@ -7600,6 +7600,24 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   function updateMediaSession(){
     const payload = mediaPayload();
+    payload.ongoing = !!payload.playing;
+
+    /*
+      إيقاف + لا رغبة بالتشغيل: أخفِ إشعار الوسائط ولا تُعد إظهاره
+      حتى يُضغط تشغيل من داخل التطبيق.
+      أثناء التشغيل: ongoing حتى لا يُمسح الإشعار بالسحب بسهولة (حسب الطبقة الأصلية).
+    */
+    if(!payload.playing && !userWantsPlay){
+      try{ nativeBridge("media-stop", payload); }catch(e){}
+      try{ nativeBridge("media-clear", payload); }catch(e){}
+      try{ nativeBridge("media-pause", payload); }catch(e){}
+      if("mediaSession" in navigator){
+        try{ navigator.mediaSession.playbackState = "none"; }catch(e){}
+        try{ navigator.mediaSession.metadata = null; }catch(e){}
+      }
+      return;
+    }
+
     nativeBridge(payload.playing ? "media-play" : "media-pause", payload);
     nativeBridge("media-update", payload);
 
@@ -7667,7 +7685,8 @@ document.addEventListener("DOMContentLoaded",()=>{
   function safePause(){
     userWantsPlay = false;
     __notifPlayLockUntil = 0;
-    audio.pause();
+    try{ audio.pause(); }catch(e){}
+    try{ updateMediaSession(); }catch(e){}
     const pb = document.getElementById("playButton");
     if(pb) pb.textContent = "▶";
     updateMediaSession();
@@ -7821,7 +7840,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 ===================================================== */
 (function(){
   /* غيّر الرقم فقط هنا عند كل إصدار جديد — كلمة «الإصدار» تُضاف تلقائياً */
-  const APP_VERSION = "1.0.162";
+  const APP_VERSION = "1.0.163";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   /* حدّث الرقم فقط — كلمة «الإصدار» ثابتة في HTML */
   function setAppVersionDisplays(){
@@ -8166,9 +8185,13 @@ document.addEventListener("DOMContentLoaded",()=>{
         setUpdateUI(true, remoteVersion, notes || "تحسينات وإصلاحات.", url);
         if(!silent && updatesStatus) updatesStatus.textContent = "🎉 يتوفر إصدار جديد!";
         let dismissed = "";
+        let notified = "";
         try{ dismissed = localStorage.getItem(DISMISS_KEY) || ""; }catch(e){}
-        if(dismissed !== remoteVersion){
+        try{ notified = localStorage.getItem("aya_update_notified_ver") || ""; }catch(e){}
+        /* مرة واحدة فقط لكل إصدار — بعد الحذف أو أول إشعار لا يُعاد */
+        if(dismissed !== remoteVersion && notified !== remoteVersion){
           notifyUpdateAvailable(remoteVersion, notes);
+          try{ localStorage.setItem("aya_update_notified_ver", remoteVersion); }catch(e){}
         }
         if(opts.autoDownload){
           setTimeout(function(){ startUpdateDownload(); }, 80);
@@ -9914,6 +9937,10 @@ body.interface-old #downloadsPopup .download-native-select{
     عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
     var WHATS_NEW = {
+    "1.0.163": [
+      "إشعار التحديث لا يظهر مرة أخرى بعد حذفه لنفس الإصدار",
+      "إشعار التلاوة يُخفى عند الإيقاف ولا يعود إلا عند التشغيل من التطبيق"
+    ],
     "1.0.162": [
       "تحسين تزامن <b>صوت الشيخ ياسر الدوسري</b> مع ملف صوتي متوافق من مصدر موثوق",
       "قفز أدق لأول آية في الصفحة عند قلب الصفحات <b>بدون تقطيع</b> في الصوت",
