@@ -2340,6 +2340,123 @@ body.interface-new.night-mode .page-area {
   right:3px;
 }
 </style>
+
+<style id="listen-only-mode-css">
+body.listen-only-mode .reader,
+body.listen-only-mode .page-area,
+body.listen-only-mode #quranPage,
+body.listen-only-mode .ayah-highlight-layer,
+body.listen-only-mode .reader-info-top,
+body.listen-only-mode .reader-page-number,
+body.listen-only-mode .player{
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+body.listen-only-mode .menu-button{
+  display: flex !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 60 !important;
+}
+#listenOnlyPlayer{
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(24px + var(--reader-safe-top, 0px)) 20px calc(28px + var(--reader-safe-bottom, 0px));
+  box-sizing: border-box;
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(22,128,59,.28), transparent 55%),
+    linear-gradient(165deg, #0b1a14 0%, #102820 40%, #0a1620 100%);
+  color: #f4f7f9;
+  direction: rtl;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+body.listen-only-mode #listenOnlyPlayer{ display: flex !important; }
+.lop-card{
+  width: min(92vw, 420px);
+  padding: 28px 22px 24px;
+  border-radius: 24px;
+  background: rgba(28,42,56,.55);
+  border: 1px solid rgba(200,220,235,.18);
+  box-shadow: 0 16px 48px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  text-align: center;
+}
+.lop-icon{
+  width: 88px; height: 88px; margin: 0 auto 16px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #1fa34a, #0f6b32);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40px;
+  box-shadow: 0 8px 24px rgba(31,163,74,.35);
+}
+.lop-title{ font-size: 13px; color: rgba(230,238,244,.7); margin-bottom: 6px; font-weight: 600; }
+.lop-reader{ font-size: 22px; font-weight: 800; color: #7ddea8; margin-bottom: 18px; line-height: 1.4; }
+.lop-surah-label{ font-size: 13px; color: rgba(230,238,244,.7); margin-bottom: 8px; font-weight: 600; }
+.lop-surah-btn{
+  width: 100%; min-height: 52px; padding: 12px 14px; border-radius: 14px;
+  border: 1px solid rgba(200,220,235,.16); background: rgba(55,72,88,.45);
+  color: #f4f7f9; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  direction: rtl; margin-bottom: 22px;
+}
+.lop-surah-btn:active{ background: rgba(70,92,110,.55); transform: scale(.99); }
+.lop-progress-row{ display: flex; align-items: center; gap: 10px; margin-bottom: 20px; direction: rtl; }
+.lop-time{ min-width: 40px; font-size: 12px; color: rgba(230,238,244,.75); }
+.lop-progress{
+  flex: 1; height: 8px; appearance: none; -webkit-appearance: none;
+  border-radius: 99px; background: rgba(15,25,35,.45); overflow: hidden; cursor: pointer;
+}
+.lop-progress::-webkit-progress-bar{ background: rgba(15,25,35,.45); }
+.lop-progress::-webkit-progress-value{ background: #50c878; border-radius: 99px; }
+.lop-progress::-moz-progress-bar{ background: #50c878; border-radius: 99px; }
+.lop-controls{ display: flex; align-items: center; justify-content: center; gap: 18px; margin-bottom: 18px; }
+.lop-ctrl{
+  width: 52px; height: 52px; border: 0; border-radius: 50%;
+  background: rgba(55,72,88,.5); color: #7ddea8; font-size: 22px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(200,220,235,.14);
+}
+.lop-ctrl:active{ transform: scale(.96); background: rgba(70,92,110,.6); }
+.lop-play{
+  width: 72px; height: 72px; border: 0; border-radius: 50%;
+  background: #50c878; color: #0a2018; font-size: 28px; font-weight: 800;
+  cursor: pointer; box-shadow: 0 6px 20px rgba(80,200,120,.4); position: relative;
+}
+.lop-play:active{ transform: scale(.97); }
+.lop-play.is-loading{ opacity: .85; }
+.lop-play.is-loading::after{
+  content: ""; position: absolute; inset: 8px; border-radius: 50%;
+  border: 3px solid rgba(10,32,24,.2); border-top-color: #0a2018;
+  animation: lopSpin .7s linear infinite; pointer-events: none;
+}
+@keyframes lopSpin{ to{ transform: rotate(360deg); } }
+.lop-actions{ display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.lop-action{
+  width: 100%; min-height: 48px; border: 0; border-radius: 14px;
+  background: rgba(55,72,88,.42); color: #f4f7f9; font: inherit; font-size: 15px; font-weight: 700;
+  border: 1px solid rgba(200,220,235,.14); cursor: pointer;
+}
+.lop-action.primary{
+  background: rgba(80,200,120,.22); border-color: rgba(125,222,168,.35); color: #a8ffc5;
+}
+.lop-action:active{ transform: scale(.99); }
+.lop-status{ margin-top: 10px; font-size: 12px; color: rgba(200,220,235,.7); min-height: 18px; }
+.lop-hint{ margin-top: 14px; font-size: 12px; color: rgba(200,220,235,.55); line-height: 1.6; }
+body.interface-old #listenOnlyPlayer{ background: #1a1a1a; }
+body.interface-old .lop-card{
+  background: #25262a; border-color: #424348;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+</style>
+
 </head>
 
 <body>
@@ -2488,6 +2605,22 @@ body.interface-new.night-mode .page-area {
         <option value="salimi">الشيخ منصور السالمي</option>
         <option value="aliJaber">الشيخ علي جابر</option>
         <option value="wadee">الشيخ وديع اليمني</option>
+        <option value="sudais">الشيخ عبدالرحمن السديس — استماع فقط</option>
+        <option value="huthayfi">الشيخ علي الحذيفي — استماع فقط</option>
+        <option value="tablawi">الشيخ محمد الطبلاوي — استماع فقط</option>
+        <option value="banna">الشيخ محمود علي البنا — استماع فقط</option>
+        <option value="mustafaIsmail">الشيخ مصطفى إسماعيل — استماع فقط</option>
+        <option value="jibreel">الشيخ محمد جبريل — استماع فقط</option>
+        <option value="balilah">الشيخ بندر بليلة — استماع فقط</option>
+        <option value="akhdar">الشيخ إبراهيم الأخضر — استماع فقط</option>
+        <option value="nabil">الشيخ نبيل الرفاعي — استماع فقط</option>
+        <option value="hani">الشيخ هاني الرفاعي — استماع فقط</option>
+        <option value="neama">الشيخ نعمة الحسان — استماع فقط</option>
+        <option value="arkani">الشيخ عبدالولي الأركاني — استماع فقط</option>
+        <option value="islamSobhi">الشيخ إسلام صبحي — استماع فقط</option>
+        <option value="luhaidan">الشيخ محمد اللحيدان — استماع فقط</option>
+        <option value="jibreen">الشيخ إبراهيم الجبرين — استماع فقط</option>
+        <option value="afasyCalifornia">الشيخ مشاري العفاسي (كاليفورنيا) — استماع فقط</option>
       </select>
     <button type="button" class="glass-picker-btn" id="readerPickerBtn" aria-label="اختيار القارئ">
       <span id="readerPickerLabel">اختر القارئ</span>
@@ -2511,6 +2644,49 @@ body.interface-new.night-mode .page-area {
 </div>
 
 <div class="overlay" id="overlay"></div>
+
+
+<!-- مشغّل الاستماع فقط (بدون مصحف) -->
+<div id="listenOnlyPlayer" aria-label="مشغل الاستماع فقط" aria-hidden="true">
+  <div class="lop-card">
+    <div class="lop-icon" aria-hidden="true">🎧</div>
+    <div class="lop-title">وضع الاستماع فقط</div>
+    <div class="lop-reader" id="lopReaderName">اختر قارئاً</div>
+    <div class="lop-surah-label">السورة</div>
+    <button type="button" class="lop-surah-btn" id="lopSurahBtn" aria-label="اختيار السورة">
+      <span id="lopSurahLabel">1 - الفاتحة</span>
+      <span style="opacity:.7">▾</span>
+    </button>
+    <div class="lop-progress-row">
+      <span class="lop-time" id="lopDuration">0:00</span>
+      <progress class="lop-progress" id="lopProgress" value="0" max="100"></progress>
+      <span class="lop-time" id="lopCurrent">0:00</span>
+    </div>
+    <div class="lop-controls">
+      <button type="button" class="lop-ctrl" id="lopNextSurah" title="السورة التالية">⏭</button>
+      <button type="button" class="lop-play" id="lopPlay" title="تشغيل">▶</button>
+      <button type="button" class="lop-ctrl" id="lopPrevSurah" title="السورة السابقة">⏮</button>
+    </div>
+    <div class="lop-actions">
+      <button type="button" class="lop-action primary" id="lopChangeReader">تغيير القارئ</button>
+      <button type="button" class="lop-action" id="lopBackToMushaf">العودة إلى المصحف</button>
+    </div>
+    <div class="lop-status" id="lopStatus"></div>
+    <div class="lop-hint">لا يُعرض المصحف في هذا الوضع — للتلاوة والاستماع فقط</div>
+  </div>
+</div>
+
+<!-- نافذة قراء الاستماع فقط -->
+<div class="popup-overlay" id="listenOnlyPickerOverlay">
+  <div class="popup-box">
+    <div class="popup-header">
+      <h2>قراء للاستماع فقط</h2>
+      <button type="button" class="popup-close" id="listenOnlyPickerClose" aria-label="إغلاق">×</button>
+    </div>
+    <p class="search-hint" style="margin:0 0 10px;padding:0 4px">تلاوة كاملة — استماع فقط (بدون مصحف).</p>
+    <div class="popup-list" id="listenOnlyPickerList"></div>
+  </div>
+</div>
 
 <aside class="side-menu" id="sideMenu">
 
@@ -2570,6 +2746,10 @@ body.interface-new.night-mode .page-area {
     🎧 القراء والتلاوات
   </button>
 
+  <button class="menu-item" id="listenOnlyRecitersButton">
+    🔊 قراء للاستماع فقط
+  </button>
+
   <button class="menu-item" id="downloadsButton">⬇️ تنزيل الملحقات</button>
 
   <button class="menu-item" id="updatesButton">
@@ -2602,7 +2782,7 @@ body.interface-new.night-mode .page-area {
   </button>
 
   <div class="side-menu-footer" id="sideMenuFooter">
-    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.156</span></div>
+    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.166</span></div>
     <button type="button" class="side-menu-update-link" id="sideMenuUpdateLink" aria-label="تحديث التطبيق">إصدار جديد متوفر: تحديث</button>
   </div>
 
@@ -3040,7 +3220,7 @@ body.interface-old #ayaTourDots .tour-dot-active{
       </div>
 
       <div class="about-copy" id="aboutAppVersion">
-        الإصدار <span id="aboutAppVersionNum">1.0.156</span>
+        الإصدار <span id="aboutAppVersionNum">1.0.166</span>
       </div>
 
       <div class="about-copy">
@@ -4263,6 +4443,106 @@ const RECITERS = {
     server: "https://server6.mp3quran.net/wdee3/",
     timingId: 219,
     complete: true
+  },
+
+  /* قراء للاستماع فقط (بدون توقيت/تظليل) */
+  sudais: {
+    name: "الشيخ عبدالرحمن السديس",
+    server: "https://server11.mp3quran.net/sds/",
+    complete: true,
+    listenOnly: true
+  },
+  huthayfi: {
+    name: "الشيخ علي الحذيفي",
+    server: "https://server9.mp3quran.net/hthfi/",
+    complete: true,
+    listenOnly: true
+  },
+  tablawi: {
+    name: "الشيخ محمد الطبلاوي",
+    server: "https://server12.mp3quran.net/tblawi/",
+    complete: true,
+    listenOnly: true
+  },
+  banna: {
+    name: "الشيخ محمود علي البنا",
+    server: "https://server8.mp3quran.net/bna/",
+    complete: true,
+    listenOnly: true
+  },
+  mustafaIsmail: {
+    name: "الشيخ مصطفى إسماعيل",
+    server: "https://server8.mp3quran.net/mustafa/",
+    complete: true,
+    listenOnly: true
+  },
+  jibreel: {
+    name: "الشيخ محمد جبريل",
+    server: "https://server8.mp3quran.net/jbrl/",
+    complete: true,
+    listenOnly: true
+  },
+  balilah: {
+    name: "الشيخ بندر بليلة",
+    server: "https://server6.mp3quran.net/balilah/",
+    complete: true,
+    listenOnly: true
+  },
+  akhdar: {
+    name: "الشيخ إبراهيم الأخضر",
+    server: "https://server6.mp3quran.net/akdr/",
+    complete: true,
+    listenOnly: true
+  },
+  nabil: {
+    name: "الشيخ نبيل الرفاعي",
+    server: "https://server9.mp3quran.net/nabil/",
+    complete: true,
+    listenOnly: true
+  },
+  hani: {
+    name: "الشيخ هاني الرفاعي",
+    server: "https://server8.mp3quran.net/hani/",
+    complete: true,
+    listenOnly: true
+  },
+  neama: {
+    name: "الشيخ نعمة الحسان",
+    server: "https://server8.mp3quran.net/namh/",
+    complete: true,
+    listenOnly: true
+  },
+  arkani: {
+    name: "الشيخ عبدالولي الأركاني",
+    server: "https://server6.mp3quran.net/arkani/",
+    complete: true,
+    listenOnly: true
+  },
+  islamSobhi: {
+    name: "الشيخ إسلام صبحي",
+    server: "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/",
+    complete: true,
+    listenOnly: true,
+    availableSurahs: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,38,41,42,43,44,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114]
+  },
+  luhaidan: {
+    name: "الشيخ محمد اللحيدان",
+    server: "https://server8.mp3quran.net/lhdan/",
+    complete: true,
+    listenOnly: true
+  },
+  jibreen: {
+    name: "الشيخ إبراهيم الجبرين",
+    server: "https://server6.mp3quran.net/jbreen/",
+    complete: true,
+    listenOnly: true,
+    availableSurahs: [1,2,3,4,6,7,8,10,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,30,31,32,33,34,35,36,37,38,39,40,41,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114]
+  },
+  afasyCalifornia: {
+    name: "الشيخ مشاري العفاسي (كاليفورنيا)",
+    server: "https://download.quranicaudio.com/quran/mishaari_california/",
+    complete: true,
+    listenOnly: true
   }
 
 };
@@ -4919,6 +5199,14 @@ async function loadTimingForCurrentSurah(){
 
   timingSurahLoaded = surah;
   currentTiming = [];
+
+  try{
+    if(RECITERS[selectedReader] && RECITERS[selectedReader].listenOnly){
+      timingLoading = false;
+      try{ if(typeof clearAyahHighlight === "function") clearAyahHighlight(); }catch(e){}
+      return;
+    }
+  }catch(e){}
 
   const cacheKey =
     selectedReader + ":" + surah;
@@ -7849,7 +8137,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 ===================================================== */
 (function(){
   /* غيّر الرقم فقط هنا عند كل إصدار جديد — كلمة «الإصدار» تُضاف تلقائياً */
-  const APP_VERSION = "1.0.165";
+  const APP_VERSION = "1.0.166";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   /* حدّث الرقم فقط — كلمة «الإصدار» ثابتة في HTML */
   function setAppVersionDisplays(){
@@ -9946,6 +10234,15 @@ body.interface-old #downloadsPopup .download-native-select{
     عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
     var WHATS_NEW = {
+    "1.0.166": [
+      "إضافة قسم <b>قراء للاستماع فقط</b> من القائمة الجانبية",
+      "مشغّل مخصص للاستماع <b>بدون عرض المصحف</b> وبدون تظليل الآيات",
+      "قراء جدد للاستماع: السديس · الحذيفي · الطبلاوي · البنا · مصطفى إسماعيل · جبريل · بليلة · الأخضر · نبيل وهاني الرفاعي · نعمة الحسان · الأركاني",
+      "إضافة <b>إسلام صبحي</b> و<b>محمد اللحيدان</b> و<b>إبراهيم الجبرين</b> و<b>مشاري العفاسي (كاليفورنيا)</b>",
+      "قائمة السور في وضع الاستماع تعرض <b>السور المتوفرة فقط</b> لكل قارئ",
+      "أزرار السورة السابقة/التالية تنتقل بين السور المتوفرة فقط",
+      "تحسين تشغيل الصوت في وضع الاستماع على أجهزة أندرويد"
+    ],
     "1.0.165": [
       "إصلاحات وتحسينات في الإشعارات"
     ],
@@ -10597,6 +10894,519 @@ body.interface-old #downloadsPopup .download-native-select{
   }
 })();
 </script>
+
+<script id="listen-only-reciters-script">
+(function(){
+  var SURAH_NAMES = ["الفاتحة","البقرة","آل عمران","النساء","المائدة","الأنعام","الأعراف","الأنفال","التوبة","يونس","هود","يوسف","الرعد","إبراهيم","الحجر","النحل","الإسراء","الكهف","مريم","طه","الأنبياء","الحج","المؤمنون","النور","الفرقان","الشعراء","النمل","القصص","العنكبوت","الروم","لقمان","السجدة","الأحزاب","سبأ","فاطر","يس","الصافات","ص","الزمر","غافر","فصلت","الشورى","الزخرف","الدخان","الجاثية","الأحقاف","محمد","الفتح","الحجرات","ق","الذاريات","الطور","النجم","القمر","الرحمن","الواقعة","الحديد","المجادلة","الحشر","الممتحنة","الصف","الجمعة","المنافقون","التغابن","الطلاق","التحريم","الملك","القلم","الحاقة","المعارج","نوح","الجن","المزمل","المدثر","القيامة","الإنسان","المرسلات","النبأ","النازعات","عبس","التكوير","الانفطار","المطففين","الانشقاق","البروج","الطارق","الأعلى","الغاشية","الفجر","البلد","الشمس","الليل","الضحى","الشرح","التين","العلق","القدر","البينة","الزلزلة","العاديات","القارعة","التكاثر","العصر","الهمزة","الفيل","قريش","الماعون","الكوثر","الكافرون","النصر","المسد","الإخلاص","الفلق","الناس"];
+
+  function surahName(n){
+    n = Number(n) || 1;
+    try{ if(typeof surahs !== "undefined" && surahs[n-1]) return surahs[n-1][0]; }catch(e){}
+    return SURAH_NAMES[n-1] || ("سورة " + n);
+  }
+  function isListenOnly(key){
+    try{ return !!(RECITERS && RECITERS[key] && RECITERS[key].listenOnly); }catch(e){ return false; }
+  }
+  function fmt(t){
+    t = Math.max(0, Math.floor(Number(t) || 0));
+    return Math.floor(t/60) + ":" + String(t%60).padStart(2,"0");
+  }
+  function getAudioEl(){
+    return document.getElementById("audio") || (typeof audio !== "undefined" ? audio : null);
+  }
+  function getSurah(){
+    try{
+      return Number(currentAudioSurah || (typeof getSurahNumberForPage === "function" ? getSurahNumberForPage(currentPage) : 1)) || 1;
+    }catch(e){ return 1; }
+  }
+  function setStatus(msg){
+    var el = document.getElementById("lopStatus");
+    if(el) el.textContent = msg || "";
+  }
+  function setPlayIcon(symbol){
+    var play = document.getElementById("lopPlay");
+    if(!play) return;
+    play.classList.remove("is-loading");
+    play.textContent = symbol;
+  }
+  function setLoading(on){
+    var play = document.getElementById("lopPlay");
+    if(!play) return;
+    if(on){
+      play.classList.add("is-loading");
+      if(!play.textContent) play.textContent = "▶";
+    }else play.classList.remove("is-loading");
+  }
+  function syncLopUI(){
+    var rn = document.getElementById("lopReaderName");
+    var sl = document.getElementById("lopSurahLabel");
+    try{
+      if(rn) rn.textContent = (RECITERS[selectedReader] && RECITERS[selectedReader].name) || selectedReader || "—";
+    }catch(e){}
+    try{
+      var sn = getSurah();
+      if(sl) sl.textContent = sn + " - " + surahName(sn);
+    }catch(e){}
+    var a = getAudioEl();
+    var play = document.getElementById("lopPlay");
+    if(play && a && !play.classList.contains("is-loading")){
+      play.textContent = a.paused ? "▶" : "Ⅱ";
+    }
+  }
+
+  /* السور المتوفرة لهذا القارئ فقط */
+  function getAvailableSurahs(key){
+    key = key || selectedReader;
+    try{
+      var r = RECITERS && RECITERS[key];
+      if(r && Array.isArray(r.availableSurahs) && r.availableSurahs.length){
+        return r.availableSurahs.map(Number).filter(function(n){ return n >= 1 && n <= 114; });
+      }
+    }catch(e){}
+    var all = [];
+    for(var i = 1; i <= 114; i++) all.push(i);
+    return all;
+  }
+  function isSurahAvailable(n, key){
+    n = Number(n);
+    return getAvailableSurahs(key).indexOf(n) >= 0;
+  }
+  function nearestAvailable(n, key){
+    var list = getAvailableSurahs(key);
+    if(!list.length) return 1;
+    n = Number(n) || 1;
+    if(list.indexOf(n) >= 0) return n;
+    var best = list[0], bestD = Math.abs(list[0] - n);
+    for(var i = 1; i < list.length; i++){
+      var d = Math.abs(list[i] - n);
+      if(d < bestD){ bestD = d; best = list[i]; }
+    }
+    return best;
+  }
+  function nextAvailable(n, dir){
+    var list = getAvailableSurahs();
+    if(!list.length) return 1;
+    n = Number(n) || list[0];
+    var idx = list.indexOf(n);
+    if(idx < 0){
+      /* ابحث أقرب ثم تحرّك */
+      n = nearestAvailable(n);
+      idx = list.indexOf(n);
+    }
+    if(dir > 0) return list[(idx + 1) % list.length];
+    return list[(idx - 1 + list.length) % list.length];
+  }
+
+  function buildUrl(surahNum){
+    var n = Math.max(1, Math.min(114, Number(surahNum) || 1));
+    var reader = null;
+    try{ reader = RECITERS[selectedReader]; }catch(e){}
+    if(!reader || !reader.server) return "";
+    return String(reader.server).replace(/\/?$/, "/") + String(n).padStart(3,"0") + ".mp3";
+  }
+
+  function assignSrc(a, url){
+    try{ a.pause(); }catch(e){}
+    try{ a.removeAttribute("src"); }catch(e){}
+    try{
+      var own = Object.getOwnPropertyDescriptor(a, "src");
+      if(own && own.configurable){ try{ delete a.src; }catch(e){} }
+    }catch(e){}
+    try{ a.setAttribute("src", url); }catch(e){}
+    try{
+      var proto = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "src");
+      if(proto && proto.set) proto.set.call(a, url);
+      else a.src = url;
+    }catch(e){
+      try{ a.src = url; }catch(e2){}
+    }
+    try{ a.preload = "auto"; }catch(e){}
+    try{ a.load(); }catch(e){}
+  }
+
+  var lopToken = 0;
+  var lopWantPlay = false;
+
+  function doPlay(a, token){
+    if(token != null && token !== lopToken) return;
+    try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
+    setStatus("جاري التشغيل…");
+    var p;
+    try{ p = a.play(); }catch(e){
+      setPlayIcon("▶");
+      setStatus("اضغط ▶ للتشغيل");
+      return;
+    }
+    if(p && typeof p.then === "function"){
+      p.then(function(){
+        if(token != null && token !== lopToken) return;
+        setPlayIcon("Ⅱ");
+        setStatus("");
+      }).catch(function(){
+        if(token != null && token !== lopToken) return;
+        setPlayIcon("▶");
+        setStatus("اضغط ▶ مرة أخرى للتشغيل");
+      });
+    }else{
+      setPlayIcon(a.paused ? "▶" : "Ⅱ");
+      setStatus("");
+    }
+  }
+
+  function loadAndPlaySurah(n, wantPlay){
+    n = nearestAvailable(n);
+    var a = getAudioEl();
+    if(!a){ setStatus("عنصر الصوت غير موجود"); return; }
+    try{ currentAudioSurah = n; }catch(e){}
+    syncLopUI();
+
+    var url = buildUrl(n);
+    if(!url){
+      setStatus("تعذر بناء رابط التلاوة");
+      setPlayIcon("▶");
+      return;
+    }
+
+    var token = ++lopToken;
+    lopWantPlay = !!wantPlay;
+    setLoading(true);
+    setStatus(wantPlay ? "جاري التحميل…" : "جاري تجهيز الصوت…");
+    assignSrc(a, url);
+
+    var done = false;
+    function finishOk(){
+      if(token !== lopToken) return;
+      setLoading(false);
+      setStatus("");
+      if(lopWantPlay) doPlay(a, token);
+      else setPlayIcon("▶");
+    }
+    function finishErr(msg){
+      if(token !== lopToken) return;
+      setLoading(false);
+      setPlayIcon("▶");
+      setStatus(msg || "تعذر تحميل التلاوة");
+    }
+    function onReady(){
+      if(done || token !== lopToken) return;
+      done = true; cleanup(); finishOk();
+    }
+    function onError(){
+      if(done || token !== lopToken) return;
+      done = true; cleanup();
+      finishErr("هذه السورة غير متوفرة لهذا القارئ");
+    }
+    function cleanup(){
+      try{ a.removeEventListener("loadedmetadata", onReady); }catch(e){}
+      try{ a.removeEventListener("canplay", onReady); }catch(e){}
+      try{ a.removeEventListener("error", onError); }catch(e){}
+    }
+    a.addEventListener("loadedmetadata", onReady);
+    a.addEventListener("canplay", onReady);
+    a.addEventListener("error", onError);
+
+    setTimeout(function(){
+      if(token !== lopToken || done) return;
+      if(a.readyState >= 1) onReady();
+    }, 400);
+    setTimeout(function(){
+      if(token !== lopToken || done) return;
+      if(a.readyState >= 1) onReady();
+      else if(lopWantPlay){
+        done = true; cleanup(); setLoading(false); doPlay(a, token);
+      }else{
+        setLoading(false);
+        setPlayIcon("▶");
+        setStatus("اضغط تشغيل عند جاهزية الصوت");
+      }
+    }, 2500);
+
+    try{
+      var ss = document.getElementById("surahSelect");
+      if(ss) ss.value = String(n);
+    }catch(e){}
+  }
+
+  /* قائمة سور مفلترة داخل نافذة السور الزجاجية */
+  function openFilteredSurahPicker(){
+    var list = document.getElementById("surahPickerList");
+    var ov = document.getElementById("surahPickerOverlay");
+    if(!list || !ov){
+      /* احتياطي: نافذة بسيطة */
+      openInlineSurahList();
+      return;
+    }
+    var available = getAvailableSurahs();
+    var current = String(getSurah());
+    list.innerHTML = "";
+    available.forEach(function(n){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "popup-item" + (String(n) === current ? " glass-selected" : "");
+      btn.textContent = n + " - " + surahName(n);
+      btn.setAttribute("data-surah", String(n));
+      btn.onclick = function(){
+        loadAndPlaySurah(n, true);
+        try{ ov.classList.remove("show"); ov.removeAttribute("style"); }catch(e){}
+      };
+      list.appendChild(btn);
+    });
+    /* عنوان يوضح العدد */
+    try{
+      var h = ov.querySelector(".popup-header h2");
+      if(h) h.textContent = "السور المتوفرة (" + available.length + ")";
+    }catch(e){}
+    ov.classList.add("show");
+    try{
+      ov.style.setProperty("display", "flex", "important");
+      ov.style.setProperty("z-index", "520", "important");
+      ov.style.setProperty("align-items", "center", "important");
+      ov.style.setProperty("justify-content", "center", "important");
+    }catch(e){}
+    list.scrollTop = 0;
+  }
+
+  function openInlineSurahList(){
+    /* نادر */
+    var available = getAvailableSurahs();
+    var n = prompt("رقم السورة المتوفرة:\n" + available.slice(0,20).join(", ") + "...");
+    if(n) loadAndPlaySurah(Number(n), true);
+  }
+
+  function enterListenOnlyMode(){
+    document.body.classList.add("listen-only-mode");
+    var root = document.getElementById("listenOnlyPlayer");
+    if(root) root.setAttribute("aria-hidden", "false");
+    try{ if(typeof clearAyahHighlight === "function") clearAyahHighlight(); }catch(e){}
+    try{ currentTiming = []; }catch(e){}
+    try{ pageHitTiming = []; }catch(e){}
+    var sn = nearestAvailable(getSurah());
+    try{ currentAudioSurah = sn; }catch(e){}
+    syncLopUI();
+    loadAndPlaySurah(sn, false);
+  }
+
+  function exitListenOnlyMode(){
+    document.body.classList.remove("listen-only-mode");
+    var root = document.getElementById("listenOnlyPlayer");
+    if(root) root.setAttribute("aria-hidden", "true");
+    try{ var a = getAudioEl(); if(a) a.pause(); }catch(e){}
+    setStatus("");
+    /* أعد عنوان نافذة السور */
+    try{
+      var ov = document.getElementById("surahPickerOverlay");
+      var h = ov && ov.querySelector(".popup-header h2");
+      if(h) h.textContent = "اختيار السورة";
+    }catch(e){}
+    if(isListenOnly(selectedReader)){
+      var fallback = (RECITERS && RECITERS.minshawi) ? "minshawi" : "shatri";
+      try{ selectedReader = fallback; localStorage.setItem("quranReader", fallback); }catch(e){}
+      var sel = document.getElementById("readerSelect");
+      if(sel){ try{ sel.value = fallback; }catch(e){} }
+      try{ if(typeof updateReaderName === "function") updateReaderName(); }catch(e){}
+    }
+    try{ if(typeof loadPage === "function") loadPage(currentPage || 1, { keepAudio: false }); }catch(e){}
+  }
+
+  function applyListenOnlyMode(){
+    if(isListenOnly(selectedReader)) enterListenOnlyMode();
+    else if(document.body.classList.contains("listen-only-mode")){
+      document.body.classList.remove("listen-only-mode");
+      var root = document.getElementById("listenOnlyPlayer");
+      if(root) root.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  function selectListenReader(key){
+    if(!RECITERS[key]) return;
+    try{ selectedReader = key; localStorage.setItem("quranReader", key); }catch(e){}
+    var sel = document.getElementById("readerSelect");
+    if(sel){
+      if(!Array.prototype.some.call(sel.options, function(o){ return o.value === key; })){
+        var opt = document.createElement("option");
+        opt.value = key;
+        opt.textContent = (RECITERS[key].name || key) + " — استماع فقط";
+        sel.appendChild(opt);
+      }
+      sel.value = key;
+    }
+    try{ if(typeof updateReaderName === "function") updateReaderName(); }catch(e){}
+    enterListenOnlyMode();
+  }
+
+  function buildListenOnlyList(){
+    var list = document.getElementById("listenOnlyPickerList");
+    if(!list) return;
+    list.innerHTML = "";
+    Object.keys(RECITERS || {}).forEach(function(key){
+      var r = RECITERS[key];
+      if(!r || !r.listenOnly) return;
+      var avail = getAvailableSurahs(key);
+      var extra = (avail.length < 114) ? (" — " + avail.length + " سورة") : "";
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "popup-item" + (key === selectedReader ? " glass-selected" : "");
+      btn.innerHTML = (r.name || key) + '<small style="display:block;margin-top:4px">استماع فقط' + extra + "</small>";
+      btn.onclick = function(){
+        selectListenReader(key);
+        closeListenOnlyPicker();
+        try{ if(typeof closeSideMenu === "function") closeSideMenu(); }catch(e){}
+      };
+      list.appendChild(btn);
+    });
+  }
+
+  function openListenOnlyPicker(){
+    var ov = document.getElementById("listenOnlyPickerOverlay");
+    if(!ov) return;
+    buildListenOnlyList();
+    ov.classList.add("show");
+    try{
+      ov.style.setProperty("display", "flex", "important");
+      ov.style.setProperty("z-index", "500", "important");
+      ov.style.setProperty("align-items", "center", "important");
+      ov.style.setProperty("justify-content", "center", "important");
+    }catch(e){}
+    try{ if(typeof closeSideMenu === "function") closeSideMenu(); }catch(e){}
+  }
+  function closeListenOnlyPicker(){
+    var ov = document.getElementById("listenOnlyPickerOverlay");
+    if(!ov) return;
+    ov.classList.remove("show");
+    try{ ov.removeAttribute("style"); }catch(e){}
+  }
+
+  function bindPlayer(){
+    var play = document.getElementById("lopPlay");
+    var prev = document.getElementById("lopPrevSurah");
+    var next = document.getElementById("lopNextSurah");
+    var prog = document.getElementById("lopProgress");
+    var cur = document.getElementById("lopCurrent");
+    var dur = document.getElementById("lopDuration");
+    var surahBtn = document.getElementById("lopSurahBtn");
+    var changeR = document.getElementById("lopChangeReader");
+    var back = document.getElementById("lopBackToMushaf");
+
+    if(play) play.onclick = function(){
+      var a = getAudioEl();
+      if(!a){ setStatus("عنصر الصوت غير موجود"); return; }
+      if(!a.paused){
+        try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = false; }catch(e){}
+        try{ a.pause(); }catch(e){}
+        setPlayIcon("▶");
+        setStatus("");
+        return;
+      }
+      var hasSrc = false;
+      try{
+        hasSrc = !!(a.currentSrc || a.getAttribute("src"));
+        if(hasSrc && (a.currentSrc === window.location.href || a.getAttribute("src") === "")) hasSrc = false;
+      }catch(e){}
+      if(!hasSrc || a.readyState < 1 || a.error){
+        loadAndPlaySurah(getSurah(), true);
+        return;
+      }
+      lopWantPlay = true;
+      doPlay(a, lopToken);
+    };
+
+    if(prev) prev.onclick = function(){
+      loadAndPlaySurah(nextAvailable(getSurah(), -1), true);
+    };
+    if(next) next.onclick = function(){
+      loadAndPlaySurah(nextAvailable(getSurah(), +1), true);
+    };
+    if(surahBtn) surahBtn.onclick = function(){
+      openFilteredSurahPicker();
+    };
+    if(changeR) changeR.onclick = openListenOnlyPicker;
+    if(back) back.onclick = exitListenOnlyMode;
+
+    if(prog && !prog.__lopBound){
+      prog.__lopBound = true;
+      prog.addEventListener("click", function(e){
+        var a = getAudioEl();
+        if(!a || !a.duration) return;
+        var rect = prog.getBoundingClientRect();
+        var ratio = Math.max(0, Math.min(1, (rect.right - e.clientX) / rect.width));
+        try{ a.currentTime = ratio * a.duration; }catch(err){}
+      });
+    }
+
+    var a = getAudioEl();
+    if(a && !a.__lopTimeBound){
+      a.__lopTimeBound = true;
+      a.addEventListener("timeupdate", function(){
+        if(!document.body.classList.contains("listen-only-mode")) return;
+        try{
+          if(cur) cur.textContent = fmt(a.currentTime);
+          if(dur) dur.textContent = fmt(a.duration || 0);
+          if(prog && a.duration) prog.value = (a.currentTime / a.duration) * 100;
+        }catch(e){}
+      });
+      a.addEventListener("play", function(){
+        if(!document.body.classList.contains("listen-only-mode")) return;
+        setPlayIcon("Ⅱ"); setStatus("");
+      });
+      a.addEventListener("pause", function(){
+        if(!document.body.classList.contains("listen-only-mode")) return;
+        var p = document.getElementById("lopPlay");
+        if(p && !p.classList.contains("is-loading")) setPlayIcon("▶");
+      });
+      a.addEventListener("ended", function(){
+        if(!document.body.classList.contains("listen-only-mode")) return;
+        loadAndPlaySurah(nextAvailable(getSurah(), +1), true);
+      });
+      a.addEventListener("waiting", function(){
+        if(!document.body.classList.contains("listen-only-mode")) return;
+        setStatus("يُحمّل…");
+      });
+      a.addEventListener("playing", function(){
+        if(!document.body.classList.contains("listen-only-mode")) return;
+        setStatus(""); setPlayIcon("Ⅱ");
+      });
+    }
+
+    var ss = document.getElementById("surahSelect");
+    if(ss && !ss.__lopSurahBound){
+      ss.__lopSurahBound = true;
+      ss.addEventListener("change", function(){
+        if(!document.body.classList.contains("listen-only-mode")) return;
+        var n = Number(ss.value);
+        if(n >= 1 && n <= 114){
+          if(!isSurahAvailable(n)) n = nearestAvailable(n);
+          loadAndPlaySurah(n, true);
+        }
+      });
+    }
+  }
+
+  function bind(){
+    var btn = document.getElementById("listenOnlyRecitersButton");
+    var closeBtn = document.getElementById("listenOnlyPickerClose");
+    var ov = document.getElementById("listenOnlyPickerOverlay");
+    if(btn) btn.onclick = openListenOnlyPicker;
+    if(closeBtn) closeBtn.onclick = closeListenOnlyPicker;
+    if(ov) ov.addEventListener("click", function(e){ if(e.target === ov) closeListenOnlyPicker(); });
+
+    var sel = document.getElementById("readerSelect");
+    if(sel && !sel.__listenOnlyBound){
+      sel.__listenOnlyBound = true;
+      sel.addEventListener("change", function(){ setTimeout(applyListenOnlyMode, 30); });
+    }
+    bindPlayer();
+    try{
+      if(isListenOnly(selectedReader)) setTimeout(enterListenOnlyMode, 500);
+    }catch(e){}
+  }
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
+  else bind();
+  window.addEventListener("load", function(){ setTimeout(bind, 150); });
+  window.__ayaOpenListenOnlyReciters = openListenOnlyPicker;
+})();
+</script>
+
 </body>
 
 <style id="picker-classic-fullscreen-match">
