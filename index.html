@@ -2605,22 +2605,14 @@ body.interface-old .lop-card{
         <option value="salimi">الشيخ منصور السالمي</option>
         <option value="aliJaber">الشيخ علي جابر</option>
         <option value="wadee">الشيخ وديع اليمني</option>
-        <option value="sudais">الشيخ عبدالرحمن السديس — استماع فقط</option>
-        <option value="huthayfi">الشيخ علي الحذيفي — استماع فقط</option>
-        <option value="tablawi">الشيخ محمد الطبلاوي — استماع فقط</option>
-        <option value="banna">الشيخ محمود علي البنا — استماع فقط</option>
-        <option value="mustafaIsmail">الشيخ مصطفى إسماعيل — استماع فقط</option>
-        <option value="jibreel">الشيخ محمد جبريل — استماع فقط</option>
-        <option value="balilah">الشيخ بندر بليلة — استماع فقط</option>
-        <option value="akhdar">الشيخ إبراهيم الأخضر — استماع فقط</option>
-        <option value="nabil">الشيخ نبيل الرفاعي — استماع فقط</option>
-        <option value="hani">الشيخ هاني الرفاعي — استماع فقط</option>
-        <option value="neama">الشيخ نعمة الحسان — استماع فقط</option>
-        <option value="arkani">الشيخ عبدالولي الأركاني — استماع فقط</option>
-        <option value="islamSobhi">الشيخ إسلام صبحي — استماع فقط</option>
-        <option value="luhaidan">الشيخ محمد اللحيدان — استماع فقط</option>
-        <option value="jibreen">الشيخ إبراهيم الجبرين — استماع فقط</option>
-        <option value="afasyCalifornia">الشيخ مشاري العفاسي (كاليفورنيا) — استماع فقط</option>
+        <option value="sudais">الشيخ عبدالرحمن السديس</option>
+        <option value="tablawi">الشيخ محمد الطبلاوي</option>
+        <option value="akhdar">الشيخ إبراهيم الأخضر</option>
+        <option value="nabil">الشيخ نبيل الرفاعي</option>
+        <option value="hani">الشيخ هاني الرفاعي</option>
+        <option value="neama">الشيخ نعمة الحسان</option>
+        <option value="arkani">الشيخ عبدالولي الأركاني</option>
+        <option value="bukhatir">الشيخ صلاح بو خاطر</option>
       </select>
     <button type="button" class="glass-picker-btn" id="readerPickerBtn" aria-label="اختيار القارئ">
       <span id="readerPickerLabel">اختر القارئ</span>
@@ -2782,7 +2774,7 @@ body.interface-old .lop-card{
   </button>
 
   <div class="side-menu-footer" id="sideMenuFooter">
-    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.166</span></div>
+    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.167</span></div>
     <button type="button" class="side-menu-update-link" id="sideMenuUpdateLink" aria-label="تحديث التطبيق">إصدار جديد متوفر: تحديث</button>
   </div>
 
@@ -3220,7 +3212,7 @@ body.interface-old #ayaTourDots .tour-dot-active{
       </div>
 
       <div class="about-copy" id="aboutAppVersion">
-        الإصدار <span id="aboutAppVersionNum">1.0.166</span>
+        الإصدار <span id="aboutAppVersionNum">1.0.167</span>
       </div>
 
       <div class="about-copy">
@@ -4309,48 +4301,41 @@ if(readingUI.sideMenu){
 ========================= */
 
 const RECITERS = {
-
   minshawi: {
     name: "الشيخ محمد صديق المنشاوي",
     server: "https://server10.mp3quran.net/minsh/",
     timingId: 112,
     complete: true
   },
-
   husary: {
     name: "الشيخ محمود خليل الحصري",
     server: "https://server13.mp3quran.net/husr/",
     timingId: 118,
     complete: true
   },
-
   shatri: {
     name: "أبو بكر الشاطري",
     server: "https://server11.mp3quran.net/shatri/",
     timingId: 4,
     complete: true
   },
-
   idrees: {
     name: "إدريس أبكر",
     server: "https://server6.mp3quran.net/abkr/",
     timingId: 12,
     complete: true
   },
-
   fares: {
     name: "فارس عباد",
     server: "https://server8.mp3quran.net/frs_a/",
     complete: true
   },
-
   afasy: {
     name: "مشاري العفاسي",
     server: "https://server8.mp3quran.net/afs/",
     timingId: 123,
     complete: true
   },
-
   yasser: {
     name: "الشيخ ياسر الدوسري",
     /* صوت QuranAudio (نفس التسجيل بجودة أعلى) + توقيت mp3quran read=92 المتوافق معه */
@@ -4358,86 +4343,72 @@ const RECITERS = {
     timingId: 92,
     complete: true
   },
-
   khalidJalil: {
     name: "الشيخ خالد الجليل",
     server: "https://server10.mp3quran.net/jleel/",
     timingId: 20,
     complete: true
   },
-
   abdulbasitMujawwad: {
     name: "الشيخ عبد الباسط عبد الصمد مجود",
     server: "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/",
     timingId: 51,
     complete: true
   },
-
   maher: {
     name: "الشيخ ماهر المعيقلي مجود",
     server: "https://server12.mp3quran.net/maher/Almusshaf-Al-Mojawwad/",
     timingId: 133,
     complete: true
   },
-
-
   qatami: {
     name: "الشيخ ناصر القطامي",
     server: "https://server6.mp3quran.net/qtm/",
     timingId: 86,
     complete: true
   },
-
   ghamdi: {
     name: "الشيخ سعد الغامدي",
     server: "https://server7.mp3quran.net/s_gmd/",
     timingId: 30,
     complete: true
   },
-
   ajmy: {
     name: "الشيخ أحمد العجمي",
     server: "https://server10.mp3quran.net/ajm/",
     timingId: 5,
     complete: true
   },
-
   ayyub: {
     name: "الشيخ محمد أيوب",
     server: "https://server8.mp3quran.net/ayyub/",
     timingId: 109,
     complete: true
   },
-
   shuraim: {
     name: "الشيخ سعود الشريم",
     server: "https://server7.mp3quran.net/shur/",
     timingId: 31,
     complete: true
   },
-
-
   kurdi: {
     name: "الشيخ رعد الكردي",
     server: "https://server6.mp3quran.net/kurdi/",
     timingId: 221,
     complete: true
   },
-
   salimi: {
     name: "الشيخ منصور السالمي",
     server: "https://server14.mp3quran.net/mansor/",
     timingId: 245,
     complete: true
   },
-
   aliJaber: {
     name: "الشيخ علي جابر",
     server: "https://server11.mp3quran.net/a_jbr/",
     timingId: 76,
     complete: true
   },
-
   wadee: {
     name: "الشيخ وديع اليمني",
     server: "https://server6.mp3quran.net/wdee3/",
@@ -4450,19 +4421,49 @@ const RECITERS = {
     name: "الشيخ عبدالرحمن السديس",
     server: "https://server11.mp3quran.net/sds/",
     complete: true,
-    listenOnly: true
-  },
-  huthayfi: {
-    name: "الشيخ علي الحذيفي",
-    server: "https://server9.mp3quran.net/hthfi/",
-    complete: true,
-    listenOnly: true
+    timingId: 54
   },
   tablawi: {
     name: "الشيخ محمد الطبلاوي",
     server: "https://server12.mp3quran.net/tblawi/",
     complete: true,
-    listenOnly: true
+    timingId: 106
+  },
+  akhdar: {
+    name: "الشيخ إبراهيم الأخضر",
+    server: "https://server6.mp3quran.net/akdr/",
+    complete: true,
+    timingId: 1
+  },
+  nabil: {
+    name: "الشيخ نبيل الرفاعي",
+    server: "https://server9.mp3quran.net/nabil/",
+    complete: true,
+    timingId: 87
+  },
+  hani: {
+    name: "الشيخ هاني الرفاعي",
+    server: "https://server8.mp3quran.net/hani/",
+    complete: true,
+    timingId: 89
+  },
+  neama: {
+    name: "الشيخ نعمة الحسان",
+    server: "https://server8.mp3quran.net/namh/",
+    complete: true,
+    timingId: 88
+  },
+  arkani: {
+    name: "الشيخ عبدالولي الأركاني",
+    server: "https://server6.mp3quran.net/arkani/",
+    complete: true,
+    timingId: 72
+  },
+  bukhatir: {
+    name: "الشيخ صلاح بو خاطر",
+    server: "https://server8.mp3quran.net/bu_khtr/",
+    timingId: 46,
+    complete: true
   },
   banna: {
     name: "الشيخ محمود علي البنا",
@@ -4485,36 +4486,6 @@ const RECITERS = {
   balilah: {
     name: "الشيخ بندر بليلة",
     server: "https://server6.mp3quran.net/balilah/",
-    complete: true,
-    listenOnly: true
-  },
-  akhdar: {
-    name: "الشيخ إبراهيم الأخضر",
-    server: "https://server6.mp3quran.net/akdr/",
-    complete: true,
-    listenOnly: true
-  },
-  nabil: {
-    name: "الشيخ نبيل الرفاعي",
-    server: "https://server9.mp3quran.net/nabil/",
-    complete: true,
-    listenOnly: true
-  },
-  hani: {
-    name: "الشيخ هاني الرفاعي",
-    server: "https://server8.mp3quran.net/hani/",
-    complete: true,
-    listenOnly: true
-  },
-  neama: {
-    name: "الشيخ نعمة الحسان",
-    server: "https://server8.mp3quran.net/namh/",
-    complete: true,
-    listenOnly: true
-  },
-  arkani: {
-    name: "الشيخ عبدالولي الأركاني",
-    server: "https://server6.mp3quran.net/arkani/",
     complete: true,
     listenOnly: true
   },
@@ -4543,8 +4514,14 @@ const RECITERS = {
     server: "https://download.quranicaudio.com/quran/mishaari_california/",
     complete: true,
     listenOnly: true
+  },
+  imamFeysal: {
+    name: "القارئ إمام فيصل محمد",
+    server: "https://archive.org/download/Faycell_uP_bY_mUSLEm/",
+    filePattern: "{n}_uP_bY_mUSLEm.mp3",
+    complete: true,
+    listenOnly: true
   }
-
 };
 
 let selectedReader =
@@ -5952,6 +5929,13 @@ audio.addEventListener(
   ()=>{
 
     resetRepeat();
+
+    /* وضع الاستماع فقط: المشغّل المخصص يتولى الانتقال */
+    try{
+      if(document.body.classList.contains("listen-only-mode")){
+        return;
+      }
+    }catch(e){}
 
     const finishedSurah =
       currentAudioSurah ||
@@ -8137,7 +8121,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 ===================================================== */
 (function(){
   /* غيّر الرقم فقط هنا عند كل إصدار جديد — كلمة «الإصدار» تُضاف تلقائياً */
-  const APP_VERSION = "1.0.166";
+  const APP_VERSION = "1.0.167";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   /* حدّث الرقم فقط — كلمة «الإصدار» ثابتة في HTML */
   function setAppVersionDisplays(){
@@ -9318,33 +9302,62 @@ document.addEventListener("DOMContentLoaded",()=>{
     const list = $("readerPickerList");
     const sel = $("readerSelect");
     if(!list || !sel) return;
+
     list.innerHTML = "";
-    const current = sel.value;
+    const current = selectedReader || sel.value;
     let selectedBtn = null;
-    Array.from(sel.options).forEach(function(opt){
-      /* لا تتخطّ أي خيار له نص — حتى لو value فاضي نادر */
-      const val = opt.value;
-      const name = (opt.textContent || "").trim();
-      if(!name) return;
-      if(val === "" && name.indexOf("اختر") === 0) return;
+
+    /*
+     * قائمة قراء التظليل تُبنى مباشرة من RECITERS، وليس من خيارات select.
+     * أي قارئ ليس listenOnly يظهر هنا، وبذلك لا يختفي السديس وبقية القراء
+     * الذين لديهم timingId بسبب اختلاف محتوى القائمة القديمة.
+     */
+    Object.keys(RECITERS || {}).forEach(function(key){
+      const r = RECITERS[key];
+      if(!r || r.listenOnly) return;
+
+      /* تأكد أن القارئ موجود أيضاً في select حتى تعمل آلية onchange الحالية. */
+      let opt = Array.from(sel.options).find(function(o){ return o.value === key; });
+      if(!opt){
+        opt = document.createElement("option");
+        opt.value = key;
+        opt.textContent = r.name || key;
+        sel.appendChild(opt);
+      }
+
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "popup-item" + (val && val === current ? " glass-selected" : "");
-      btn.textContent = name;
+      btn.className = "popup-item" + (key === current ? " glass-selected" : "");
+      btn.textContent = r.name || key;
+
       btn.onclick = function(){
-        if(val){
-          sel.value = val;
-          try{ sel.dispatchEvent(new Event("change", { bubbles: true })); }catch(e){}
+        /* غيّر القارئ فعلياً ثم شغّل نفس مسار التبديل الأصلي */
+        selectedReader = key;
+        try{ localStorage.setItem("quranReader", key); }catch(e){}
+        sel.value = key;
+        try{
+          sel.dispatchEvent(new Event("change", { bubbles: true }));
+        }catch(e){
+          /* دعم WebView قديم */
+          try{
+            var ev = document.createEvent("HTMLEvents");
+            ev.initEvent("change", true, false);
+            sel.dispatchEvent(ev);
+          }catch(e2){}
         }
-        syncReaderLabel();
+        try{ syncReaderLabel(); }catch(e){}
         closeOverlay($("readerPickerOverlay"));
       };
+
       list.appendChild(btn);
-      if(val && val === current) selectedBtn = btn;
+      if(key === current) selectedBtn = btn;
     });
-    /* ابدأ من أعلى القائمة دائماً حتى تظهر أول الأسماء */
+
     requestAnimationFrame(function(){
       list.scrollTop = 0;
+      if(selectedBtn){
+        try{ selectedBtn.scrollIntoView({block:"nearest"}); }catch(e){}
+      }
     });
   }
 
@@ -10234,14 +10247,20 @@ body.interface-old #downloadsPopup .download-native-select{
     عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
     var WHATS_NEW = {
-    "1.0.166": [
+    "1.0.167": [
       "إضافة قسم <b>قراء للاستماع فقط</b> من القائمة الجانبية",
       "مشغّل مخصص للاستماع <b>بدون عرض المصحف</b> وبدون تظليل الآيات",
-      "قراء جدد للاستماع: السديس · الحذيفي · الطبلاوي · البنا · مصطفى إسماعيل · جبريل · بليلة · الأخضر · نبيل وهاني الرفاعي · نعمة الحسان · الأركاني",
-      "إضافة <b>إسلام صبحي</b> و<b>محمد اللحيدان</b> و<b>إبراهيم الجبرين</b> و<b>مشاري العفاسي (كاليفورنيا)</b>",
+      "قراء للاستماع فقط: البنا · مصطفى إسماعيل · جبريل · بليلة · إسلام صبحي · اللحيدان · الجبرين · العفاسي (كاليفورنيا) · إمام فيصل محمد",
+      "إضافة إلى قائمة التلاوة مع التظليل: <b>السديس · الطبلاوي · الأخضر · نبيل الرفاعي · هاني الرفاعي · نعمة الحسان · الأركاني · صلاح بو خاطر</b>",
+      "",
       "قائمة السور في وضع الاستماع تعرض <b>السور المتوفرة فقط</b> لكل قارئ",
       "أزرار السورة السابقة/التالية تنتقل بين السور المتوفرة فقط",
+      "عند انتهاء السورة في وضع الاستماع تنتقل تلقائياً إلى <b>السورة التالية</b>",
       "تحسين تشغيل الصوت في وضع الاستماع على أجهزة أندرويد"
+    
+    
+    
+    
     ],
     "1.0.165": [
       "إصلاحات وتحسينات في الإشعارات"
@@ -11002,26 +11021,45 @@ body.interface-old #downloadsPopup .download-native-select{
     var reader = null;
     try{ reader = RECITERS[selectedReader]; }catch(e){}
     if(!reader || !reader.server) return "";
-    return String(reader.server).replace(/\/?$/, "/") + String(n).padStart(3,"0") + ".mp3";
+    var base = String(reader.server).replace(/\/?$/, "/");
+    var nn = String(n).padStart(3, "0");
+    if(reader.filePattern){
+      return base + String(reader.filePattern).replace("{n}", nn).replace("{nn}", nn).replace("{N}", String(n));
+    }
+    return base + nn + ".mp3";
   }
 
-  function assignSrc(a, url){
+  /* تشغيل التلاوات التي تم تنزيلها من Cache Storage أولاً.
+     هذا مهم لوضع الاستماع فقط، لأن تعيين audio.src مباشرة لا يمر عبر Cache API. */
+  async function offlineAudioUrl(url){
+    try{
+      if(typeof caches === "undefined" || !url) return url;
+      var cache = await caches.open("aya-audio-v1");
+      var hit = await cache.match(url);
+      if(!hit) return url;
+      var blob = await hit.blob();
+      if(!blob || !blob.size) return url;
+      var audioBlob = new Blob([blob], {type: "audio/mpeg"});
+      return URL.createObjectURL(audioBlob);
+    }catch(e){
+      return url;
+    }
+  }
+
+  async function assignSrc(a, url){
     try{ a.pause(); }catch(e){}
     try{ a.removeAttribute("src"); }catch(e){}
-    try{
-      var own = Object.getOwnPropertyDescriptor(a, "src");
-      if(own && own.configurable){ try{ delete a.src; }catch(e){} }
-    }catch(e){}
-    try{ a.setAttribute("src", url); }catch(e){}
+    var sourceUrl = await offlineAudioUrl(url);
     try{
       var proto = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "src");
-      if(proto && proto.set) proto.set.call(a, url);
-      else a.src = url;
+      if(proto && proto.set) proto.set.call(a, sourceUrl);
+      else a.src = sourceUrl;
     }catch(e){
-      try{ a.src = url; }catch(e2){}
+      try{ a.src = sourceUrl; }catch(e2){}
     }
     try{ a.preload = "auto"; }catch(e){}
     try{ a.load(); }catch(e){}
+    return sourceUrl;
   }
 
   var lopToken = 0;
@@ -11071,7 +11109,6 @@ body.interface-old #downloadsPopup .download-native-select{
     lopWantPlay = !!wantPlay;
     setLoading(true);
     setStatus(wantPlay ? "جاري التحميل…" : "جاري تجهيز الصوت…");
-    assignSrc(a, url);
 
     var done = false;
     function finishOk(){
@@ -11104,6 +11141,8 @@ body.interface-old #downloadsPopup .download-native-select{
     a.addEventListener("loadedmetadata", onReady);
     a.addEventListener("canplay", onReady);
     a.addEventListener("error", onError);
+
+    assignSrc(a, url).catch(function(){ onError(); });
 
     setTimeout(function(){
       if(token !== lopToken || done) return;
@@ -11222,13 +11261,10 @@ body.interface-old #downloadsPopup .download-native-select{
     try{ selectedReader = key; localStorage.setItem("quranReader", key); }catch(e){}
     var sel = document.getElementById("readerSelect");
     if(sel){
-      if(!Array.prototype.some.call(sel.options, function(o){ return o.value === key; })){
-        var opt = document.createElement("option");
-        opt.value = key;
-        opt.textContent = (RECITERS[key].name || key) + " — استماع فقط";
-        sel.appendChild(opt);
+      /* القارئ للاستماع فقط لا يُضاف أبداً إلى قائمة قراء التظليل */
+      if(!isListenOnly(key)) {
+        try{ sel.value = key; }catch(e){}
       }
-      sel.value = key;
     }
     try{ if(typeof updateReaderName === "function") updateReaderName(); }catch(e){}
     enterListenOnlyMode();
@@ -11240,7 +11276,8 @@ body.interface-old #downloadsPopup .download-native-select{
     list.innerHTML = "";
     Object.keys(RECITERS || {}).forEach(function(key){
       var r = RECITERS[key];
-      if(!r || !r.listenOnly) return;
+      /* قسم الاستماع فقط: لا توقيت ولا تظليل */
+      if(!r || !r.listenOnly || Number.isFinite(Number(r.timingId))) return;
       var avail = getAvailableSurahs(key);
       var extra = (avail.length < 114) ? (" — " + avail.length + " سورة") : "";
       var btn = document.createElement("button");
@@ -11355,7 +11392,14 @@ body.interface-old #downloadsPopup .download-native-select{
       });
       a.addEventListener("ended", function(){
         if(!document.body.classList.contains("listen-only-mode")) return;
-        loadAndPlaySurah(nextAvailable(getSurah(), +1), true);
+        try{
+          var cur = getSurah();
+          var nxt = nextAvailable(cur, +1);
+          setStatus("الانتقال إلى السورة " + nxt + "…");
+          loadAndPlaySurah(nxt, true);
+        }catch(e){
+          try{ loadAndPlaySurah(getSurah() + 1, true); }catch(e2){}
+        }
       });
       a.addEventListener("waiting", function(){
         if(!document.body.classList.contains("listen-only-mode")) return;
