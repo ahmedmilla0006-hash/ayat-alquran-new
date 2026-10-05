@@ -1114,15 +1114,9 @@ body.update-banner-visible .page-area{
 .reader-info-top .sep{
   display: none !important;
 }
-/* كما كان: الجزء يمين، السورة يسار في شريط RTL */
 .reader-info-top #juzInfo,
 .reader-info-top #surahInfo{
   flex: 0 1 auto;
-  min-width: 0;
-  max-width: 46%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   text-align: start;
 }
 /* توسيط خفيف: مساحة بيضاء أعلى/أسفل مع رفع المصحف سطراً */
@@ -2640,7 +2634,6 @@ body.interface-old *::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.12);
         <option value="khalidJalil">الشيخ خالد الجليل</option>
         <option value="abdulbasitMujawwad">الشيخ عبد الباسط عبد الصمد مجود</option>
         <option value="maher">الشيخ ماهر المعيقلي مجود</option>
-        <option value="maherMurattal">الشيخ ماهر المعيقلي مرتل</option>
         <option value="qatami">الشيخ ناصر القطامي</option>
         <option value="ghamdi">الشيخ سعد الغامدي</option>
         <option value="ajmy">الشيخ أحمد العجمي</option>
@@ -2822,7 +2815,7 @@ body.interface-old *::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.12);
   </button>
 
   <div class="side-menu-footer" id="sideMenuFooter">
-    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.170</span></div>
+    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.169</span></div>
     <button type="button" class="side-menu-update-link" id="sideMenuUpdateLink" aria-label="تحديث التطبيق">إصدار جديد متوفر: تحديث</button>
   </div>
 
@@ -3242,7 +3235,6 @@ body.interface-old #ayaTourDots .tour-dot-active{
       <ul style="margin:0 0 12px 0;padding-right:18px;color:#ddd">
         <li><a href="https://mp3quran.net" target="_blank" rel="noopener noreferrer" style="color:#7ec8ff;text-decoration:underline;font-weight:700">موقع MP3Quran</a> — مصدر صور صفحات المصحف (SVG)، ملفات التلاوة، وتوقيت الآيات. المحتوى متاح للاستماع والتحميل، ويُعرض هنا لأغراض تعليمية ودينية غير تجارية.</li>
         <li><a href="https://quranicaudio.com" target="_blank" rel="noopener noreferrer" style="color:#7ec8ff;text-decoration:underline;font-weight:700">QuranicAudio</a> — مصدر بعض التسجيلات الصوتية عالية الجودة. الاستخدام مسموح للأغراض الشخصية وغير التجارية وفق سياسة الموقع.</li>
-        <li><a href="https://everyayah.com" target="_blank" rel="noopener noreferrer" style="color:#7ec8ff;text-decoration:underline;font-weight:700">EveryAyah</a> — مصدر ملفات التلاوة <b>آية بآية</b> (مثل ماهر المعيقلي مرتّل). الاستخدام للأغراض التعليمية والشخصية وغير التجارية مع احترام حقوق أصحاب التسجيلات.</li>
         <li><a href="https://alquran.cloud" target="_blank" rel="noopener noreferrer" style="color:#7ec8ff;text-decoration:underline;font-weight:700">AlQuran Cloud</a> / <a href="https://quranhub.com" target="_blank" rel="noopener noreferrer" style="color:#7ec8ff;text-decoration:underline;font-weight:700">QuranHub</a> — مصدر البحث في النص القرآني. يُستخدم الـAPI وفق شروط الخدمة المتاحة.</li>
         <li><a href="https://github.com/spa5k/tafsir_api" target="_blank" rel="noopener noreferrer" style="color:#7ec8ff;text-decoration:underline;font-weight:700">spa5k/tafsir_api</a> — مصدر التفاسير (الطبري، ابن كثير، البغوي). واجهة الـAPI مرخّصة (MIT)، ونصوص التفاسير القديمة في الملك العام مع حفظ الفضل لأصحابها.</li>
       </ul>
@@ -3318,7 +3310,7 @@ body.interface-old #ayaTourDots .tour-dot-active{
       </div>
 
       <div class="about-copy" id="aboutAppVersion">
-        الإصدار <span id="aboutAppVersionNum">1.0.170</span>
+        الإصدار <span id="aboutAppVersionNum">1.0.169</span>
       </div>
 
       <div class="about-copy">
@@ -3450,34 +3442,6 @@ const aboutClose =
 
 let currentAudioSurah = null;
 
-function ayaShouldKeepPlaying(){
-  try{
-    if(window.__ayaNavShouldPlay) return true;
-  }catch(e){}
-  try{
-    if(window.__ayaUserWantsPlay) return true;
-  }catch(e){}
-  try{
-    if(typeof userWantsPlay !== "undefined" && userWantsPlay) return true;
-  }catch(e){}
-  try{
-    if(typeof audio !== "undefined" && audio && !audio.paused) return true;
-  }catch(e){}
-  try{
-    var pb = document.getElementById("playButton");
-    if(pb && (pb.textContent || "").indexOf("Ⅱ") >= 0) return true;
-  }catch(e){}
-  return false;
-}
-
-function ayaMarkKeepPlaying(on){
-  try{ window.__ayaNavShouldPlay = !!on; }catch(e){}
-  if(on){
-    try{ window.__ayaUserWantsPlay = true; }catch(e){}
-    try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
-  }
-}
-
 function loadPage(n, options = {}){
 
   currentPage =
@@ -3504,34 +3468,10 @@ function loadPage(n, options = {}){
     loadPageHitTiming(currentPage);
   }
 
-  /* حدّث اسم السورة في المشغّل مع الصفحة إن لم يكن التشغيل متابعاً لصوت سورة أخرى */
-  try{
-    var playingNow = false;
-    try{
-      playingNow = !!(typeof audio !== "undefined" && audio && !audio.paused);
-    }catch(e){}
-    try{
-      if(!playingNow && window.__ayaUserWantsPlay) playingNow = true;
-    }catch(e){}
-    if(!playingNow && !options.autoContinue){
-      var sn = typeof getSurahNumberForPage === "function" ? getSurahNumberForPage(currentPage) : null;
-      if(sn && typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(sn);
-    }
-  }catch(e){}
-
   // عندما تكون الصفحة التالية داخل نفس مسار التلاوة،
   // نغيّر الصورة فقط ولا نعيد تحميل ملف الصوت.
   if(options.keepAudio){
-    try{
-      if(!(RECITERS[selectedReader] && RECITERS[selectedReader].verseByVerse)){
-        syncHighlight();
-      }else{
-        /* في المرتل: حدّث التمييز فقط إن كانت الآية على هذه الصفحة */
-        try{ syncHighlight(); }catch(e){}
-      }
-    }catch(e){
-      try{ syncHighlight(); }catch(e2){}
-    }
+    syncHighlight();
     return;
   }
 
@@ -3562,17 +3502,7 @@ function loadPage(n, options = {}){
 function nextPage(){
 
   if(currentPage < TOTAL_PAGES){
-    try{ window.__vbbFollowPage = false; }catch(e){}
-    try{
-      if(RECITERS[selectedReader] && RECITERS[selectedReader].verseByVerse){
-        const target = currentPage + 1;
-        loadPage(target, { keepAudio: true });
-        if(typeof window.vbbGoToFirstAyahOnPage === "function"){
-          window.vbbGoToFirstAyahOnPage(target);
-        }
-        return;
-      }
-    }catch(e){}
+
     loadPage(
       currentPage + 1
     );
@@ -3589,17 +3519,7 @@ function nextPage(){
 function prevPage(){
 
   if(currentPage > 1){
-    try{ window.__vbbFollowPage = false; }catch(e){}
-    try{
-      if(RECITERS[selectedReader] && RECITERS[selectedReader].verseByVerse){
-        const target = currentPage - 1;
-        loadPage(target, { keepAudio: true });
-        if(typeof window.vbbGoToFirstAyahOnPage === "function"){
-          window.vbbGoToFirstAyahOnPage(target);
-        }
-        return;
-      }
-    }catch(e){}
+
     loadPage(
       currentPage - 1
     );
@@ -4020,32 +3940,6 @@ async function fetchTimingForSurah(surahNumber){
   }
 
   try{
-    /* مرتل آية-بآية: مضلعات من polygonTimingId + أزمنة وهمية للترتيب */
-    const rd0 = RECITERS[selectedReader];
-    if(rd0 && rd0.verseByVerse){
-      const polyId = Number(rd0.polygonTimingId) || 133;
-      const resV = await fetch(
-        TIMING_API + "?surah=" + surah + "&read=" + polyId,
-        {cache:"force-cache"}
-      );
-      let listV = [];
-      if(resV.ok){
-        const dataV = await resV.json();
-        listV = Array.isArray(dataV) ? dataV.filter(function(x){
-          return x && x.ayah != null;
-        }) : [];
-      }
-      listV = listV.map(function(x, idx){
-        const a = Number(x.ayah) || (idx + 1);
-        return Object.assign({}, x, {
-          start_time: (a - 1) * 10000,
-          end_time: a * 10000
-        });
-      });
-      timingCache[cacheKey] = listV;
-      return tagTimingItems(listV, surah);
-    }
-
     const readId = await getTimingReadId();
     if(!readId) return [];
 
@@ -4193,6 +4087,9 @@ function playFromCurrentPosition(){
 */
 function seekToAyahItem(item, options = {}){
   if(!item || !audio) return false;
+  const st = Number(item.start_time);
+  if(!Number.isFinite(st)) return false;
+  const targetSec = Math.max(0, st / 1000);
 
   const targetSurah = Number(
     item._surah ||
@@ -4203,70 +4100,6 @@ function seekToAyahItem(item, options = {}){
   );
 
   const autoPlay = options.autoPlay !== false;
-
-  /* وضع آية-بآية (مثل ماهر المرتل): تحميل ملف الآية مباشرة */
-  try{
-    const rdS = RECITERS[selectedReader];
-    if(rdS && rdS.verseByVerse){
-      const ayahN = Math.max(1, Number(item.ayah) || 1);
-      window.__vbbAyah = ayahN;
-      currentAudioSurah = targetSurah;
-      const urlV = typeof getAudioUrl === "function"
-        ? getAudioUrl(selectedReader, currentPage, targetSurah)
-        : "";
-      if(!urlV) return false;
-      if(typeof resetRepeat === "function") resetRepeat();
-      try{ window.__ayaAudioSourceSwitching = true; }catch(e){}
-      const tok = ++audioPageToken;
-      audio._ayaLoadToken = tok;
-      audio.pause();
-      audio.src = urlV;
-      audio.load();
-      const startV = function(){
-        if(audio._ayaLoadToken !== tok) return;
-        try{ audio.currentTime = 0; }catch(e){}
-        if(typeof syncHighlight === "function"){
-          try{ syncHighlight(); }catch(e){}
-        }
-        if(autoPlay && (window.__ayaUserWantsPlay !== false)){
-          try{ window.__ayaUserWantsPlay = true; }catch(e){}
-          try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
-          const p = audio.play();
-          if(p && p.catch) p.catch(function(){});
-          try{ playButton.textContent = "Ⅱ"; }catch(e){}
-        }else if(!autoPlay){
-          try{ if(playButton) playButton.textContent = "▶"; }catch(e){}
-        }
-        try{ window.__ayaAudioSourceSwitching = false; }catch(e){}
-      };
-      if(audio.readyState >= 1) startV();
-      else audio.addEventListener("loadedmetadata", function onM(){
-        audio.removeEventListener("loadedmetadata", onM);
-        startV();
-      });
-      /* حضّر التوقيت للتمييز */
-      try{
-        const ck = selectedReader + ":" + targetSurah;
-        if(timingCache[ck]){
-          currentTiming = tagTimingItems(timingCache[ck], targetSurah);
-          timingSurahLoaded = targetSurah;
-          if(typeof syncHighlight === "function") syncHighlight();
-        }else if(typeof fetchTimingForSurah === "function"){
-          fetchTimingForSurah(targetSurah).then(function(list){
-            if(audio._ayaLoadToken !== tok) return;
-            currentTiming = list || [];
-            timingSurahLoaded = targetSurah;
-            if(typeof syncHighlight === "function") syncHighlight();
-          });
-        }
-      }catch(e){}
-      return true;
-    }
-  }catch(e){}
-
-  const st = Number(item.start_time);
-  if(!Number.isFinite(st)) return false;
-  const targetSec = Math.max(0, st / 1000);
 
   if(typeof resetRepeat === "function") resetRepeat();
 
@@ -4603,13 +4436,9 @@ const RECITERS = {
   },
   yasser: {
     name: "الشيخ ياسر الدوسري",
-    /* QuranicAudio متوافق غالباً مع timing 92؛ استثناءات في surahAudioOverrides */
+    /* صوت QuranAudio (نفس التسجيل بجودة أعلى) + توقيت mp3quran read=92 المتوافق معه */
     server: "https://download.quranicaudio.com/quran/yasser_ad-dussary/",
     timingId: 92,
-    /* سورة ق: تسجيل QuranicAudio أطول وغير متطابق — استخدم مجلد التوقيت الرسمي */
-    surahAudioOverrides: {
-      50: "https://cdn.mp3quran.net/audio/yasser-dosari/r1/"
-    },
     complete: true
   },
   khalidJalil: {
@@ -4628,14 +4457,6 @@ const RECITERS = {
     name: "الشيخ ماهر المعيقلي مجود",
     server: "https://server12.mp3quran.net/maher/Almusshaf-Al-Mojawwad/",
     timingId: 133,
-    complete: true
-  },
-  maherMurattal: {
-    name: "الشيخ ماهر المعيقلي مرتل",
-    /* آية بآية من everyayah + مضلعات التمييز من توقيت المجود (نفس المصحف) */
-    server: "https://everyayah.com/data/MaherAlMuaiqly128kbps/",
-    verseByVerse: true,
-    polygonTimingId: 133,
     complete: true
   },
   qatami: {
@@ -4808,24 +4629,12 @@ if(
 
 function getSurahNumberForPage(pageNumber){
   /*
-    إن وُجدت سورة تبدأ في هذه الصفحة نفضّلها (مثل صفحة 523 = الطور)،
-    وإلا أول سورة لها محتوى في الصفحة.
+    نُرجع أول سورة لها محتوى في الصفحة (وليس آخر سورة تبدأ فيها).
+    مثال: صفحة 587 → الانفطار قبل المطففين.
   */
   if(typeof getSurahsOnPage === "function"){
     const list = getSurahsOnPage(pageNumber);
-    if(list && list.length){
-      const p = Number(pageNumber) || 1;
-      /* سورة تبدأ في هذه الصفحة */
-      for(let k = list.length - 1; k >= 0; k--){
-        const sn = Number(list[k]);
-        try{
-          if(typeof surahs !== "undefined" && surahs[sn - 1] && Number(surahs[sn - 1][1]) === p){
-            return sn;
-          }
-        }catch(e){}
-      }
-      return list[0];
-    }
+    if(list && list.length) return list[0];
   }
 
   for(let i = 0; i < surahs.length; i++){
@@ -4855,25 +4664,8 @@ function getAudioUrl(readerKey, pageNumber, explicitSurah = null){
     explicitSurah ||
     getSurahNumberForPage(pageNumber);
 
-  if(reader.verseByVerse){
-    const ayah = Math.max(1, Number(window.__vbbAyah) || 1);
-    return reader.server +
-      String(surahNumber).padStart(3, "0") +
-      String(ayah).padStart(3, "0") +
-      ".mp3";
-  }
-
   const fileNumber =
     String(surahNumber).padStart(3, "0");
-
-  /* استثناء سور معيّنة إن اختلف التسجيل عن ملف التوقيت */
-  try{
-    const ov = reader.surahAudioOverrides && reader.surahAudioOverrides[Number(surahNumber)];
-    if(ov){
-      if(String(ov).toLowerCase().endsWith(".mp3")) return String(ov);
-      return String(ov).replace(/\/?$/, "/") + fileNumber + ".mp3";
-    }
-  }catch(e){}
 
   return reader.server + fileNumber + ".mp3";
 }
@@ -5662,16 +5454,6 @@ function seekAudioToCurrentPage(){
 function getActiveTiming(){
   if(!currentTiming.length) return null;
 
-  try{
-    const rd = RECITERS[selectedReader];
-    if(rd && rd.verseByVerse){
-      const a = Math.max(1, Number(window.__vbbAyah) || 1);
-      return currentTiming.find(function(item){
-        return Number(item.ayah) === a;
-      }) || null;
-    }
-  }catch(e){}
-
   const t = audio.currentTime * 1000;
 
   return currentTiming.find(item =>
@@ -5691,13 +5473,6 @@ function syncHighlight(){
     pageFromTiming(active);
 
   if(targetPage && targetPage !== currentPage){
-    /* وضع آية-بآية: لا تُغيّر الصفحة من التمييز أبداً (التقليب يدوي أو صريح فقط) */
-    try{
-      const rdH = RECITERS[selectedReader];
-      if(rdH && rdH.verseByVerse){
-        return;
-      }
-    }catch(e){}
     loadPage(
       targetPage,
       {keepAudio:true}
@@ -5769,61 +5544,21 @@ function seekMsForPageStart(list, pageNum, surahNum){
 function updateAudioSource(keepPosition = false, options = {}){
 
   const oldTime = audio.currentTime || 0;
-  var __navPlay = false;
-  try{ __navPlay = !!window.__ayaNavShouldPlay; }catch(e){}
   const wasPlaying =
     !audio.paused ||
-    !!(typeof userWantsPlay !== "undefined" && userWantsPlay) ||
-    !!window.__ayaUserWantsPlay ||
-    __navPlay;
-  const autoContinue = !!options.autoContinue || __navPlay;
+    !!(typeof userWantsPlay !== "undefined" && userWantsPlay);
+  const autoContinue = !!options.autoContinue;
   /* أثناء تبديل المصدر بسبب التنقل لا تُفسَّر pause على أنها إيقاف من المستخدم */
   var __continueAfterSource =
     !!(wasPlaying || autoContinue);
   try{
-    if(__continueAfterSource){
-      try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
-      try{ window.__ayaUserWantsPlay = true; }catch(e){}
+    if(typeof userWantsPlay !== "undefined" && __continueAfterSource){
+      userWantsPlay = true;
     }
   }catch(e){}
   try{ window.__ayaAudioSourceSwitching = true; }catch(e){}
   const explicitSurah = options.surahNumber || null;
   const explicitAyah = Number(options.startAyah) || null;
-
-  /* مرتل آية-بآية */
-  try{
-    if(RECITERS[selectedReader] && RECITERS[selectedReader].verseByVerse){
-      const sNum = Number(explicitSurah) || getSurahNumberForPage(currentPage) || 1;
-      const aNum = explicitAyah || 1;
-      /* اختيار جزء/صفحة فقط بدون سورة: اذهب لأول آية في الصفحة */
-      if(!explicitSurah && !explicitAyah && typeof window.vbbGoToFirstAyahOnPage === "function"){
-        try{ window.__vbbAyah = 1; }catch(e){}
-        currentAudioSurah = sNum;
-        try{ if(typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(sNum); }catch(e){}
-        if(autoContinue || wasPlaying || (typeof userWantsPlay !== "undefined" && userWantsPlay) || window.__ayaUserWantsPlay){
-          try{ window.__ayaUserWantsPlay = true; }catch(e){}
-        }
-        setTimeout(function(){
-          window.vbbGoToFirstAyahOnPage(currentPage);
-        }, 40);
-        try{ window.__ayaAudioSourceSwitching = false; }catch(e){}
-        return;
-      }
-      try{ window.__vbbAyah = aNum; }catch(e){}
-      currentAudioSurah = sNum;
-      try{ if(typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(sNum); }catch(e){}
-      if(autoContinue || wasPlaying || (typeof userWantsPlay !== "undefined" && userWantsPlay) || window.__ayaUserWantsPlay){
-        try{ window.__ayaUserWantsPlay = true; }catch(e){}
-        setTimeout(function(){
-          if(typeof window.playVbbAyah === "function") window.playVbbAyah(sNum, aNum, true);
-        }, 30);
-      }else if(typeof window.playVbbAyah === "function"){
-        window.playVbbAyah(sNum, aNum, false);
-      }
-      try{ window.__ayaAudioSourceSwitching = false; }catch(e){}
-      return;
-    }
-  }catch(e){}
 
   /*
     عند فتح/قلب صفحة بدون سورة محددة:
@@ -6099,185 +5834,120 @@ updateReaderName();
 
 readerSelect.onchange = ()=>{
 
-  const prevReader = selectedReader;
-  const nextReader = readerSelect.value;
-  const prevWasVbb = !!(RECITERS[prevReader] && RECITERS[prevReader].verseByVerse);
-  const nextIsVbb = !!(RECITERS[nextReader] && RECITERS[nextReader].verseByVerse);
-
-  /* 1) احفظ السورة والآية قبل أي تغيير */
-  let targetSurah = Number(currentAudioSurah) || (typeof getSurahNumberForPage === "function" ? getSurahNumberForPage(currentPage) : 1) || 1;
+  /* احفظ الآية الحالية قبل تبديل القارئ لنبدأ منها بعد التحميل */
+  const wasPlaying = audio && !audio.paused;
   let targetAyah = null;
-
-  /* من المرتل: أولوية لـ __vbbAyah */
-  try{
-    if(prevWasVbb && Number(window.__vbbAyah) >= 1){
-      targetAyah = Number(window.__vbbAyah);
+  let targetSurah = Number(
+    currentAudioSurah ||
+    getSurahNumberForPage(currentPage)
+  );
+  if(typeof getActiveTiming === "function"){
+    const active = getActiveTiming();
+    if(active && active.ayah != null){
+      targetAyah = Number(active.ayah);
+      if(active._surah) targetSurah = Number(active._surah);
     }
-  }catch(e){}
-
-  try{
-    if(targetAyah == null && typeof getActiveTiming === "function"){
-      /* getActiveTiming يعتمد على selectedReader الحالي (ما زال القديم) */
-      const active = getActiveTiming();
-      if(active && active.ayah != null){
-        targetAyah = Number(active.ayah);
-        if(active._surah) targetSurah = Number(active._surah);
+  }
+  /* إن لم نجد آية نشطة (مثلاً عند الإيقاف) نأخذ أقرب آية حسب الوقت */
+  if(targetAyah == null && currentTiming && currentTiming.length && audio){
+    const t = (audio.currentTime || 0) * 1000;
+    let nearest = null;
+    let nearestDist = Infinity;
+    for(const item of currentTiming){
+      const st = Number(item.start_time);
+      if(!Number.isFinite(st)) continue;
+      const d = Math.abs(t - st);
+      if(d < nearestDist){
+        nearestDist = d;
+        nearest = item;
       }
     }
-  }catch(e){}
-
-  try{
-    if(targetAyah == null && currentTiming && currentTiming.length && audio){
-      const t = (Number(audio.currentTime) || 0) * 1000;
-      let best = null, bestD = Infinity;
-      for(let i = 0; i < currentTiming.length; i++){
-        const it = currentTiming[i];
-        const st = Number(it.start_time), en = Number(it.end_time);
-        if(Number.isFinite(st) && Number.isFinite(en) && t >= st && t < en){
-          best = it; break;
-        }
-        if(Number.isFinite(st)){
-          const d = Math.abs(t - st);
-          if(d < bestD){ bestD = d; best = it; }
-        }
-      }
-      if(best && best.ayah != null){
-        targetAyah = Number(best.ayah);
-        if(best._surah) targetSurah = Number(best._surah);
-      }
+    if(nearest && nearest.ayah != null){
+      targetAyah = Number(nearest.ayah);
+      if(nearest._surah) targetSurah = Number(nearest._surah);
     }
-  }catch(e){}
-
-  if(targetAyah == null || !(targetAyah >= 1)) targetAyah = 1;
-
-  const keepPlay =
-    !!(audio && !audio.paused) ||
-    !!window.__ayaUserWantsPlay ||
-    (typeof ayaShouldKeepPlaying === "function" && ayaShouldKeepPlaying());
-
-  /* 2) بدّل القارئ */
-  selectedReader = readerSelect.value;
-  localStorage.setItem("quranReader", selectedReader);
-  try{ updateReaderName(); }catch(e){}
-  currentAudioSurah = targetSurah;
-  try{ window.__vbbAyah = targetAyah; }catch(e){}
-  if(keepPlay){
-    try{ window.__ayaUserWantsPlay = true; }catch(e){}
-    try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
-    try{ if(typeof ayaMarkKeepPlaying === "function") ayaMarkKeepPlaying(true); }catch(e){}
   }
 
-  /* 3) مرتل → مرتل أو إلى مرتل */
-  try{
-    if(RECITERS[selectedReader] && RECITERS[selectedReader].verseByVerse){
-      if(typeof window.playVbbAyah === "function"){
-        window.playVbbAyah(targetSurah, targetAyah, !!keepPlay);
-        return;
-      }
-    }
-  }catch(e){}
+  selectedReader = readerSelect.value;
 
-  /* 4) إلى مجوّد/ملف سورة: حمّل الملف → التوقيت → اقفز للآية → ثم شغّل */
-  try{ window.__ayaAudioSourceSwitching = true; }catch(e){}
-  try{ if(audio) audio.pause(); }catch(e){}
-  try{ clearAyahHighlight(); }catch(e){}
+  localStorage.setItem(
+    "quranReader",
+    selectedReader
+  );
 
-  const url = (typeof getAudioUrl === "function")
-    ? getAudioUrl(selectedReader, currentPage, targetSurah)
-    : "";
+  updateReaderName();
+  currentAudioSurah = targetSurah;
+
+  /* حمّل صوت القارئ الجديد ثم ابحث عن نفس الآية في توقيته */
+  const url = getAudioUrl(selectedReader, currentPage, currentAudioSurah);
   if(!url){
-    try{ window.__ayaAudioSourceSwitching = false; }catch(e){}
+    updateAudioSource(false);
     return;
   }
 
-  const loadTok = ++audioPageToken;
-  audio._ayaLoadToken = loadTok;
-  try{ timingSurahLoaded = 0; }catch(e){}
-  currentTiming = [];
+  resetRepeat();
+  audio.pause();
+  try{ audio.preload = "auto"; }catch(e){}
+  audio.src = url;
+  audio.load();
+  currentTime.textContent = "0:00";
+  duration.textContent = "0:00";
+  progress.value = 0;
+  playButton.textContent = wasPlaying ? "Ⅱ" : "▶";
+  clearAyahHighlight();
 
-  (async function(){
-    var seekSec = 0;
-    try{
-      var list = null;
-      if(typeof fetchTimingForSurah === "function"){
-        list = await fetchTimingForSurah(targetSurah);
-      }
-      if(audio._ayaLoadToken !== loadTok) return;
-      if(list && list.length){
-        currentTiming = (typeof tagTimingItems === "function")
-          ? tagTimingItems(list, targetSurah)
-          : list;
-        timingSurahLoaded = targetSurah;
-        try{ timingCache[selectedReader + ":" + targetSurah] = currentTiming; }catch(e){}
-        var match = currentTiming.find(function(it){
-          return Number(it.ayah) === Number(targetAyah);
+  /* ابدأ التشغيل فوراً عند تبديل القارئ — لا تنتظر التوقيت */
+  if(wasPlaying){
+    try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
+    const kick = (n)=>{
+      const p = audio.play();
+      if(p && typeof p.then === "function"){
+        p.then(()=>{ playButton.textContent = "Ⅱ"; }).catch(()=>{
+          if(n < 6) setTimeout(()=>kick(n+1), 70 + n*40);
         });
-        if(match && Number.isFinite(Number(match.start_time))){
-          seekSec = Math.max(0, Number(match.start_time) / 1000);
-        }
       }
-    }catch(e){}
+    };
+    kick(0);
+  }
 
-    if(audio._ayaLoadToken !== loadTok) return;
-
-    try{ audio.preload = "auto"; }catch(e){}
-    audio.src = url;
-    try{ audio.load(); }catch(e){}
-
-    function finish(attempt){
-      if(audio._ayaLoadToken !== loadTok) return;
+  const applyAyahSeek = ()=>{
+    if(targetAyah == null || !currentTiming.length){
+      if(wasPlaying && audio.paused){
+        audio.play().then(()=>{ playButton.textContent = "Ⅱ"; }).catch(()=>{});
+      }
+      return;
+    }
+    const match = currentTiming.find(item =>
+      Number(item.ayah) === targetAyah &&
+      (item._surah == null || Number(item._surah) === targetSurah)
+    );
+    if(match && Number.isFinite(Number(match.start_time))){
       try{
-        if(audio.readyState < 1 && attempt < 20){
-          setTimeout(function(){ finish(attempt + 1); }, 80);
-          return;
-        }
-        try{ audio.currentTime = seekSec; }catch(e){}
-        try{ if(typeof syncHighlight === "function") syncHighlight(); }catch(e){}
-        try{ if(typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(targetSurah); }catch(e){}
-        if(keepPlay){
-          try{ window.__ayaUserWantsPlay = true; }catch(e){}
-          var p = audio.play();
-          if(p && p.then){
-            p.then(function(){
-              if(audio._ayaLoadToken !== loadTok) return;
-              try{ if(playButton) playButton.textContent = "Ⅱ"; }catch(e){}
-              try{ window.__ayaAudioSourceSwitching = false; }catch(e){}
-              try{ window.__ayaNavShouldPlay = false; }catch(e){}
-              /* إعادة تأكيد الموضع بعد التشغيل (بعض المتصفحات تُصفّر currentTime) */
-              try{
-                if(Math.abs((audio.currentTime || 0) - seekSec) > 1.5){
-                  audio.currentTime = seekSec;
-                }
-              }catch(e){}
-            }).catch(function(){
-              if(attempt < 20) setTimeout(function(){ finish(attempt + 1); }, 100);
-              else try{ window.__ayaAudioSourceSwitching = false; }catch(e){}
-            });
-          }else{
-            try{ if(playButton) playButton.textContent = "Ⅱ"; }catch(e){}
-            try{ window.__ayaAudioSourceSwitching = false; }catch(e){}
-          }
-        }else{
-          try{ if(playButton) playButton.textContent = "▶"; }catch(e){}
-          try{ window.__ayaAudioSourceSwitching = false; }catch(e){}
-        }
-      }catch(e){
-        try{ window.__ayaAudioSourceSwitching = false; }catch(e2){}
-      }
+        audio.currentTime = Math.max(0, Number(match.start_time) / 1000);
+      }catch(e){}
+      if(typeof syncHighlight === "function") syncHighlight();
     }
+    if(wasPlaying && audio.paused){
+      audio.play().then(()=>{ playButton.textContent = "Ⅱ"; }).catch(()=>{});
+    }
+  };
 
-    if(audio.readyState >= 1) finish(0);
-    else{
-      var once = function(){
-        try{ audio.removeEventListener("loadedmetadata", once); }catch(e){}
-        try{ audio.removeEventListener("canplay", once); }catch(e){}
-        finish(0);
-      };
-      audio.addEventListener("loadedmetadata", once);
-      audio.addEventListener("canplay", once);
-      setTimeout(function(){ finish(0); }, 500);
+  /* التوقيت في الخلفية ثم القفز للآية دون تأخير البدء */
+  const waitTimingAndSeek = async ()=>{
+    await loadTimingForCurrentSurah();
+    if(audio.readyState >= 1){
+      applyAyahSeek();
+      return;
     }
-  })();
+    const onReady = function(){
+      audio.removeEventListener("loadedmetadata", onReady);
+      audio.removeEventListener("canplay", onReady);
+      applyAyahSeek();
+    };
+    audio.addEventListener("loadedmetadata", onReady);
+    audio.addEventListener("canplay", onReady);
+  };
+  waitTimingAndSeek();
 
 };
 
@@ -6394,14 +6064,6 @@ audio.addEventListener(
       }
     }catch(e){}
 
-    /* وضع آية-بآية (ماهر المرتل): لا تنتقل للسورة التالية هنا */
-    try{
-      const rdEnd = RECITERS[selectedReader];
-      if(rdEnd && rdEnd.verseByVerse){
-        return;
-      }
-    }catch(e){}
-
     const finishedSurah =
       currentAudioSurah ||
       getSurahNumberForPage(currentPage);
@@ -6450,21 +6112,14 @@ function setAudioLoading(on){
       playButton.textContent = "";
       playButton.classList.add("is-loading");
       playButton.setAttribute("aria-busy", "true");
-      /* أثناء الانتقال بين آيات المرتل: لا تُظهر المشغّل فجأة */
-      var vbbQuiet = false;
+      /* أظهر الواجهة أثناء التحميل ولا تُخفِها */
       try{
-        vbbQuiet = !!(RECITERS[selectedReader] && RECITERS[selectedReader].verseByVerse &&
-          (window.__vbbAdvancing || window.__ayaAudioSourceSwitching || window.__ayaUserWantsPlay));
+        if(typeof setReadingUIHidden === "function" && readingUIHidden){
+          setReadingUIHidden(false);
+        }else{
+          if(typeof clearReadingUIAutoHide === "function") clearReadingUIAutoHide();
+        }
       }catch(e){}
-      if(!vbbQuiet){
-        try{
-          if(typeof setReadingUIHidden === "function" && readingUIHidden){
-            setReadingUIHidden(false);
-          }else{
-            if(typeof clearReadingUIAutoHide === "function") clearReadingUIAutoHide();
-          }
-        }catch(e){}
-      }
     }else{
       playButton.classList.remove("is-loading");
       playButton.removeAttribute("aria-busy");
@@ -6519,6 +6174,8 @@ try{ bindAudioLoadingUI(); }catch(e){}
 
 playButton.onclick = ()=>{
 
+  try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
+
   var hasSrc = false;
   try{
     hasSrc = !!(audio.currentSrc || audio.getAttribute("src") || audio.src);
@@ -6526,24 +6183,20 @@ playButton.onclick = ()=>{
   }catch(e){}
 
   if(!hasSrc || audio.error){
-    try{ window.__ayaUserWantsPlay = true; }catch(e){}
-    try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
     updateAudioSource(false, { autoContinue: true });
     return;
   }
 
   if(audio.paused){
-    try{ window.__ayaUserWantsPlay = true; }catch(e){}
-    try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
     /* إن كانت البيانات جاهزة شغّل فوراً دون إعادة تحميل */
     var p = null;
     try{
-      if(typeof window.safePlay === "function") p = window.safePlay();
-      else if(typeof safePlay === "function") p = safePlay();
+      if(typeof safePlay === "function") p = safePlay();
       else p = audio.play();
     }catch(e){}
     if(p && typeof p.then === "function"){
       p.then(function(){ playButton.textContent = "Ⅱ"; }).catch(function(){
+        /* محاولة ثانية بعد لحظة قصيرة قبل إعادة التحميل */
         setTimeout(function(){
           audio.play().then(function(){ playButton.textContent = "Ⅱ"; }).catch(function(){
             updateAudioSource(true, { autoContinue: true });
@@ -6554,15 +6207,11 @@ playButton.onclick = ()=>{
       playButton.textContent = "Ⅱ";
     }
   }else{
-    /* إيقاف صريح من المستخدم */
-    try{ window.__ayaUserWantsPlay = false; }catch(e){}
     try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = false; }catch(e){}
-    if(typeof window.safePause === "function"){
-      window.safePause();
-    }else if(typeof safePause === "function"){
+    if(typeof safePause === "function"){
       safePause();
     }else{
-      try{ audio.pause(); }catch(e){}
+      audio.pause();
       playButton.textContent = "▶";
     }
   }
@@ -6581,22 +6230,6 @@ function seekToAdjacentAyah(direction){
   const items = currentTiming
     .slice()
     .sort((a,b)=>Number(a.start_time)-Number(b.start_time));
-
-  /* وضع آية-بآية: انتقل بملف الآية وليس بالزمن */
-  try{
-    const rdAdj = RECITERS[selectedReader];
-    if(rdAdj && rdAdj.verseByVerse){
-      const curA = Math.max(1, Number(window.__vbbAyah) || 1);
-      let index = items.findIndex(function(it){ return Number(it.ayah) === curA; });
-      if(index < 0) index = 0;
-      index += direction;
-      if(index < 0 || index >= items.length) return;
-      if(typeof seekToAyahItem === "function"){
-        seekToAyahItem(items[index], { autoPlay: !audio.paused || !!(typeof userWantsPlay !== "undefined" && userWantsPlay) });
-      }
-      return;
-    }
-  }catch(e){}
 
   const t = audio.currentTime * 1000;
 
@@ -6856,21 +6489,6 @@ function openBookmark(bm){
   var ayah = Number(bm.ayah) || 0;
   closeBookmarksPicker();
   try{ if(typeof closeSideMenu === "function") closeSideMenu(); }catch(e){}
-  try{ if(surah >= 1) currentAudioSurah = surah; }catch(e){}
-  try{ if(ayah >= 1) window.__vbbAyah = ayah; }catch(e){}
-  /* مرتل: اذهب لنفس الآية مباشرة */
-  try{
-    if(RECITERS[selectedReader] && RECITERS[selectedReader].verseByVerse &&
-       surah >= 1 && ayah >= 1 && typeof window.playVbbAyah === "function"){
-      if(typeof loadPage === "function"){
-        loadPage(page, { keepAudio: true, surahNumber: surah, startAyah: ayah });
-      }
-      setTimeout(function(){
-        window.playVbbAyah(surah, ayah, !!window.__ayaUserWantsPlay);
-      }, 60);
-      return;
-    }
-  }catch(e){}
   if(surah >= 1 && ayah >= 1 && typeof goToAyahFromSearch === "function"){
     try{ goToAyahFromSearch(page, surah, ayah); return; }catch(e){}
   }
@@ -7207,36 +6825,14 @@ function buildSurahList(){
 
       button.onclick = ()=>{
 
-        /* تحديد رقم السورة صراحةً + البدء من الآية الأولى */
-        const sn = index + 1;
-        try{ window.__vbbAyah = 1; }catch(e){}
-        currentAudioSurah = sn;
-        var shouldPlay = (typeof ayaShouldKeepPlaying === "function") ? ayaShouldKeepPlaying() : false;
-        if(shouldPlay && typeof ayaMarkKeepPlaying === "function") ayaMarkKeepPlaying(true);
+        /* تحديد رقم السورة صراحةً حتى تعمل السور القصيرة
+           المشتركة في نفس الصفحة (مثل الإخلاص/الفلق/الناس) */
         loadPage(
           surah[1],
           {
-            surahNumber: sn,
-            startAyah: 1,
-            autoContinue: shouldPlay
+            surahNumber: index + 1
           }
         );
-        if(shouldPlay){
-          setTimeout(function(){
-            try{
-              if(RECITERS[selectedReader] && RECITERS[selectedReader].verseByVerse &&
-                 typeof window.playVbbAyah === "function"){
-                window.playVbbAyah(sn, 1, true);
-                return;
-              }
-            }catch(e){}
-            try{
-              if(audio && audio.paused) audio.play().catch(function(){});
-              if(playButton) playButton.textContent = "Ⅱ";
-            }catch(e){}
-          }, 150);
-          setTimeout(function(){ try{ window.__ayaNavShouldPlay = false; }catch(e){} }, 600);
-        }
 
         surahOverlay.classList.remove(
           "show"
@@ -7358,70 +6954,29 @@ function buildJuzList(){
 
       button.onclick = ()=>{
 
+        /* انتقال الجزء مستقل تماماً عن انتقال السور.
+           نلغي أي تزامن قديم للصوت/التظليل حتى لا يعيد الصفحة السابقة،
+           ثم نرسل صفحة بداية الجزء فقط إلى المسار الطبيعي لتحميل المصحف. */
         const juzPage = Number(item[1]);
         if(!Number.isFinite(juzPage) || juzPage < 1 || juzPage > TOTAL_PAGES) return;
 
-        var shouldPlay = (typeof ayaShouldKeepPlaying === "function") ? ayaShouldKeepPlaying() : false;
-        if(shouldPlay && typeof ayaMarkKeepPlaying === "function") ayaMarkKeepPlaying(true);
-
+        /* إبطال أي عمليات صوتية/تظليل معلقة من الصفحة السابقة */
         if(typeof audioPageToken !== "undefined") audioPageToken++;
         if(typeof currentTiming !== "undefined") currentTiming = [];
         if(typeof pageHitTiming !== "undefined") pageHitTiming = [];
         if(typeof timingSurahLoaded !== "undefined") timingSurahLoaded = 0;
-        try{ window.__vbbAyah = 1; }catch(e){}
-        try{ window.__vbbAdvancing = false; }catch(e){}
-        try{ window.__vbbFollowPage = false; }catch(e){}
-        try{ window.__ayaAudioSourceSwitching = true; }catch(e){}
         if(typeof audio !== "undefined" && audio){
           try{ audio.pause(); }catch(e){}
-        }
-        if(shouldPlay){
-          try{ window.__ayaUserWantsPlay = true; }catch(e){}
-          try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
         }
 
         if(typeof prefetchQuranPage === "function") {
           prefetchQuranPage(juzPage);
         }
 
-        try{
-          if(typeof getSurahNumberForPage === "function"){
-            currentAudioSurah = getSurahNumberForPage(juzPage);
-          }
-        }catch(e){}
-
-        loadPage(juzPage, { autoContinue: shouldPlay });
-
-        if(shouldPlay){
-          try{ ayaMarkKeepPlaying(true); }catch(e){}
-          setTimeout(function(){
-            try{
-              if(RECITERS[selectedReader] && RECITERS[selectedReader].verseByVerse){
-                if(typeof window.vbbGoToFirstAyahOnPage === "function"){
-                  window.vbbGoToFirstAyahOnPage(juzPage);
-                  return;
-                }
-              }
-            }catch(e){}
-            /* مجوّد / عادي */
-            try{
-              if(audio && audio.paused){
-                var p = audio.play();
-                if(p && p.catch) p.catch(function(){});
-              }
-              if(playButton) playButton.textContent = "Ⅱ";
-            }catch(e){}
-          }, 150);
-          setTimeout(function(){
-            try{
-              if(audio && audio.paused && window.__ayaUserWantsPlay){
-                audio.play().catch(function(){});
-              }
-            }catch(e){}
-            try{ window.__ayaNavShouldPlay = false; }catch(e){}
-          }, 600);
-        }
-        setTimeout(function(){ try{ window.__ayaAudioSourceSwitching = false; }catch(e){} }, 400);
+        /* الجزء = صفحة فقط، بدون surahNumber أو startAyah.
+           وعند الانتقال من قائمة الأجزاء يبدأ تشغيل التلاوة تلقائياً
+           من موضع الصفحة الجديدة، دون استخدام منطق السور. */
+        loadPage(juzPage,{ autoContinue: true });
 
         juzOverlay.classList.remove(
           "show"
@@ -7660,12 +7215,9 @@ async function goToAyahFromSearch(pageNumber, surahNumber, ayahNumber){
     }
   }
 
-  try{ window.__vbbAyah = ayah; }catch(e){}
-  try{ currentAudioSurah = surah; }catch(e){}
-
   /* تحميل الصفحة عبر المسار الرسمي لضمان التزامن */
   if(typeof loadPage === "function"){
-    loadPage(pageNum, { surahNumber: surah, startAyah: ayah, autoContinue: false });
+    loadPage(pageNum, { surahNumber: surah, autoContinue: false });
   }else{
     currentPage = pageNum;
     localStorage.setItem("quranPage", currentPage);
@@ -7708,23 +7260,10 @@ async function goToAyahFromSearch(pageNumber, surahNumber, ayahNumber){
   );
   timingSurahLoaded = surah;
   currentAudioSurah = surah;
-  try{ window.__vbbAyah = ayah; }catch(e){}
 
   if(typeof positionHighlightLayer === "function"){
     positionHighlightLayer();
   }
-
-  /* مرتل: ملف الآية نفسها */
-  try{
-    if(RECITERS[selectedReader] && RECITERS[selectedReader].verseByVerse &&
-       typeof window.playVbbAyah === "function"){
-      window.playVbbAyah(surah, ayah, true);
-      if(typeof drawAyahHighlight === "function"){
-        requestAnimationFrame(function(){ drawAyahHighlight(match); });
-      }
-      return;
-    }
-  }catch(e){}
 
   const seekOk = seekToAyahItem(match, { autoPlay: true });
 
@@ -8352,7 +7891,6 @@ function syncPlayerSurahUI(surahNumber){
             : 1));
     }catch(e){ n = 1; }
   }
-  try{ currentAudioSurah = n; }catch(e){}
   var sel = document.getElementById("surahSelect");
   var label = document.getElementById("surahPickerLabel");
   var name = "";
@@ -8372,16 +7910,8 @@ function syncPlayerSurahUI(surahNumber){
   if(label){
     label.textContent = name ? (n + " - " + name) : ("سورة " + n);
   }
-  /* شريط المعلومات أعلى المصحف */
-  try{
-    var si = document.getElementById("surahInfo");
-    if(si) si.textContent = name ? ("سورة " + name) : ("سورة " + n);
-  }catch(e){}
   try{
     if(typeof syncSurahLabel === "function") syncSurahLabel();
-  }catch(e){}
-  try{
-    if(typeof updateMediaSession === "function") updateMediaSession();
   }catch(e){}
 }
 function chooseDirectSurah(n){
@@ -8392,36 +7922,15 @@ function chooseDirectSurah(n){
   if(!s) return;
 
   currentAudioSurah=n;
-  try{ window.__vbbAyah = 1; }catch(e){}
-
-  var shouldPlay = (typeof ayaShouldKeepPlaying === "function") ? ayaShouldKeepPlaying() : false;
-  if(shouldPlay && typeof ayaMarkKeepPlaying === "function") ayaMarkKeepPlaying(true);
 
   if(typeof loadPage==="function"){
     loadPage(
       Number(s[1]),
       {
         surahNumber:n,
-        startAyah:1,
-        autoContinue:shouldPlay
+        autoContinue:true
       }
     );
-  }
-  if(shouldPlay){
-    setTimeout(function(){
-      try{
-        if(RECITERS[selectedReader] && RECITERS[selectedReader].verseByVerse &&
-           typeof window.playVbbAyah === "function"){
-          window.playVbbAyah(n, 1, true);
-          return;
-        }
-      }catch(e){}
-      try{
-        if(audio && audio.paused) audio.play().catch(function(){});
-        if(playButton) playButton.textContent = "Ⅱ";
-      }catch(e){}
-    }, 150);
-    setTimeout(function(){ try{ window.__ayaNavShouldPlay = false; }catch(e){} }, 600);
   }
 }
 document.addEventListener("DOMContentLoaded",()=>{
@@ -8508,21 +8017,6 @@ document.addEventListener("DOMContentLoaded",()=>{
     - وإلا: تقدير من رقم الصفحة
   */
   function getDisplayedSurahName(pageNumber){
-    /* 1) الآية المميّزة حالياً إن وُجدت */
-    try{
-      if(typeof getActiveTiming === "function"){
-        var act = getActiveTiming();
-        if(act){
-          var as = Number(act._surah || act.surah || 0);
-          if(as >= 1){
-            var byAyah = getSurahNameByNumber(as);
-            if(byAyah) return byAyah;
-          }
-        }
-      }
-    }catch(e){}
-
-    /* 2) السورة التي تُشغَّل */
     const playing =
       typeof currentAudioSurah !== "undefined" && currentAudioSurah
         ? Number(currentAudioSurah)
@@ -8532,18 +8026,6 @@ document.addEventListener("DOMContentLoaded",()=>{
       const byAudio = getSurahNameByNumber(playing);
       if(byAudio) return byAudio;
     }
-
-    /* 3) من الصفحة: إن وُجدت عدة سور خذ الأخيرة التي تبدأ في هذه الصفحة أو قبلها */
-    try{
-      if(typeof getSurahsOnPage === "function"){
-        var list = getSurahsOnPage(pageNumber);
-        if(list && list.length){
-          var last = Number(list[list.length - 1]);
-          var byPage = getSurahNameByNumber(last);
-          if(byPage) return byPage;
-        }
-      }
-    }catch(e){}
 
     return getSurahNameForPage(pageNumber);
   }
@@ -8712,41 +8194,25 @@ document.addEventListener("DOMContentLoaded",()=>{
   }
 
   function mediaPayload(){
-    var src = audio;
-    try{
-      var rd = (typeof RECITERS !== "undefined" && typeof selectedReader !== "undefined")
-        ? RECITERS[selectedReader] : null;
-      if(rd && rd.verseByVerse && window.__vbbOut){
-        src = window.__vbbOut;
-      }
-    }catch(e){}
-    var pos = Number(src.currentTime);
-    var dur = Number(src.duration);
+    var pos = Number(audio.currentTime);
+    var dur = Number(audio.duration);
     if(!Number.isFinite(pos) || pos < 0) pos = 0;
     if(!Number.isFinite(dur) || dur < 0) dur = 0;
+    /* بعض المتصفحات تعطي Infinity قبل اكتمال البيانات */
     if(dur === Infinity) dur = 0;
     if(dur > 0 && pos > dur) pos = dur;
-    var isPlaying = false;
-    try{
-      isPlaying = !src.paused && !src.ended;
-      if(!isPlaying && window.__ayaUserWantsPlay){
-        /* أثناء تحميل الآية التالية في المرتل */
-        var rd2 = RECITERS[selectedReader];
-        if(rd2 && rd2.verseByVerse) isPlaying = !!window.__ayaUserWantsPlay && !src.paused;
-      }
-    }catch(e){ isPlaying = !audio.paused; }
     return {
       title: surahLabel() + (ayahHint() ? " — " + ayahHint() : ""),
       artist: reciterLabel(),
       album: "آية",
-      playing: isPlaying,
+      playing: !audio.paused,
       position: pos,
       duration: dur,
       positionSec: Math.floor(pos),
       durationSec: Math.floor(dur),
       positionText: fmtMediaTime(pos),
       durationText: fmtMediaTime(dur),
-      playbackRate: (src && src.playbackRate) || 1
+      playbackRate: audio.playbackRate || 1
     };
   }
 
@@ -8832,45 +8298,26 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   function safePlay(){
     userWantsPlay = true;
-    try{ window.__ayaUserWantsPlay = true; }catch(e){}
+    /* قفل قصير جداً فقط ضد pause عابر عند بدء التشغيل */
     __notifPlayLockUntil = Date.now() + 600;
-    try{
-      var rd = RECITERS[selectedReader];
-      if(rd && rd.verseByVerse && typeof window.playVbbAyah === "function"){
-        var s = Number(currentAudioSurah) || 1;
-        var a = Number(window.__vbbAyah) || 1;
-        window.playVbbAyah(s, a, true);
-        updateMediaSession();
-        return Promise.resolve();
-      }
-    }catch(e){}
     return audio.play().then(()=>{
       const pb = document.getElementById("playButton");
       if(pb) pb.textContent = "Ⅱ";
       updateMediaSession();
     }).catch(()=>{
       userWantsPlay = false;
-      try{ window.__ayaUserWantsPlay = false; }catch(e){}
       updateMediaSession();
     });
   }
 
   function safePause(){
     userWantsPlay = false;
-    try{ window.__ayaUserWantsPlay = false; }catch(e){}
     __notifPlayLockUntil = 0;
-    try{
-      if(typeof window.__vbbStopAll === "function") window.__vbbStopAll();
-    }catch(e){}
     try{ audio.pause(); }catch(e){}
-    try{
-      if(window.__vbbOut) window.__vbbOut.pause();
-    }catch(e){}
     const pb = document.getElementById("playButton");
     if(pb) pb.textContent = "▶";
     try{ updateMediaSession(); }catch(e){}
   }
-  try{ window.safePlay = safePlay; window.safePause = safePause; }catch(e){}
 
   audio.addEventListener("pause", function(){
     /* تبديل ملف الصوت عند التنقل بين الصفحات/السور/الأجزاء */
@@ -8879,27 +8326,12 @@ document.addEventListener("DOMContentLoaded",()=>{
         return;
       }
     }catch(e){}
-    /* آية-بآية: لا تُفسّر نهاية الآية / تبديل الملف كإيقاف من المستخدم */
-    try{
-      var rdP = (typeof RECITERS !== "undefined" && typeof selectedReader !== "undefined")
-        ? RECITERS[selectedReader] : null;
-      if(rdP && rdP.verseByVerse){
-        if(audio.ended) return;
-        if(window.__vbbAdvancing) return;
-      }
-    }catch(e){}
     /*
       إن أوقف المستخدم التشغيل (من الإشعار أو الزر) بعد انتهاء قفل الاستئناف القصير
       نحفظ حالة الإيقاف ولا نعيد التشغيل.
     */
     if(Date.now() >= __notifPlayLockUntil){
-      try{
-        if(window.__ayaNavShouldPlay || window.__ayaAudioSourceSwitching){
-          return;
-        }
-      }catch(e){}
       userWantsPlay = false;
-      try{ window.__ayaUserWantsPlay = false; }catch(e){}
       try{
         const pb = document.getElementById("playButton");
         if(pb && !pb.classList.contains("is-loading")) pb.textContent = "▶";
@@ -8991,6 +8423,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.addEventListener("visibilitychange", function(){
     if(document.visibilityState === "visible"){
       updateMediaSession();
+      /* لا نستأنف التشغيل تلقائياً بعد الإيقاف من الإشعار أو التطبيق */
       try{
         var img = document.getElementById("page");
         if(img && (!img.complete || !img.naturalWidth) && typeof currentPage !== "undefined"){
@@ -9001,16 +8434,14 @@ document.addEventListener("DOMContentLoaded",()=>{
           }
         }
       }catch(e){}
-      try{ if(typeof window.ayaRestorePlaybackPosition === "function") window.ayaRestorePlaybackPosition(false); }catch(e){}
-    }else{
-      try{ if(typeof window.ayaSavePlaybackPosition === "function") window.ayaSavePlaybackPosition(); }catch(e){}
-      if(!audio.paused) updateMediaSession();
+    }else if(!audio.paused){
+      updateMediaSession();
     }
   });
 
   window.addEventListener("pageshow", function(){
     updateMediaSession();
-    try{ if(typeof window.ayaRestorePlaybackPosition === "function") window.ayaRestorePlaybackPosition(false); }catch(e){}
+    /* الحفاظ على حالة الإيقاف — بلا استئناف تلقائي */
   });
 
   const playBtn = document.getElementById("playButton");
@@ -9036,7 +8467,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 ===================================================== */
 (function(){
   /* غيّر الرقم فقط هنا عند كل إصدار جديد — كلمة «الإصدار» تُضاف تلقائياً */
-  const APP_VERSION = "1.0.170";
+  const APP_VERSION = "1.0.169";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   /* حدّث الرقم فقط — كلمة «الإصدار» ثابتة في HTML */
   function setAppVersionDisplays(){
@@ -10294,11 +9725,14 @@ document.addEventListener("DOMContentLoaded",()=>{
       btn.textContent = r.name || key;
 
       btn.onclick = function(){
-        /* لا تغيّر selectedReader هنا — onchange يحفظ الآية أولاً ثم يبدّل */
+        /* غيّر القارئ فعلياً ثم شغّل نفس مسار التبديل الأصلي */
+        selectedReader = key;
+        try{ localStorage.setItem("quranReader", key); }catch(e){}
         sel.value = key;
         try{
           sel.dispatchEvent(new Event("change", { bubbles: true }));
         }catch(e){
+          /* دعم WebView قديم */
           try{
             var ev = document.createEvent("HTMLEvents");
             ev.initEvent("change", true, false);
@@ -11162,7 +10596,7 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.170";
+    return "1.0.169";
   }
 
   /*
@@ -11207,9 +10641,6 @@ body.interface-old #downloadsPopup .download-native-select{
     عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
     var WHATS_NEW = {
-    "1.0.170": [
-      "إضافة <b>ماهر المعيقلي مرتّل</b> مع تمييز الآيات (تشغيل آية بآية)"
-    ],
     "1.0.169": [
       "إضافة قسم <b>شكر وعرفان</b> في المساعدة مع روابط المصادر وبيان حقوق الاستخدام",
       "إمكانية <b>التقدّم والترجيع</b> بالضغط والسحب على شريط الصوت أثناء التلاوة",
@@ -12751,534 +12182,6 @@ body.interface-old #bookmarksPickerList .bm-del{
   document.addEventListener("change", function(e){
     if(e && e.target && e.target.id === "readerSelect") setTimeout(warmCurrentAudio, 100);
   });
-})();
-</script>
-
-
-<script id="verse-by-verse-maher-script">
-(function(){
-  var SURAH_AYAHS_VBB = [0,7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,16,17,13,12,11,11,10,8,9,5,8,8,5,6,5,6,5,5,6,3,5,4,5,6,3,5,3,5,4,5,6];
-  if(typeof window.__vbbAyah === "undefined") window.__vbbAyah = 1;
-  if(typeof window.__ayaUserWantsPlay === "undefined") window.__ayaUserWantsPlay = false;
-  window.__vbbAdvancing = false;
-
-  var PREFETCH_AHEAD = 6;
-  var preMap = Object.create(null);
-
-  function isVbb(){
-    try{ return !!(RECITERS[selectedReader] && RECITERS[selectedReader].verseByVerse); }
-    catch(e){ return false; }
-  }
-  function maxA(s){ return SURAH_AYAHS_VBB[Number(s)||1] || 7; }
-  function wantsPlay(){
-    try{ return !!window.__ayaUserWantsPlay; }catch(e){ return false; }
-  }
-  function vbbUrl(surah, ayah){
-    try{
-      var rd = RECITERS[selectedReader];
-      if(!rd || !rd.server) return "";
-      return rd.server + String(surah).padStart(3,"0") + String(ayah).padStart(3,"0") + ".mp3";
-    }catch(e){ return ""; }
-  }
-  function nextAyahRef(surah, ayah){
-    surah = Number(surah)||1; ayah = Number(ayah)||1;
-    var mx = maxA(surah);
-    if(ayah < mx) return { surah: surah, ayah: ayah + 1 };
-    if(surah < 114) return { surah: surah + 1, ayah: 1 };
-    return null;
-  }
-
-  function notifyMedia(){
-    try{
-      /* اجعل العنصر الرئيسي هو مصدر الإشعار */
-      window.__vbbOut = audio;
-    }catch(e){}
-    try{ if(typeof updateMediaSession === "function") updateMediaSession(); }catch(e){}
-    try{
-      if(window.AndroidInterface && typeof window.AndroidInterface.postMessage === "function"){
-        var title = "القرآن الكريم";
-        var artist = "قارئ";
-        try{
-          if(typeof surahs !== "undefined" && currentAudioSurah && surahs[currentAudioSurah-1])
-            title = "سورة " + surahs[currentAudioSurah-1][0];
-          if(window.__vbbAyah) title += " — الآية " + window.__vbbAyah;
-        }catch(e){}
-        try{
-          var rn = document.getElementById("readerName");
-          if(rn) artist = rn.textContent.trim() || artist;
-        }catch(e){}
-        var payload = {
-          title: title,
-          artist: artist,
-          album: "آية",
-          playing: !!(audio && !audio.paused),
-          position: Number(audio && audio.currentTime) || 0,
-          duration: Number(audio && audio.duration) || 0,
-          playbackRate: 1,
-          ongoing: !!(audio && !audio.paused)
-        };
-        if(payload.playing){
-          if(!window.__vbbNotifStarted){
-            window.__vbbNotifStarted = true;
-            window.AndroidInterface.postMessage(JSON.stringify({ cmd: "media-play", data: payload }));
-          }
-          window.AndroidInterface.postMessage(JSON.stringify({ cmd: "media-update", data: payload }));
-        }else{
-          window.__vbbNotifStarted = false;
-          window.AndroidInterface.postMessage(JSON.stringify({ cmd: "media-pause", data: payload }));
-          window.AndroidInterface.postMessage(JSON.stringify({ cmd: "media-update", data: payload }));
-        }
-      }
-    }catch(e){}
-  }
-
-  function prefetchOne(url){
-    if(!url || preMap[url]) return;
-    preMap[url] = true;
-    try{
-      var a = new Audio();
-      a.preload = "auto";
-      a.src = url;
-      try{ a.load(); }catch(e){}
-    }catch(e){}
-    try{
-      fetch(url, { mode: "cors", credentials: "omit", cache: "force-cache" }).catch(function(){
-        try{ fetch(url, { mode: "no-cors", credentials: "omit", cache: "force-cache" }).catch(function(){}); }catch(e2){}
-      });
-    }catch(e){}
-  }
-
-  function prefetchChain(surah, ayah){
-    var ref = { surah: Number(surah)||1, ayah: Number(ayah)||1 };
-    for(var i=0;i<=PREFETCH_AHEAD;i++){
-      prefetchOne(vbbUrl(ref.surah, ref.ayah));
-      ref = nextAyahRef(ref.surah, ref.ayah);
-      if(!ref) break;
-    }
-  }
-
-  function ensurePageForAyah(surah, ayah){
-    try{
-      var list = timingCache[selectedReader + ":" + surah];
-      if(!list && currentTiming && currentTiming.length) list = currentTiming;
-      if(!list) return;
-      var item = null;
-      for(var i=0;i<list.length;i++){
-        if(Number(list[i].ayah) === Number(ayah)){ item = list[i]; break; }
-      }
-      if(!item) return;
-      var pg = null;
-      try{ if(typeof pageFromTiming === "function") pg = pageFromTiming(item); }catch(e){}
-      if(pg && Number(pg) !== Number(currentPage) && typeof loadPage === "function"){
-        loadPage(Number(pg), { keepAudio: true, surahNumber: surah, startAyah: ayah });
-      }
-    }catch(e){}
-  }
-
-  function setTimingFor(surah){
-    try{
-      var ck = selectedReader + ":" + surah;
-      if(timingCache[ck]){
-        currentTiming = tagTimingItems(timingCache[ck], surah);
-        timingSurahLoaded = surah;
-        return Promise.resolve(currentTiming);
-      }
-      if(typeof fetchTimingForSurah === "function"){
-        return fetchTimingForSurah(surah).then(function(list){
-          currentTiming = list || [];
-          timingSurahLoaded = surah;
-          return currentTiming;
-        });
-      }
-    }catch(e){}
-    return Promise.resolve([]);
-  }
-
-  function applyAyahState(surah, ayah){
-    window.__vbbAyah = ayah;
-    currentAudioSurah = surah;
-    try{ if(typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(surah); }catch(e){}
-    ensurePageForAyah(surah, ayah);
-    try{ if(typeof syncHighlight === "function") syncHighlight(); }catch(e){}
-  }
-
-  function playVbbAyah(surah, ayah, autoPlay){
-    if(!isVbb() || !audio) return;
-    surah = Number(surah)||1;
-    ayah = Math.max(1, Math.min(maxA(surah), Number(ayah)||1));
-    var url = vbbUrl(surah, ayah);
-    if(!url) return;
-
-    var continuePlay = !!autoPlay && (wantsPlay() || window.__vbbAdvancing);
-    window.__vbbAdvancing = true;
-
-    applyAyahState(surah, ayah);
-    prefetchChain(surah, ayah);
-    setTimingFor(surah).then(function(){
-      ensurePageForAyah(surah, ayah);
-      try{ if(typeof syncHighlight === "function") syncHighlight(); }catch(e){}
-    });
-
-    /* التشغيل عبر العنصر الرئيسي #audio حتى يظهر الإشعار */
-    try{ window.__ayaAudioSourceSwitching = true; }catch(e){}
-    try{ audio.volume = 1; }catch(e){}
-    var tok = ++audioPageToken;
-    audio._ayaLoadToken = tok;
-    try{ audio.pause(); }catch(e){}
-    audio.src = url;
-    try{ audio.load(); }catch(e){}
-    try{ window.__vbbOut = audio; }catch(e){}
-
-    function go(){
-      if(audio._ayaLoadToken !== tok) return;
-      try{ window.__ayaAudioSourceSwitching = false; }catch(e){}
-      try{ audio.currentTime = 0; }catch(e){}
-      try{ if(typeof syncHighlight === "function") syncHighlight(); }catch(e){}
-      if(!(continuePlay || wantsPlay())){
-        window.__vbbAdvancing = false;
-        try{ if(playButton) playButton.textContent = "▶"; }catch(e){}
-        notifyMedia();
-        return;
-      }
-      try{ window.__ayaUserWantsPlay = true; }catch(e){}
-      var p = audio.play();
-      if(p && p.then){
-        p.then(function(){
-          window.__vbbAdvancing = false;
-          try{ if(playButton) playButton.textContent = "Ⅱ"; }catch(e){}
-          prefetchChain(surah, ayah);
-          notifyMedia();
-        }).catch(function(){
-          window.__vbbAdvancing = false;
-          notifyMedia();
-        });
-      }else{
-        window.__vbbAdvancing = false;
-        try{ if(playButton) playButton.textContent = "Ⅱ"; }catch(e){}
-        notifyMedia();
-      }
-    }
-
-    if(audio.readyState >= 2) go();
-    else if(audio.readyState >= 1) go();
-    else{
-      var done = false;
-      function once(){
-        if(done) return; done = true;
-        try{ audio.removeEventListener("canplay", once); }catch(e){}
-        try{ audio.removeEventListener("loadeddata", once); }catch(e){}
-        go();
-      }
-      audio.addEventListener("canplay", once);
-      audio.addEventListener("loadeddata", once);
-      setTimeout(once, 1500);
-    }
-  }
-
-  function onEnded(){
-    if(!isVbb()) return;
-    if(!wantsPlay()) return;
-    var nxt = nextAyahRef(currentAudioSurah || 1, window.__vbbAyah || 1);
-    if(!nxt){
-      try{ if(playButton) playButton.textContent = "▶"; }catch(e){}
-      try{ window.__ayaUserWantsPlay = false; }catch(e){}
-      notifyMedia();
-      return;
-    }
-    window.__vbbAdvancing = true;
-    try{ window.__ayaUserWantsPlay = true; }catch(e){}
-    playVbbAyah(nxt.surah, nxt.ayah, true);
-  }
-
-  function stopAllVbb(){
-    window.__vbbAdvancing = false;
-    try{ window.__ayaUserWantsPlay = false; }catch(e){}
-    try{ window.__vbbNotifStarted = false; }catch(e){}
-    try{ if(audio) audio.pause(); }catch(e){}
-    try{ if(playButton) playButton.textContent = "▶"; }catch(e){}
-    notifyMedia();
-  }
-  window.__vbbStopAll = stopAllVbb;
-  window.playVbbAyah = playVbbAyah;
-
-  function bindMain(){
-    if(!audio || audio.__vbbMainBound) return;
-    audio.__vbbMainBound = true;
-    audio.addEventListener("ended", function(){
-      if(isVbb()) onEnded();
-    });
-    audio.addEventListener("playing", function(){
-      if(!isVbb()) return;
-      try{ window.__vbbOut = audio; }catch(e){}
-      notifyMedia();
-    });
-    audio.addEventListener("timeupdate", function(){
-      if(!isVbb() || !wantsPlay()) return;
-      try{
-        var d = Number(audio.duration)||0;
-        var t = Number(audio.currentTime)||0;
-        if(d > 0 && t / d > 0.35)
-          prefetchChain(currentAudioSurah||1, window.__vbbAyah||1);
-      }catch(e){}
-    });
-    audio.addEventListener("pause", function(){
-      if(!isVbb()) return;
-      if(window.__ayaAudioSourceSwitching || window.__vbbAdvancing) return;
-      notifyMedia();
-    });
-  }
-
-  var pb = document.getElementById("playButton");
-  if(pb && !pb.__vbbNotifBound){
-    pb.__vbbNotifBound = true;
-    pb.addEventListener("click", function(ev){
-      if(!isVbb()) return;
-      var playing = audio && !audio.paused && !audio.ended;
-      if(playing || wantsPlay()){
-        stopAllVbb();
-        try{ ev.stopImmediatePropagation(); }catch(e){}
-        try{ ev.preventDefault(); }catch(e){}
-        return;
-      }
-      try{ window.__ayaUserWantsPlay = true; }catch(e){}
-      var s = Number(currentAudioSurah) || (typeof getSurahNumberForPage === "function" ? getSurahNumberForPage(currentPage) : 1);
-      var a = Number(window.__vbbAyah) || 1;
-      playVbbAyah(s, a, true);
-      try{ ev.stopImmediatePropagation(); }catch(e){}
-      try{ ev.preventDefault(); }catch(e){}
-    }, true);
-  }
-
-  document.addEventListener("change", function(e){
-    if(!e.target || e.target.id !== "readerSelect") return;
-    setTimeout(function(){
-      if(!isVbb()) return;
-      var surah = Number(currentAudioSurah) || (typeof getSurahNumberForPage === "function" ? getSurahNumberForPage(currentPage) : 1);
-      var ayah = Number(window.__vbbAyah)||1;
-      prefetchChain(surah, ayah);
-      playVbbAyah(surah, ayah, wantsPlay());
-    }, 80);
-  });
-
-  if(document.readyState === "loading"){
-    document.addEventListener("DOMContentLoaded", bindMain);
-  }else bindMain();
-  window.addEventListener("load", bindMain);
-
-  window.vbbGoToFirstAyahOnPage = function(pageNum){
-    if(!isVbb()) return;
-    pageNum = Number(pageNum)||Number(currentPage)||1;
-    var surah = 1;
-    try{
-      if(typeof getSurahNumberForPage === "function")
-        surah = Number(getSurahNumberForPage(pageNum))||1;
-    }catch(e){}
-    function pickFirst(list){
-      if(!list || !list.length) return 1;
-      var best = null, bestStart = Infinity;
-      for(var i=0;i<list.length;i++){
-        var it = list[i];
-        if(!it) continue;
-        var pg = null;
-        try{ if(typeof pageFromTiming === "function") pg = pageFromTiming(it, surah); }catch(e){}
-        if(pg != null && Number(pg) !== pageNum) continue;
-        var st = Number(it.start_time);
-        if(!Number.isFinite(st)) st = Number(it.ayah)||0;
-        if(st < bestStart){ bestStart = st; best = it; }
-      }
-      if(best && best.ayah != null) return Number(best.ayah)||1;
-      var a0 = Number(list[0].ayah);
-      return Number.isFinite(a0) && a0 > 0 ? a0 : 1;
-    }
-    function go(list){
-      var ayah = pickFirst(list);
-      try{
-        if(list && list.length){
-          currentTiming = tagTimingItems(list, surah);
-          timingSurahLoaded = surah;
-        }
-      }catch(e){}
-      prefetchChain(surah, ayah);
-      playVbbAyah(surah, ayah, wantsPlay());
-    }
-    var ck = selectedReader + ":" + surah;
-    if(timingCache[ck]){ go(timingCache[ck]); return; }
-    if(typeof fetchTimingForSurah === "function"){
-      fetchTimingForSurah(surah).then(function(list){ go(list||[]); })
-        .catch(function(){ prefetchChain(surah,1); playVbbAyah(surah,1,wantsPlay()); });
-    }else{
-      prefetchChain(surah,1); playVbbAyah(surah,1,wantsPlay());
-    }
-  };
-})();
-</script>
-
-
-<script id="playback-position-persist">
-(function(){
-  var KEY = "ayaPlaybackPos";
-  var lastSave = 0;
-
-  function isVbb(){
-    try{ return !!(RECITERS[selectedReader] && RECITERS[selectedReader].verseByVerse); }catch(e){ return false; }
-  }
-
-  function currentAyah(){
-    try{
-      if(isVbb() && Number(window.__vbbAyah) >= 1) return Number(window.__vbbAyah);
-    }catch(e){}
-    try{
-      if(typeof getActiveTiming === "function"){
-        var a = getActiveTiming();
-        if(a && a.ayah != null) return Number(a.ayah);
-      }
-    }catch(e){}
-    try{
-      if(currentTiming && currentTiming.length && audio){
-        var t = (Number(audio.currentTime) || 0) * 1000;
-        for(var i = 0; i < currentTiming.length; i++){
-          var it = currentTiming[i];
-          var st = Number(it.start_time), en = Number(it.end_time);
-          if(Number.isFinite(st) && Number.isFinite(en) && t >= st && t < en) return Number(it.ayah);
-        }
-      }
-    }catch(e){}
-    return null;
-  }
-
-  function save(){
-    try{
-      if(typeof audio === "undefined" || !audio) return;
-      var surah = Number(currentAudioSurah) || 0;
-      var ayah = currentAyah();
-      var page = Number(currentPage) || 1;
-      var reader = selectedReader || "";
-      var t = Number(audio.currentTime) || 0;
-      if(!surah && typeof getSurahNumberForPage === "function"){
-        surah = Number(getSurahNumberForPage(page)) || 1;
-      }
-      if(ayah == null) ayah = Number(window.__vbbAyah) || 1;
-      var data = {
-        page: page,
-        surah: surah || 1,
-        ayah: ayah || 1,
-        time: t,
-        reader: reader,
-        vbb: isVbb() ? 1 : 0,
-        ts: Date.now()
-      };
-      localStorage.setItem(KEY, JSON.stringify(data));
-      lastSave = Date.now();
-    }catch(e){}
-  }
-
-  function loadSaved(){
-    try{
-      var raw = localStorage.getItem(KEY);
-      if(!raw) return null;
-      var d = JSON.parse(raw);
-      if(!d || !d.surah) return null;
-      return d;
-    }catch(e){ return null; }
-  }
-
-  function restore(autoPlay){
-    var d = loadSaved();
-    if(!d) return;
-    try{
-      /* إن كان الصوت في منتصف آية بالفعل فلا تُعد */
-      if(audio && !audio.paused && (Number(audio.currentTime) || 0) > 1.2) return;
-    }catch(e){}
-
-    var surah = Number(d.surah) || 1;
-    var ayah = Number(d.ayah) || 1;
-    var page = Number(d.page) || 1;
-    var time = Number(d.time) || 0;
-
-    try{
-      if(typeof currentPage !== "undefined" && Number(currentPage) !== page && typeof loadPage === "function"){
-        loadPage(page, { keepAudio: true, surahNumber: surah, startAyah: ayah });
-      }
-    }catch(e){}
-
-    try{ currentAudioSurah = surah; }catch(e){}
-    try{ window.__vbbAyah = ayah; }catch(e){}
-    try{ if(typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(surah); }catch(e){}
-
-    if(isVbb()){
-      if(typeof window.playVbbAyah === "function"){
-        /* لا تشغّل تلقائياً إلا إن طُلب — فقط جهّز الآية */
-        var want = !!autoPlay && !!window.__ayaUserWantsPlay;
-        window.playVbbAyah(surah, ayah, want);
-      }
-      return;
-    }
-
-    /* مجوّد: اقفز لوقت الآية المحفوظ */
-    (async function(){
-      try{
-        var list = null;
-        if(typeof fetchTimingForSurah === "function"){
-          list = await fetchTimingForSurah(surah);
-        }
-        if(list && list.length){
-          currentTiming = (typeof tagTimingItems === "function") ? tagTimingItems(list, surah) : list;
-          timingSurahLoaded = surah;
-        }
-        var seekSec = time;
-        if(!(seekSec > 0.5) && currentTiming && currentTiming.length){
-          var match = currentTiming.find(function(it){ return Number(it.ayah) === ayah; });
-          if(match && Number.isFinite(Number(match.start_time))){
-            seekSec = Number(match.start_time) / 1000;
-          }
-        }
-        if(!(seekSec > 0)) return;
-
-        function applySeek(attempt){
-          try{
-            if(!audio) return;
-            /* إن تغيّر المصدر أو صفر الموضع — أعد التعيين */
-            if(audio.readyState >= 1){
-              if(Math.abs((audio.currentTime || 0) - seekSec) > 0.8){
-                audio.currentTime = seekSec;
-              }
-              try{ if(typeof syncHighlight === "function") syncHighlight(); }catch(e){}
-              return;
-            }
-          }catch(e){}
-          if(attempt < 15) setTimeout(function(){ applySeek(attempt + 1); }, 120);
-        }
-        applySeek(0);
-      }catch(e){}
-    })();
-  }
-
-  window.ayaSavePlaybackPosition = save;
-  window.ayaRestorePlaybackPosition = restore;
-
-  function bind(){
-    if(typeof audio === "undefined" || !audio || audio.__ayaPosBound) return;
-    audio.__ayaPosBound = true;
-    audio.addEventListener("timeupdate", function(){
-      if(Date.now() - lastSave < 800) return;
-      save();
-    });
-    audio.addEventListener("pause", save);
-    audio.addEventListener("play", save);
-    window.addEventListener("pagehide", save);
-    window.addEventListener("beforeunload", save);
-  }
-
-  function boot(){
-    bind();
-    /* بعد تحميل الصفحة الأولى: استعد الآية المحفوظة */
-    setTimeout(function(){ restore(false); }, 700);
-    setTimeout(function(){ restore(false); }, 1800);
-  }
-
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
-  else boot();
-  window.addEventListener("load", function(){ setTimeout(function(){ restore(false); }, 500); });
 })();
 </script>
 
