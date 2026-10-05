@@ -4603,9 +4603,13 @@ const RECITERS = {
   },
   yasser: {
     name: "الشيخ ياسر الدوسري",
-    /* صوت QuranicAudio (متوافق مع توقيت mp3quran read=92) — كما في الإصدارات السابقة */
+    /* QuranicAudio متوافق غالباً مع timing 92؛ استثناءات في surahAudioOverrides */
     server: "https://download.quranicaudio.com/quran/yasser_ad-dussary/",
     timingId: 92,
+    /* سورة ق: تسجيل QuranicAudio أطول وغير متطابق — استخدم مجلد التوقيت الرسمي */
+    surahAudioOverrides: {
+      50: "https://cdn.mp3quran.net/audio/yasser-dosari/r1/"
+    },
     complete: true
   },
   khalidJalil: {
@@ -4861,6 +4865,15 @@ function getAudioUrl(readerKey, pageNumber, explicitSurah = null){
 
   const fileNumber =
     String(surahNumber).padStart(3, "0");
+
+  /* استثناء سور معيّنة إن اختلف التسجيل عن ملف التوقيت */
+  try{
+    const ov = reader.surahAudioOverrides && reader.surahAudioOverrides[Number(surahNumber)];
+    if(ov){
+      if(String(ov).toLowerCase().endsWith(".mp3")) return String(ov);
+      return String(ov).replace(/\/?$/, "/") + fileNumber + ".mp3";
+    }
+  }catch(e){}
 
   return reader.server + fileNumber + ".mp3";
 }
