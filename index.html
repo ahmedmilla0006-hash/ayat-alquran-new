@@ -1366,13 +1366,17 @@ body {
   padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)) !important;
   border-radius: 20px !important;
   border: 1px solid rgba(200,220,235,.20) !important;
-  background: rgba(28,42,56,.55) !important;
+  /* خلفية صلبة ثابتة على كل الأجهزة — بدون شفافية أو blur */
+  background: #1c2a38 !important;
+  background-color: #1c2a38 !important;
   box-shadow: 0 10px 32px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08) !important;
-  backdrop-filter: blur(16px) saturate(140%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   color: #f4f7f9 !important;
   transform: translateY(0) !important;
   transition: transform .32s ease, opacity .28s ease, visibility .28s ease !important;
+  isolation: isolate !important;
+  opacity: 1 !important;
 }
 .player.ui-hidden {
   transform: translateY(120%) !important;
@@ -1392,7 +1396,8 @@ body {
 }
 .player .reader-select,
 .player .bottom-selection-card select {
-  background: rgba(55,72,88,.45) !important;
+  background: #374858 !important;
+  background-color: #374858 !important;
   color: #f4f7f9 !important;
   border-color: rgba(200,220,235,.16) !important;
 }
@@ -1463,8 +1468,12 @@ body {
 
 /* الوضع الليلي يبقى متوافقاً */
 .night-mode .player {
-  background: rgba(20,30,40,.70) !important;
+  background: #141e28 !important;
+  background-color: #141e28 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   color: #f4f7f9 !important;
+  opacity: 1 !important;
 }
 .night-mode .side-menu {
   background: rgba(20,30,40,.65) !important;
@@ -2557,10 +2566,6 @@ body.interface-old *::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.12);
           </span>
         </div>
 
-        <div class="readers-title">
-          القراء
-        </div>
-
       </div></div>
 
     <div class="progress-row">
@@ -2628,7 +2633,7 @@ body.interface-old *::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.12);
         <option value="husary">الشيخ محمود خليل الحصري</option>
         <option value="shatri">أبو بكر الشاطري</option>
         <option value="idrees">إدريس أبكر</option>
-        <option value="fares">فارس عباد</option>
+        <option value="fares">الشيخ فارس عباد</option>
         <option value="afasy">مشاري العفاسي</option>
         <option value="yasser">الشيخ ياسر الدوسري</option>
         <option value="khalidJalil">الشيخ خالد الجليل</option>
@@ -3502,11 +3507,8 @@ function loadPage(n, options = {}){
 function nextPage(){
 
   if(currentPage < TOTAL_PAGES){
-
-    loadPage(
-      currentPage + 1
-    );
-
+    /* التقليب اليدوي مفعّل دائماً — يحدّث الصفحة والصوت لموضع الصفحة */
+    loadPage(currentPage + 1);
   }
 
 }
@@ -3519,11 +3521,7 @@ function nextPage(){
 function prevPage(){
 
   if(currentPage > 1){
-
-    loadPage(
-      currentPage - 1
-    );
-
+    loadPage(currentPage - 1);
   }
 
 }
@@ -4424,8 +4422,9 @@ const RECITERS = {
     complete: true
   },
   fares: {
-    name: "فارس عباد",
+    name: "الشيخ فارس عباد",
     server: "https://server8.mp3quran.net/frs_a/",
+    timingId: 81,
     complete: true
   },
   afasy: {
@@ -4450,7 +4449,8 @@ const RECITERS = {
     server: "https://server10.mp3quran.net/jleel/",
     timingId: 20,
     complete: true,
-    /* آل عمران (3): الملف يبدأ بالفاتحة ثم آل عمران — ابدأ من الثانية 34 */
+    /* آل عمران (3): الملف يبدأ بالفاتحة ثم البسملة ثم آل عمران.
+       ابدأ من الثانية 34: تخطّي الفاتحة مع الإبقاء على البسملة (الآية 1 عند ~40.5ث). */
     audioIntroOffsetSec: { 3: 34 }
   },
   abdulbasitMujawwad: {
@@ -5755,8 +5755,18 @@ function updateAudioSource(keepPosition = false, options = {}){
             Number.isFinite(d) && d > 0 ? d : oldTime
           );
         }else if(Number.isFinite(seekMs)){
-          if(typeof seekOnceToMs === "function") seekOnceToMs(seekMs);
-          else audio.currentTime = Math.max(0, seekMs / 1000);
+          var ms = Number(seekMs);
+          /* لا تبدأ من 0 إذا كانت للسورة مقدمة صوتية */
+          if(ms <= 0){
+            try{
+              var intro = typeof getAudioIntroOffsetMs === "function"
+                ? getAudioIntroOffsetMs(selectedReader, currentAudioSurah)
+                : 0;
+              if(intro > 0) ms = intro;
+            }catch(e){}
+          }
+          if(typeof seekOnceToMs === "function") seekOnceToMs(ms);
+          else audio.currentTime = Math.max(0, ms / 1000);
         }else if(typeof seekAudioToCurrentPage === "function"){
           seekAudioToCurrentPage();
         }
@@ -5881,8 +5891,15 @@ function updateAudioSource(keepPosition = false, options = {}){
       return;
     }
 
-    /* عند انتهاء سورة أو اختيار سورة: ابدأ دائماً من أول ملف التلاوة */
-    applySource(explicitSurah, 0);
+    /* عند انتهاء سورة أو اختيار سورة: ابدأ من أول التلاوة
+       مع تجاوز المقدمة إن وُجدت (مثل الفاتحة داخل ملف آل عمران) */
+    var startMs = 0;
+    try{
+      if(typeof getAudioIntroOffsetMs === "function"){
+        startMs = getAudioIntroOffsetMs(selectedReader, explicitSurah) || 0;
+      }
+    }catch(e){}
+    applySource(explicitSurah, startMs);
     return;
   }
 
@@ -6305,6 +6322,13 @@ playButton.onclick = ()=>{
   }
 
   if(audio.paused){
+    /* تجاوز مقدمة الملف (مثل الفاتحة داخل آل عمران) إن كنا قبلها */
+    try{
+      var introSec = typeof getActiveIntroOffsetSec === "function" ? getActiveIntroOffsetSec() : 0;
+      if(introSec > 0 && (audio.currentTime || 0) < introSec - 0.15){
+        audio.currentTime = introSec;
+      }
+    }catch(e){}
     /* إن كانت البيانات جاهزة شغّل فوراً دون إعادة تحميل */
     var p = null;
     try{
@@ -12309,6 +12333,622 @@ body.interface-old #bookmarksPickerList .bm-del{
   document.addEventListener("change", function(e){
     if(e && e.target && e.target.id === "readerSelect") setTimeout(warmCurrentAudio, 100);
   });
+})();
+</script>
+
+
+<style id="player-solid-bg-fix">
+/* خلفية المشغّل صلبة ومتطابقة على كل الأجهزة */
+body.interface-new .player,
+body.interface-new .player.ui-hidden,
+html body .player{
+  background: #1c2a38 !important;
+  background-color: #1c2a38 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  opacity: 1 !important;
+  isolation: isolate !important;
+}
+body.interface-new.night-mode .player,
+body.night-mode .player{
+  background: #141e28 !important;
+  background-color: #141e28 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  opacity: 1 !important;
+}
+body.interface-old .player{
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+body.interface-old.night-mode .player{
+  background: #202020 !important;
+  background-color: #202020 !important;
+}
+</style>
+
+
+<style id="animated-bg-effects">
+/* ===== خلفية متحركة هادئة (الوضع الزجاجي فقط) ===== */
+body.interface-new{
+  background-color:#0a1620 !important;
+  background-image:
+    linear-gradient(rgba(3,10,16,.35), rgba(3,10,16,.55)),
+    url("https://storage.radiosarajevo.ba/image/795011/1180x732/dzamija-u-medini-3juni24-aa-6.jpg") !important;
+  background-size: 112% 112% !important;
+  background-position: 50% 50% !important;
+  background-attachment: fixed !important;
+  animation: ayaBgKenBurns 48s ease-in-out infinite alternate;
+}
+@keyframes ayaBgKenBurns{
+  0%{ background-position: 42% 48%; background-size: 112% 112%; }
+  50%{ background-position: 58% 52%; background-size: 118% 118%; }
+  100%{ background-position: 50% 45%; background-size: 114% 114%; }
+}
+
+/* طبقات توهج متحركة فوق الخلفية */
+body.interface-new .app::before{
+  content:"" !important;
+  position:fixed !important;
+  inset:0 !important;
+  z-index:-1 !important;
+  pointer-events:none !important;
+  background:
+    radial-gradient(ellipse 55% 40% at 20% 25%, rgba(22,128,59,.22), transparent 60%),
+    radial-gradient(ellipse 50% 45% at 80% 70%, rgba(80,200,120,.12), transparent 65%),
+    radial-gradient(ellipse 40% 35% at 60% 15%, rgba(125,222,168,.10), transparent 55%),
+    linear-gradient(180deg, rgba(5,14,22,.20), rgba(4,12,19,.42)) !important;
+  animation: ayaGlowDrift 22s ease-in-out infinite alternate;
+}
+@keyframes ayaGlowDrift{
+  0%{ opacity:.85; transform:scale(1) translate(0,0); }
+  50%{ opacity:1; transform:scale(1.06) translate(1.5%, -1%); }
+  100%{ opacity:.9; transform:scale(1.03) translate(-1%, 1.5%); }
+}
+
+/* جسيمات ضوئية خفيفة */
+body.interface-new .app::after{
+  content:"" !important;
+  position:fixed !important;
+  inset:-10% !important;
+  z-index:-1 !important;
+  pointer-events:none !important;
+  background-image:
+    radial-gradient(circle 2px at 12% 22%, rgba(255,255,255,.35), transparent 3px),
+    radial-gradient(circle 1.5px at 28% 68%, rgba(125,222,168,.40), transparent 3px),
+    radial-gradient(circle 2px at 48% 18%, rgba(255,255,255,.28), transparent 3px),
+    radial-gradient(circle 1.5px at 72% 42%, rgba(80,200,120,.38), transparent 3px),
+    radial-gradient(circle 2px at 88% 78%, rgba(255,255,255,.30), transparent 3px),
+    radial-gradient(circle 1.5px at 18% 88%, rgba(125,222,168,.32), transparent 3px),
+    radial-gradient(circle 2px at 62% 92%, rgba(255,255,255,.25), transparent 3px),
+    radial-gradient(circle 1.5px at 92% 14%, rgba(80,200,120,.35), transparent 3px);
+  background-repeat: no-repeat;
+  animation: ayaParticlesFloat 28s linear infinite;
+  opacity:.7;
+}
+@keyframes ayaParticlesFloat{
+  0%{ transform:translateY(0) translateX(0); }
+  25%{ transform:translateY(-2.5%) translateX(1.2%); }
+  50%{ transform:translateY(-1%) translateX(-1.5%); }
+  75%{ transform:translateY(-3%) translateX(.8%); }
+  100%{ transform:translateY(0) translateX(0); }
+}
+
+/* في الوضع الليلي: توهج أهدأ */
+body.interface-new.night-mode .app::before{
+  background:
+    radial-gradient(ellipse 55% 40% at 20% 25%, rgba(22,128,59,.14), transparent 60%),
+    radial-gradient(ellipse 50% 45% at 80% 70%, rgba(80,200,120,.08), transparent 65%),
+    linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.55)) !important;
+}
+body.interface-new.night-mode .app::after{
+  opacity:.45;
+}
+
+/* تقليل الحركة إن طلب النظام ذلك */
+@media (prefers-reduced-motion: reduce){
+  body.interface-new,
+  body.interface-new .app::before,
+  body.interface-new .app::after{
+    animation: none !important;
+  }
+  body.interface-new{
+    background-size: cover !important;
+    background-position: center center !important;
+  }
+}
+
+/* الكلاسيكي: بدون تأثيرات خلفية */
+body.interface-old,
+body.interface-old .app::before,
+body.interface-old .app::after{
+  animation: none !important;
+}
+body.interface-old .app::after{
+  content: none !important;
+  display: none !important;
+}
+</style>
+
+
+<script id="aya-auto-offline-progress">
+(function(){
+  /*
+    تحميل تلقائي لما وصل إليه القارئ فقط:
+    - صفحات: من أول السورة حتى الصفحة الحالية
+    - صوت: جزء الملف من البداية حتى زمن آخر آية وصل إليها (HTTP Range)
+    - توقيت: السورة الحالية فقط
+  */
+  var PAGE_CACHE = "aya-pages-v1";
+  var AUDIO_CACHE = "aya-audio-v1";
+  var TIMING_CACHE = "aya-timing-v1";
+  var IDB_NAME = "aya-audio-partial-db";
+  var IDB_STORE = "partials";
+  var KEY_ENABLED = "ayaAutoOffline";
+  var queue = [];
+  var busy = false;
+  var lastPageKey = "";
+  var partialBusy = Object.create(null);
+  var metaCache = Object.create(null); /* url -> {length, supportsRange} */
+  var savedMaxSec = Object.create(null); /* url -> sec */
+
+  function enabled(){
+    try{
+      var v = localStorage.getItem(KEY_ENABLED);
+      if(v === null || v === undefined) return true;
+      return v !== "0";
+    }catch(e){ return true; }
+  }
+
+  function openIdb(){
+    return new Promise(function(resolve, reject){
+      try{
+        var req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = function(){
+          var db = req.result;
+          if(!db.objectStoreNames.contains(IDB_STORE)){
+            db.createObjectStore(IDB_STORE, { keyPath: "url" });
+          }
+        };
+        req.onsuccess = function(){ resolve(req.result); };
+        req.onerror = function(){ reject(req.error); };
+      }catch(e){ reject(e); }
+    });
+  }
+
+  function idbGet(url){
+    return openIdb().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(IDB_STORE, "readonly");
+        var req = tx.objectStore(IDB_STORE).get(url);
+        req.onsuccess = function(){ resolve(req.result || null); };
+        req.onerror = function(){ reject(req.error); };
+      });
+    }).catch(function(){ return null; });
+  }
+
+  function idbPut(record){
+    return openIdb().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(IDB_STORE, "readwrite");
+        tx.objectStore(IDB_STORE).put(record);
+        tx.oncomplete = function(){ resolve(); };
+        tx.onerror = function(){ reject(tx.error); };
+      });
+    }).catch(function(){});
+  }
+
+  async function putUrl(cacheName, url){
+    if(!url || typeof caches === "undefined") return;
+    try{
+      var cache = await caches.open(cacheName);
+      var hit = await cache.match(url);
+      if(hit) return;
+      var res = null;
+      try{
+        res = await fetch(url, { mode: "cors", credentials: "omit", cache: "force-cache" });
+        if(!res || !res.ok) res = null;
+      }catch(e){ res = null; }
+      if(!res){
+        try{
+          res = await fetch(url, { mode: "cors", credentials: "omit", cache: "default" });
+          if(!res || !res.ok) res = null;
+        }catch(e){ res = null; }
+      }
+      if(res) await cache.put(url, res.clone ? res.clone() : res);
+    }catch(e){}
+  }
+
+  function enqueue(job){
+    if(!job || !job.url) return;
+    for(var i=0;i<queue.length;i++){
+      if(queue[i].url === job.url && queue[i].cache === job.cache) return;
+    }
+    queue.push(job);
+    pump();
+  }
+
+  function pump(){
+    if(busy || !queue.length || !enabled()) return;
+    busy = true;
+    var job = queue.shift();
+    putUrl(job.cache, job.url).then(function(){
+      busy = false;
+      if(queue.length) setTimeout(pump, 30);
+    }).catch(function(){
+      busy = false;
+      if(queue.length) setTimeout(pump, 80);
+    });
+  }
+
+  function pageUrl(n){
+    n = Number(n) || 1;
+    try{
+      if(typeof quranPageSvgUrl === "function") return quranPageSvgUrl(n);
+    }catch(e){}
+    return "https://www.mp3quran.net/api/quran_pages_svg/" + String(n).padStart(3,"0") + ".svg";
+  }
+
+  function audioUrlFor(surah){
+    try{
+      if(typeof getAudioUrl === "function" && typeof selectedReader !== "undefined"){
+        return getAudioUrl(selectedReader, (typeof currentPage !== "undefined" ? currentPage : 1), surah);
+      }
+    }catch(e){}
+    return "";
+  }
+
+  function timingUrl(surah, readId){
+    return "https://mp3quran.net/api/v3/ayat_timing?surah=" + surah + "&read=" + readId;
+  }
+
+  function surahStartPage(surah){
+    surah = Number(surah) || 1;
+    try{
+      if(typeof surahs !== "undefined" && surahs[surah - 1]) return Number(surahs[surah - 1][1]) || 1;
+    }catch(e){}
+    return 1;
+  }
+
+  async function cacheTiming(surah){
+    surah = Number(surah) || 1;
+    try{
+      if(typeof RECITERS === "undefined" || !RECITERS[selectedReader]) return;
+      if(RECITERS[selectedReader].listenOnly) return;
+      var readId = null;
+      if(typeof getTimingReadId === "function") readId = await getTimingReadId();
+      else readId = RECITERS[selectedReader].timingId;
+      if(!readId) return;
+      var url = timingUrl(surah, readId);
+      enqueue({ cache: TIMING_CACHE, url: url });
+      try{ fetch(url, { mode: "cors", credentials: "omit", cache: "force-cache" }).catch(function(){}); }catch(e){}
+    }catch(e){}
+  }
+
+  async function getAudioMeta(url){
+    if(metaCache[url]) return metaCache[url];
+    var length = 0;
+    var supportsRange = false;
+    try{
+      var res = await fetch(url, { method: "HEAD", mode: "cors", credentials: "omit" });
+      if(res && res.ok){
+        length = Number(res.headers.get("content-length")) || 0;
+        var ar = (res.headers.get("accept-ranges") || "").toLowerCase();
+        supportsRange = ar.indexOf("bytes") >= 0 || length > 0;
+      }
+    }catch(e){}
+    /* بعض الخوادم ترفض HEAD — جرّب Range صغيراً */
+    if(!length){
+      try{
+        var r2 = await fetch(url, {
+          method: "GET",
+          mode: "cors",
+          credentials: "omit",
+          headers: { "Range": "bytes=0-0" }
+        });
+        if(r2 && (r2.status === 206 || r2.status === 200)){
+          var cr = r2.headers.get("content-range") || "";
+          var m = cr.match(/\/(\d+)\s*$/);
+          if(m) length = Number(m[1]) || 0;
+          supportsRange = r2.status === 206 || length > 0;
+        }
+      }catch(e){}
+    }
+    metaCache[url] = { length: length, supportsRange: supportsRange };
+    return metaCache[url];
+  }
+
+  /*
+    تحميل تدريجي: بايتات 0..(نهاية الآية الحالية) فقط.
+    maxSec = زمن نهاية آخر آية وصل إليها القارئ (بالثواني).
+  */
+  async function downloadAudioUpTo(url, maxSec){
+    if(!enabled() || !url || !(maxSec > 0.5)) return;
+    maxSec = Number(maxSec);
+    if(savedMaxSec[url] && maxSec <= savedMaxSec[url] + 1.5) return;
+    if(partialBusy[url]) return;
+    partialBusy[url] = true;
+    try{
+      /* إن وُجد الملف كاملاً في الكاش لا داعي للجزء */
+      try{
+        if(typeof caches !== "undefined"){
+          var full = await caches.open(AUDIO_CACHE).then(function(c){ return c.match(url); });
+          if(full){ savedMaxSec[url] = 1e9; return; }
+        }
+      }catch(e){}
+
+      var prev = await idbGet(url);
+      if(prev && prev.maxSec && maxSec <= prev.maxSec + 1.5){
+        savedMaxSec[url] = prev.maxSec;
+        return;
+      }
+
+      var meta = await getAudioMeta(url);
+      var duration = 0;
+      try{
+        var a = document.getElementById("audio");
+        if(a && isFinite(a.duration) && a.duration > 1) duration = a.duration;
+      }catch(e){}
+
+      var byteEnd = 0;
+      if(meta.length > 0 && duration > 1){
+        byteEnd = Math.ceil((Math.min(maxSec, duration) / duration) * meta.length);
+      }else if(meta.length > 0){
+        /* تقدير ~128kbps إن لم تُعرف المدة بعد */
+        byteEnd = Math.ceil(Math.min(meta.length - 1, maxSec * 16000));
+      }else{
+        byteEnd = Math.ceil(maxSec * 16000);
+      }
+      /* هامش صغير حتى لا يُقطع آخر الآية */
+      byteEnd = Math.ceil(byteEnd * 1.02) + 65536;
+      if(meta.length > 0) byteEnd = Math.min(byteEnd, meta.length - 1);
+      if(byteEnd < 4096) byteEnd = 4096;
+
+      var res = await fetch(url, {
+        method: "GET",
+        mode: "cors",
+        credentials: "omit",
+        headers: { "Range": "bytes=0-" + byteEnd }
+      });
+      if(!res || !(res.status === 206 || res.status === 200)) return;
+      var buf = await res.arrayBuffer();
+      if(!buf || !buf.byteLength) return;
+
+      /* إذا رجع الملف كاملاً ضعه في كاش التلاوات */
+      if(res.status === 200 && meta.length > 0 && buf.byteLength >= meta.length * 0.98){
+        try{
+          var cache = await caches.open(AUDIO_CACHE);
+          await cache.put(url, new Response(buf, {
+            status: 200,
+            headers: { "Content-Type": "audio/mpeg", "Content-Length": String(buf.byteLength) }
+          }));
+          savedMaxSec[url] = 1e9;
+          return;
+        }catch(e){}
+      }
+
+      await idbPut({
+        url: url,
+        blob: new Blob([buf], { type: "audio/mpeg" }),
+        maxSec: maxSec,
+        byteEnd: byteEnd,
+        contentLength: meta.length || 0,
+        updatedAt: Date.now()
+      });
+      savedMaxSec[url] = maxSec;
+      try{ localStorage.setItem("ayaPartialMax:"+url, String(maxSec)); }catch(e){}
+    }catch(e){
+    }finally{
+      partialBusy[url] = false;
+    }
+  }
+
+  function schedulePagesAndTiming(page, surah){
+    if(!enabled()) return;
+    page = Number(page) || 1;
+    surah = Number(surah) || 1;
+    var key = String(selectedReader || "") + ":p:" + page + ":s:" + surah;
+    if(key === lastPageKey) return;
+    lastPageKey = key;
+
+    var startP = surahStartPage(surah);
+    for(var p = startP; p <= page; p++){
+      enqueue({ cache: PAGE_CACHE, url: pageUrl(p) });
+    }
+    cacheTiming(surah);
+  }
+
+  function currentSurahGuess(){
+    try{
+      if(typeof currentAudioSurah !== "undefined" && currentAudioSurah) return Number(currentAudioSurah);
+    }catch(e){}
+    try{
+      if(typeof getSurahNumberForPage === "function") return Number(getSurahNumberForPage(currentPage || 1)) || 1;
+    }catch(e){}
+    return 1;
+  }
+
+  function reachedSecFromTiming(){
+    try{
+      var a = document.getElementById("audio");
+      var t = a ? (a.currentTime || 0) : 0;
+      if(typeof getActiveTiming === "function"){
+        var active = getActiveTiming();
+        if(active && Number.isFinite(Number(active.end_time))){
+          return Math.max(t, Number(active.end_time) / 1000);
+        }
+      }
+      if(typeof currentTiming !== "undefined" && currentTiming && currentTiming.length){
+        var best = 0;
+        for(var i=0;i<currentTiming.length;i++){
+          var it = currentTiming[i];
+          var st = Number(it.start_time) / 1000;
+          var en = Number(it.end_time) / 1000;
+          if(t >= st - 0.05) best = Math.max(best, en);
+        }
+        if(best > 0) return best;
+      }
+      return t;
+    }catch(e){ return 0; }
+  }
+
+  function scheduleAudioProgress(){
+    if(!enabled()) return;
+    try{
+      var surah = currentSurahGuess();
+      var url = audioUrlFor(surah);
+      if(!url) return;
+      var sec = reachedSecFromTiming();
+      if(!(sec > 0.8)) return;
+      downloadAudioUpTo(url, sec);
+    }catch(e){}
+  }
+
+  var _lp = window.loadPage;
+  if(typeof _lp === "function"){
+    window.loadPage = function(n, options){
+      var r = _lp.apply(this, arguments);
+      try{
+        var page = Number(n) || (typeof currentPage !== "undefined" ? currentPage : 1);
+        setTimeout(function(){
+          schedulePagesAndTiming(page, currentSurahGuess());
+          scheduleAudioProgress();
+        }, 200);
+      }catch(e){}
+      return r;
+    };
+  }
+
+  function tryPlayPartial(url, preferOffline){
+    if(!url) return Promise.resolve(false);
+    return idbGet(url).then(function(rec){
+      if(!rec || !rec.blob) return false;
+      var audioEl = document.getElementById("audio");
+      if(!audioEl) return false;
+      var local = URL.createObjectURL(rec.blob);
+      var t = 0;
+      try{ t = audioEl.currentTime || 0; }catch(e){}
+      try{
+        audioEl.src = local;
+        if(t > 0.3 && t < (rec.maxSec || 0)) audioEl.currentTime = t;
+        return audioEl.play().then(function(){ return true; }).catch(function(){ return true; });
+      }catch(e){ return false; }
+    }).catch(function(){ return false; });
+  }
+
+  try{
+    var a = document.getElementById("audio");
+    if(a && !a.__ayaAutoOffBound){
+      a.__ayaAutoOffBound = true;
+      a.addEventListener("play", function(){
+        schedulePagesAndTiming(typeof currentPage !== "undefined" ? currentPage : 1, currentSurahGuess());
+        scheduleAudioProgress();
+      });
+      a.addEventListener("timeupdate", function(){
+        if(a.__ayaPartialTick) return;
+        a.__ayaPartialTick = true;
+        setTimeout(function(){
+          a.__ayaPartialTick = false;
+          scheduleAudioProgress();
+        }, 2000);
+      });
+      /* بدون إنترنت: استخدم الجزء المحفوظ حتى موضع القراءة */
+      a.addEventListener("error", function(){
+        try{
+          var url = audioUrlFor(currentSurahGuess());
+          tryPlayPartial(url);
+        }catch(e){}
+      });
+    }
+  }catch(e){}
+
+  /* عند تعيين مصدر الصوت بدون شبكة جرّب الجزء المحفوظ */
+  try{
+    var audioEl = document.getElementById("audio");
+    if(audioEl && !audioEl.__ayaPartialSrcHook){
+      audioEl.__ayaPartialSrcHook = true;
+      var desc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "src");
+      if(desc && desc.set){
+        Object.defineProperty(audioEl, "src", {
+          configurable: true,
+          enumerable: true,
+          get: function(){ return desc.get.call(this); },
+          set: function(v){
+            var self = this;
+            var offline = false;
+            try{ offline = (typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+            if(offline && v && String(v).indexOf("blob:") !== 0){
+              idbGet(v).then(function(rec){
+                if(rec && rec.blob){
+                  desc.set.call(self, URL.createObjectURL(rec.blob));
+                }else{
+                  desc.set.call(self, v);
+                }
+              }).catch(function(){ desc.set.call(self, v); });
+            }else{
+              desc.set.call(self, v);
+            }
+          }
+        });
+      }
+    }
+  }catch(e){}
+
+  function boot(){
+    try{
+      schedulePagesAndTiming(
+        typeof currentPage !== "undefined" ? currentPage : 1,
+        currentSurahGuess()
+      );
+      scheduleAudioProgress();
+    }catch(e){}
+  }
+  if(document.readyState === "complete") setTimeout(boot, 1200);
+  else window.addEventListener("load", function(){ setTimeout(boot, 1200); });
+
+  var _fetch = window.fetch;
+  if(typeof _fetch === "function" && !window.__ayaTimingFetchPatched){
+    window.__ayaTimingFetchPatched = true;
+    window.fetch = function(input, init){
+      var url = (typeof input === "string") ? input : (input && input.url);
+      var p = _fetch.apply(this, arguments);
+      if(url && String(url).indexOf("ayat_timing") >= 0){
+        return p.then(function(res){
+          if(res && res.ok){
+            try{
+              caches.open(TIMING_CACHE).then(function(cache){
+                cache.put(url, res.clone()).catch(function(){});
+              });
+            }catch(e){}
+            return res;
+          }
+          return caches.open(TIMING_CACHE).then(function(cache){
+            return cache.match(url).then(function(hit){ return hit || res; });
+          }).catch(function(){ return res; });
+        }).catch(function(err){
+          return caches.open(TIMING_CACHE).then(function(cache){
+            return cache.match(url).then(function(hit){
+              if(hit) return hit;
+              throw err;
+            });
+          });
+        });
+      }
+      return p;
+    };
+  }
+
+  window.__ayaAutoOffline = {
+    enabled: enabled,
+    setEnabled: function(on){
+      try{ localStorage.setItem(KEY_ENABLED, on ? "1" : "0"); }catch(e){}
+      if(on) boot();
+    },
+    scheduleAudioProgress: scheduleAudioProgress,
+    downloadAudioUpTo: downloadAudioUpTo
+  };
 })();
 </script>
 
