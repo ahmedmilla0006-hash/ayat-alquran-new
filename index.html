@@ -2815,7 +2815,7 @@ body.interface-old *::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.12);
   </button>
 
   <div class="side-menu-footer" id="sideMenuFooter">
-    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.169</span></div>
+    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.170</span></div>
     <button type="button" class="side-menu-update-link" id="sideMenuUpdateLink" aria-label="تحديث التطبيق">إصدار جديد متوفر: تحديث</button>
   </div>
 
@@ -3310,7 +3310,7 @@ body.interface-old #ayaTourDots .tour-dot-active{
       </div>
 
       <div class="about-copy" id="aboutAppVersion">
-        الإصدار <span id="aboutAppVersionNum">1.0.169</span>
+        الإصدار <span id="aboutAppVersionNum">1.0.170</span>
       </div>
 
       <div class="about-copy">
@@ -4436,16 +4436,22 @@ const RECITERS = {
   },
   yasser: {
     name: "الشيخ ياسر الدوسري",
-    /* صوت QuranAudio (نفس التسجيل بجودة أعلى) + توقيت mp3quran read=92 المتوافق معه */
+    /* صوت QuranAudio + توقيت mp3quran read=92.
+       سور لا يتطابق فيها ملف QuranAudio مع التوقيت تُحمَّل من cdn.mp3quran (انظر getAudioUrl). */
     server: "https://download.quranicaudio.com/quran/yasser_ad-dussary/",
     timingId: 92,
-    complete: true
+    complete: true,
+    /* سور: ملف QuranAudio مختلف المدة عن توقيت read=92 → استخدم مصدر التوقيت */
+    timingAudioSurahs: [8, 49, 50, 92],
+    timingAudioServer: "https://cdn.mp3quran.net/audio/yasser-dosari/r1/"
   },
   khalidJalil: {
     name: "الشيخ خالد الجليل",
     server: "https://server10.mp3quran.net/jleel/",
     timingId: 20,
-    complete: true
+    complete: true,
+    /* آل عمران (3): الملف يبدأ بالفاتحة ثم آل عمران — ابدأ من الثانية 34 */
+    audioIntroOffsetSec: { 3: 34 }
   },
   abdulbasitMujawwad: {
     name: "الشيخ عبد الباسط عبد الصمد مجود",
@@ -4661,13 +4667,97 @@ function getAudioUrl(readerKey, pageNumber, explicitSurah = null){
   if(!reader) return "";
 
   const surahNumber =
-    explicitSurah ||
-    getSurahNumberForPage(pageNumber);
+    Number(explicitSurah || getSurahNumberForPage(pageNumber)) || 1;
 
   const fileNumber =
     String(surahNumber).padStart(3, "0");
 
+  /*
+    ياسر الدوسري: بعض السور على QuranAudio أطول/أقصر من توقيت mp3quran read=92
+    (مثل الأنفال 8، الحجرات 49، ق 50، الليل 92).
+    لهذه السور نستخدم ملف التوقيت من cdn.mp3quran حتى يتزامن التظليل.
+  */
+  try{
+    const special = reader.timingAudioSurahs;
+    const altServer = reader.timingAudioServer;
+    if(
+      Array.isArray(special) &&
+      altServer &&
+      special.indexOf(surahNumber) >= 0
+    ){
+      return String(altServer).replace(/\/?$/, "/") + fileNumber + ".mp3";
+    }
+  }catch(e){}
+
   return reader.server + fileNumber + ".mp3";
+}
+
+
+function getAudioIntroOffsetMs(readerKey, surahNum){
+  try{
+    const r = RECITERS[readerKey || selectedReader];
+    if(!r || !r.audioIntroOffsetSec) return 0;
+    const sec = Number(r.audioIntroOffsetSec[Number(surahNum)]);
+    if(Number.isFinite(sec) && sec > 0) return Math.round(sec * 1000);
+  }catch(e){}
+  return 0;
+}
+
+/* إزاحة المقدمة بالثواني للسورة الحالية (للعداد وشريط التقدم) */
+function getActiveIntroOffsetSec(){
+  try{
+    const s = Number(
+      (typeof currentAudioSurah !== "undefined" && currentAudioSurah)
+        ? currentAudioSurah
+        : (typeof getSurahNumberForPage === "function" ? getSurahNumberForPage(currentPage) : 0)
+    ) || 0;
+    return getAudioIntroOffsetMs(selectedReader, s) / 1000;
+  }catch(e){ return 0; }
+}
+
+/* الوقت المعروض: يبدأ من 0 بعد تجاوز المقدمة */
+function displayCurrentTimeSec(){
+  try{
+    const off = getActiveIntroOffsetSec();
+    const t = Number(audio.currentTime) || 0;
+    return Math.max(0, t - off);
+  }catch(e){ return Number(audio.currentTime) || 0; }
+}
+
+function displayDurationSec(){
+  try{
+    const off = getActiveIntroOffsetSec();
+    const d = Number(audio.duration);
+    if(!Number.isFinite(d) || d <= 0) return 0;
+    return Math.max(0, d - off);
+  }catch(e){ return Number(audio.duration) || 0; }
+}
+
+/* تحديث العدادين (الوقت الحالي + طول السورة) دون تصفير طول السورة إن كان معروفاً */
+function refreshTimeDisplay(opts){
+  opts = opts || {};
+  try{
+    const cur = typeof displayCurrentTimeSec === "function" ? displayCurrentTimeSec() : (audio.currentTime || 0);
+    const dur = typeof displayDurationSec === "function" ? displayDurationSec() : (audio.duration || 0);
+    if(currentTime){
+      if(opts.resetCurrent) currentTime.textContent = "0:00";
+      else currentTime.textContent = fmt(cur);
+    }
+    if(duration){
+      /* لا تصفّر طول السورة إذا المدة معروفة في عنصر الصوت */
+      if(Number.isFinite(dur) && dur > 0){
+        duration.textContent = fmt(dur);
+      }else if(opts.forceZeroDuration){
+        duration.textContent = "0:00";
+      }
+      /* وإلا اترك القيمة السابقة كما هي */
+    }
+    if(progress && Number.isFinite(dur) && dur > 0){
+      progress.value = (cur / dur) * 100;
+    }else if(progress && opts.resetCurrent){
+      progress.value = 0;
+    }
+  }catch(e){}
 }
 
 function updateReaderName(){
@@ -5443,7 +5533,11 @@ function seekAudioToCurrentPage(){
       Number(first.ayah) === 1 &&
       surahStartPage === currentPage
     ){
-      audio.currentTime = 0;
+      /* إن وُجدت مقدمة (مثل الفاتحة داخل ملف آل عمران) لا تبدأ من 0 */
+      const introMs = typeof getAudioIntroOffsetMs === "function"
+        ? getAudioIntroOffsetMs(selectedReader, audioSurah)
+        : 0;
+      audio.currentTime = introMs > 0 ? (introMs / 1000) : 0;
     }else{
       audio.currentTime =
         Number(first.start_time || 0) / 1000;
@@ -5536,7 +5630,12 @@ function seekMsForPageStart(list, pageNum, surahNum){
   }
   try{
     if(Number(top.ayah) === 1 && typeof surahs !== "undefined" && surahs[surahNum - 1] &&
-       Number(surahs[surahNum - 1][1]) === Number(pageNum)) return 0;
+       Number(surahs[surahNum - 1][1]) === Number(pageNum)){
+      const introMs = typeof getAudioIntroOffsetMs === "function"
+        ? getAudioIntroOffsetMs(selectedReader, surahNum)
+        : 0;
+      return introMs > 0 ? introMs : 0;
+    }
   }catch(e){}
   return ms;
 }
@@ -5594,9 +5693,18 @@ function updateAudioSource(keepPosition = false, options = {}){
     const loadToken = ++audioPageToken;
     audio._ayaLoadToken = loadToken;
 
-    currentTime.textContent = "0:00";
-    duration.textContent = "0:00";
-    progress.value = 0;
+    /* صفّر الوقت الحالي فقط؛ طول السورة يبقى إن كان الملف نفسه جاهزاً */
+    try{
+      if(typeof refreshTimeDisplay === "function"){
+        refreshTimeDisplay({ resetCurrent: true });
+      }else{
+        currentTime.textContent = "0:00";
+        progress.value = 0;
+      }
+    }catch(e){
+      currentTime.textContent = "0:00";
+      progress.value = 0;
+    }
     playButton.textContent = "▶";
     clearAyahHighlight();
 
@@ -5813,7 +5921,10 @@ function updateAudioSource(keepPosition = false, options = {}){
           const st = Number(top.start_time);
           if(Number(top.ayah) === 1 && typeof surahs !== "undefined" && surahs[surahNum - 1] &&
              Number(surahs[surahNum - 1][1]) === targetPage){
-            seekMs = 0;
+            const introMs = typeof getAudioIntroOffsetMs === "function"
+              ? getAudioIntroOffsetMs(selectedReader, surahNum)
+              : 0;
+            seekMs = introMs > 0 ? introMs : 0;
           }else if(Number.isFinite(st)) seekMs = st;
         }
       }
@@ -5890,9 +6001,19 @@ readerSelect.onchange = ()=>{
   try{ audio.preload = "auto"; }catch(e){}
   audio.src = url;
   audio.load();
-  currentTime.textContent = "0:00";
-  duration.textContent = "0:00";
-  progress.value = 0;
+  try{
+    if(typeof refreshTimeDisplay === "function"){
+      refreshTimeDisplay({ resetCurrent: true, forceZeroDuration: true });
+    }else{
+      currentTime.textContent = "0:00";
+      duration.textContent = "0:00";
+      progress.value = 0;
+    }
+  }catch(e){
+    currentTime.textContent = "0:00";
+    duration.textContent = "0:00";
+    progress.value = 0;
+  }
   playButton.textContent = wasPlaying ? "Ⅱ" : "▶";
   clearAyahHighlight();
 
@@ -6014,31 +6135,27 @@ function fmt(s){
 audio.addEventListener(
   "loadedmetadata",
   ()=>{
+    if(typeof refreshTimeDisplay === "function") refreshTimeDisplay();
+    else if(duration) duration.textContent = fmt(audio.duration);
+  }
+);
 
-    duration.textContent =
-      fmt(audio.duration);
-
+audio.addEventListener(
+  "durationchange",
+  ()=>{
+    if(typeof refreshTimeDisplay === "function") refreshTimeDisplay();
   }
 );
 
 audio.addEventListener(
   "timeupdate",
   ()=>{
-
-    currentTime.textContent =
-      fmt(audio.currentTime);
-
-    progress.value =
-      audio.duration
-      ?
-      audio.currentTime /
-      audio.duration *
-      100
-      :
-      0;
-
+    if(typeof refreshTimeDisplay === "function") refreshTimeDisplay();
+    else {
+      currentTime.textContent = fmt(audio.currentTime);
+      progress.value = audio.duration ? audio.currentTime / audio.duration * 100 : 0;
+    }
     syncHighlight();
-
   }
 );
 
@@ -8467,7 +8584,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 ===================================================== */
 (function(){
   /* غيّر الرقم فقط هنا عند كل إصدار جديد — كلمة «الإصدار» تُضاف تلقائياً */
-  const APP_VERSION = "1.0.169";
+  const APP_VERSION = "1.0.170";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   /* حدّث الرقم فقط — كلمة «الإصدار» ثابتة في HTML */
   function setAppVersionDisplays(){
@@ -10596,7 +10713,7 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.169";
+    return "1.0.170";
   }
 
   /*
@@ -10641,6 +10758,9 @@ body.interface-old #downloadsPopup .download-native-select{
     عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
     var WHATS_NEW = {
+    "1.0.170": [
+      "إصلاحات وتحسينات"
+    ],
     "1.0.169": [
       "إضافة قسم <b>شكر وعرفان</b> في المساعدة مع روابط المصادر وبيان حقوق الاستخدام",
       "إمكانية <b>التقدّم والترجيع</b> بالضغط والسحب على شريط الصوت أثناء التلاوة",
@@ -12040,11 +12160,18 @@ body.interface-old #bookmarksPickerList .bm-del{
       var rect = prog.getBoundingClientRect();
       if(!rect.width) return;
       var ratio = Math.max(0, Math.min(1, (rect.right - clientXFrom(e)) / rect.width));
-      try{ a.currentTime = ratio * a.duration; }catch(err){}
+      /* العداد يعرض من 0 بعد المقدمة: حوّل نسبة الشريط إلى موضع الصوت الفعلي */
+      var off = 0;
+      try{ if(typeof getActiveIntroOffsetSec === "function") off = getActiveIntroOffsetSec() || 0; }catch(err){}
+      var effectiveDur = Math.max(0, a.duration - off);
+      var target = off + ratio * effectiveDur;
+      try{ a.currentTime = Math.max(0, Math.min(a.duration, target)); }catch(err){}
       try{
         prog.value = ratio * 100;
         var ct = document.getElementById("currentTime");
-        if(ct && typeof fmt === "function") ct.textContent = fmt(a.currentTime);
+        if(ct && typeof fmt === "function"){
+          ct.textContent = fmt(typeof displayCurrentTimeSec === "function" ? displayCurrentTimeSec() : a.currentTime);
+        }
         if(typeof syncHighlight === "function") syncHighlight();
       }catch(err){}
     }
