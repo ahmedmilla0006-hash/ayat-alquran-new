@@ -1160,7 +1160,13 @@ body.update-banner-visible .page-area{
   color:#fff;
   transition:opacity .55s ease,visibility .55s ease;
 }
-#splashScreen.hide{opacity:0;visibility:hidden;pointer-events:none}
+#splashScreen.hide{
+  opacity:0 !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+  display:none !important;
+  z-index:-1 !important;
+}
 #splashScreen .splash-icon{
   width:min(58vw,220px);
   height:min(58vw,220px);
@@ -2504,6 +2510,40 @@ body.interface-old *::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.12);
 <link rel="preconnect" href="https://server8.mp3quran.net" crossorigin>
 <link rel="preconnect" href="https://server10.mp3quran.net" crossorigin>
 <link rel="preconnect" href="https://server12.mp3quran.net" crossorigin>
+
+<style id="storage-manage-fullscreen">
+/* نافذة منبثقة عادية — ليست ملء الشاشة */
+#storageManagePopup.popup-overlay{
+  z-index:100000 !important;
+}
+#storageManagePopup.popup-overlay.show{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+#storageManagePopup .popup-box{
+  width:min(96vw, 520px) !important;
+  max-width:min(96vw, 520px) !important;
+  height:auto !important;
+  max-height:min(88dvh, 900px) !important;
+  border-radius:18px !important;
+  margin:12px !important;
+  overflow:auto !important;
+}
+/* لا تبقَ شاشة الافتتاح أو زخرفتها بعد فتح إدارة المساحة من الإعدادات */
+#splashScreen.hide,
+body.aya-storage-from-settings #splashScreen{
+  display:none !important;
+  opacity:0 !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+  width:0 !important;
+  height:0 !important;
+  overflow:hidden !important;
+  z-index:-1 !important;
+}
+</style>
+
 </head>
 
 <body>
@@ -2820,7 +2860,7 @@ body.interface-old *::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.12);
   </button>
 
   <div class="side-menu-footer" id="sideMenuFooter">
-    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.173</span></div>
+    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.174</span></div>
     <button type="button" class="side-menu-update-link" id="sideMenuUpdateLink" aria-label="تحديث التطبيق">إصدار جديد متوفر: تحديث</button>
   </div>
 
@@ -3315,7 +3355,7 @@ body.interface-old #ayaTourDots .tour-dot-active{
       </div>
 
       <div class="about-copy" id="aboutAppVersion">
-        الإصدار <span id="aboutAppVersionNum">1.0.173</span>
+        الإصدار <span id="aboutAppVersionNum">1.0.174</span>
       </div>
 
       <div class="about-copy">
@@ -8727,7 +8767,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 ===================================================== */
 (function(){
   /* غيّر الرقم فقط هنا عند كل إصدار جديد — كلمة «الإصدار» تُضاف تلقائياً */
-  const APP_VERSION = "1.0.173";
+  const APP_VERSION = "1.0.174";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   /* حدّث الرقم فقط — كلمة «الإصدار» ثابتة في HTML */
   function setAppVersionDisplays(){
@@ -9874,8 +9914,9 @@ document.addEventListener("DOMContentLoaded",()=>{
 (function(){
   function hideSplash(){
     const sp = document.getElementById("splashScreen");
-    if(!sp || sp.classList.contains("hide")) return;
+    if(!sp) return;
     sp.classList.add("hide");
+    try{ sp.style.display="none"; sp.style.opacity="0"; sp.style.visibility="hidden"; }catch(e){}
     setTimeout(function(){ try{ sp.remove(); }catch(e){} }, 500);
   }
   if(document.readyState === "complete"){
@@ -10903,7 +10944,7 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.173";
+    return "1.0.174";
   }
 
   /*
@@ -10948,6 +10989,9 @@ body.interface-old #downloadsPopup .download-native-select{
     عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
     var WHATS_NEW = {
+    "1.0.174": [
+      "إصلاحات وتحسينات"
+    ],
     "1.0.173": [
       "إصلاحات وتحسينات"
     ],
@@ -13289,7 +13333,19 @@ body.interface-old .app::after{
     }catch(e){}
   }
 
+  function forceHideSplash(){
+    try{
+      var sp = document.getElementById("splashScreen");
+      if(!sp) return;
+      sp.classList.add("hide");
+      sp.style.cssText = "display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;z-index:-1!important;position:fixed!important;inset:0;width:0!important;height:0!important;overflow:hidden!important;";
+      sp.setAttribute("aria-hidden", "true");
+      try{ sp.replaceChildren(); }catch(e){}
+      try{ if(sp.parentNode) sp.parentNode.removeChild(sp); }catch(e){}
+    }catch(e){}
+  }
   function openPopup(){
+    forceHideSplash();
     var p = $("storageManagePopup");
     if(!p) return;
     p.classList.add("show");
@@ -13299,6 +13355,7 @@ body.interface-old .app::after{
   function closePopup(){
     var p = $("storageManagePopup");
     if(p) p.classList.remove("show");
+    forceHideSplash();
   }
 
   var btn = $("storageManageButton");
@@ -13368,26 +13425,70 @@ body.interface-old .app::after{
     });
   }
 
-  /* فتح إدارة المساحة من أندرويد: ?storage=1 أو #storage */
-  function shouldOpenStorageFromUrl(){
+  /* فتح إدارة المساحة من أندرويد: ?storage=1 أو localStorage أو استدعاء أصلي */
+  function shouldOpenStorage(){
     try{
       var q = (location.search || "").replace(/^\?/, "");
       var params = new URLSearchParams(q);
       if(params.get("storage") === "1" || params.get("manageSpace") === "1") return true;
       if((location.hash || "").indexOf("storage") >= 0) return true;
     }catch(e){}
+    try{
+      if(localStorage.getItem("aya_open_storage") === "1") return true;
+      if(sessionStorage.getItem("aya_open_storage") === "1") return true;
+    }catch(e){}
     return false;
   }
-  function openStorageFromUrl(){
-    if(!shouldOpenStorageFromUrl()) return;
-    try{ if(typeof closeSideMenu === "function") closeSideMenu(); }catch(e){}
-    setTimeout(function(){ openPopup(); }, 400);
-    setTimeout(function(){ openPopup(); }, 1200);
+  function clearStorageFlag(){
+    try{ localStorage.removeItem("aya_open_storage"); }catch(e){}
+    try{ sessionStorage.removeItem("aya_open_storage"); }catch(e){}
   }
-  if(document.readyState === "complete") openStorageFromUrl();
-  else window.addEventListener("load", openStorageFromUrl);
+  function maskAppForStorage(){
+    try{ forceHideSplash(); }catch(e){}
+  }
+  function openStorageNow(){
+    maskAppForStorage();
+    try{ if(typeof closeSideMenu === "function") closeSideMenu(); }catch(e){}
+    try{ openPopup(); }catch(e){}
+  }
+  function tryOpenStorageManager(force){
+    if(!force && !shouldOpenStorage()) return false;
+    try{ document.body.classList.add("aya-storage-from-settings"); }catch(e){}
+    forceHideSplash();
+    maskAppForStorage();
+    clearStorageFlag();
+    openStorageNow();
+    setTimeout(openStorageNow, 300);
+    setTimeout(openStorageNow, 900);
+    setTimeout(openStorageNow, 1800);
+    return true;
+  }
+  /* أندرويد قد يضبط العلم بعد تحميل الصفحة */
+  try{
+    if(localStorage.getItem("aya_open_storage") === "1" || sessionStorage.getItem("aya_open_storage") === "1"){
+      forceHideSplash();
+    }
+  }catch(e){}
 
-  try{ window.__ayaOpenStorageManager = openPopup; }catch(e){}
+  var storagePoll = 0;
+  var storageTimer = setInterval(function(){
+    storagePoll++;
+    if(shouldOpenStorage()){
+      tryOpenStorageManager(true);
+      clearInterval(storageTimer);
+    }
+    if(storagePoll > 40) clearInterval(storageTimer);
+  }, 400);
+  if(document.readyState === "complete") tryOpenStorageManager(false);
+  else window.addEventListener("load", function(){ tryOpenStorageManager(false); });
+
+  try{
+    window.__ayaOpenStorageManager = openPopup;
+    window.__ayaRequestStorageManager = function(){
+      try{ localStorage.setItem("aya_open_storage", "1"); }catch(e){}
+      tryOpenStorageManager(true);
+    };
+  }catch(e){}
 })();
 </script>
 
