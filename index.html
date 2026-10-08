@@ -2820,7 +2820,7 @@ body.interface-old *::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.12);
   </button>
 
   <div class="side-menu-footer" id="sideMenuFooter">
-    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.171</span></div>
+    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.172</span></div>
     <button type="button" class="side-menu-update-link" id="sideMenuUpdateLink" aria-label="تحديث التطبيق">إصدار جديد متوفر: تحديث</button>
   </div>
 
@@ -3315,7 +3315,7 @@ body.interface-old #ayaTourDots .tour-dot-active{
       </div>
 
       <div class="about-copy" id="aboutAppVersion">
-        الإصدار <span id="aboutAppVersionNum">1.0.171</span>
+        الإصدار <span id="aboutAppVersionNum">1.0.172</span>
       </div>
 
       <div class="about-copy">
@@ -7303,6 +7303,11 @@ aboutButton.onclick = ()=>{
   closeSideMenu();
 
   aboutOverlay.classList.add("show");
+  try{
+    if(typeof window.__ayaRefreshAboutStorage === "function"){
+      window.__ayaRefreshAboutStorage();
+    }
+  }catch(e){}
 
 };
 
@@ -8722,7 +8727,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 ===================================================== */
 (function(){
   /* غيّر الرقم فقط هنا عند كل إصدار جديد — كلمة «الإصدار» تُضاف تلقائياً */
-  const APP_VERSION = "1.0.171";
+  const APP_VERSION = "1.0.172";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   /* حدّث الرقم فقط — كلمة «الإصدار» ثابتة في HTML */
   function setAppVersionDisplays(){
@@ -9166,6 +9171,43 @@ document.addEventListener("DOMContentLoaded",()=>{
 })();
 </script>
 
+
+<!-- إدارة المساحة -->
+<div class="popup-overlay" id="storageManagePopup" aria-hidden="true">
+  <div class="popup-box" style="max-width:min(96vw,520px)">
+    <div class="popup-header">
+      <h2>إدارة المساحة</h2>
+      <button type="button" class="popup-close" id="storageManageClose" aria-label="إغلاق">×</button>
+    </div>
+    <p class="search-hint" style="margin-top:0">عرض ما يستهلكه التطبيق من التخزين ومسحه بشكل انتقائي دون حذف إعداداتك أو علاماتك.</p>
+    <div id="storageStats" style="direction:rtl;display:flex;flex-direction:column;gap:10px;margin:12px 0">
+      <div style="background:rgba(0,0,0,.22);border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
+        <span>المجموع</span><strong id="stTotal">—</strong>
+      </div>
+      <div style="background:rgba(0,0,0,.14);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+        <span>صفحات المصحف</span><span id="stPages">—</span>
+      </div>
+      <div style="background:rgba(0,0,0,.14);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+        <span>التلاوات الكاملة</span><span id="stAudio">—</span>
+      </div>
+      <div style="background:rgba(0,0,0,.14);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+        <span>التلاوة التدريجية</span><span id="stPartial">—</span>
+      </div>
+      <div style="background:rgba(0,0,0,.14);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+        <span>التوقيت والتظليل</span><span id="stTiming">—</span>
+      </div>
+    </div>
+    <div style="direction:rtl;display:flex;flex-direction:column;gap:8px;margin-top:8px">
+      <button type="button" class="popup-item" id="stClearPages" style="margin:0;text-align:center">مسح صفحات المصحف</button>
+      <button type="button" class="popup-item" id="stClearAudio" style="margin:0;text-align:center">مسح التلاوات الكاملة</button>
+      <button type="button" class="popup-item" id="stClearPartial" style="margin:0;text-align:center">مسح التلاوة التدريجية</button>
+      <button type="button" class="popup-item" id="stClearTiming" style="margin:0;text-align:center">مسح بيانات التوقيت</button>
+      <button type="button" class="popup-item" id="stClearAll" style="margin:0;text-align:center;background:#8a3030">مسح كل الملفات المنزّلة</button>
+    </div>
+    <div id="stStatus" class="search-status" style="text-align:right;padding:10px 0 0;min-height:24px"></div>
+  </div>
+</div>
+
 <div class="popup-overlay" id="downloadsPopup" aria-hidden="true">
   <div class="popup-box" style="max-width:min(96vw,560px)">
     <div class="popup-header">
@@ -9221,7 +9263,7 @@ document.addEventListener("DOMContentLoaded",()=>{
       <progress id="dlProgress" max="100" value="0" class="progress" style="width:100%;height:14px;background:#444;border-radius:8px;overflow:hidden"></progress>
       <div style="display:flex;gap:8px;margin-top:10px">
         <button type="button" class="popup-item" id="dlCancel" style="margin:0;flex:1;text-align:center;background:#666">إيقاف</button>
-        <button type="button" class="popup-item" id="dlClear" style="margin:0;flex:1;text-align:center;background:#8a3030">مسح التنزيلات</button>
+        <button type="button" class="popup-item" id="dlClear" style="margin:0;flex:1;text-align:center;background:#3a5a4a">💾 إدارة المساحة</button>
       </div>
     </div>
   </div>
@@ -9320,14 +9362,24 @@ document.addEventListener("DOMContentLoaded",()=>{
   });
 
   var clearEl = document.getElementById("dlClear");
-  if(clearEl) clearEl.addEventListener("click", async function(){
-    if(!confirm("مسح كل الصفحات والتلاوات المنزّلة؟")) return;
+  if(clearEl) clearEl.addEventListener("click", function(){
+    /* إدارة مساحة أدق بدل المسح الكلي فقط */
     try{
-      await caches.delete(PAGE_CACHE);
-      await caches.delete(AUDIO_CACHE);
-      setStatus("تم مسح التنزيلات");
-      setProgress(0, 100);
-    }catch(e){ setStatus("تعذر المسح"); }
+      if(typeof window.__ayaOpenStorageManager === "function"){
+        try{ closePopup(); }catch(e){}
+        window.__ayaOpenStorageManager();
+        return;
+      }
+    }catch(e){}
+    (async function(){
+      if(!confirm("مسح كل الصفحات والتلاوات المنزّلة؟")) return;
+      try{
+        await caches.delete(PAGE_CACHE);
+        await caches.delete(AUDIO_CACHE);
+        setStatus("تم مسح التنزيلات");
+        setProgress(0, 100);
+      }catch(e){ setStatus("تعذر المسح"); }
+    })();
   });
 
   function juzPageRange(pageNumber){
@@ -10851,7 +10903,7 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.171";
+    return "1.0.172";
   }
 
   /*
@@ -10896,6 +10948,9 @@ body.interface-old #downloadsPopup .download-native-select{
     عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
     var WHATS_NEW = {
+    "1.0.172": [
+      "إصلاحات وتحسينات"
+    ],
     "1.0.171": [
       "تحسين التظليل عند التشغيل بدون إنترنت بعد الحفظ التدريجي",
       "حفظ التوقيت وأبعاد الصفحة محلياً للعمل دون نت",
@@ -13084,6 +13139,252 @@ body.interface-old .app::after{
     scheduleAudioProgress: scheduleAudioProgress,
     downloadAudioUpTo: downloadAudioUpTo
   };
+})();
+</script>
+
+
+<script id="aya-storage-manager">
+(function(){
+  var PAGE_CACHE = "aya-pages-v1";
+  var AUDIO_CACHE = "aya-audio-v1";
+  var TIMING_CACHE = "aya-timing-v1";
+  var IDB_NAME = "aya-audio-partial-db";
+  var IDB_STORE = "partials";
+
+  function $(id){ return document.getElementById(id); }
+
+  function fmtSize(n){
+    n = Number(n) || 0;
+    if(n < 1024) return Math.round(n) + " بايت";
+    if(n < 1024*1024) return (n/1024).toFixed(n < 10*1024 ? 1 : 0) + " ك.ب";
+    return (n/(1024*1024)).toFixed(n < 10*1024*1024 ? 2 : 1) + " م.ب";
+  }
+
+  async function cacheSize(name){
+    if(typeof caches === "undefined") return { bytes: 0, count: 0 };
+    try{
+      var cache = await caches.open(name);
+      var keys = await cache.keys();
+      var total = 0;
+      for(var i=0;i<keys.length;i++){
+        try{
+          var res = await cache.match(keys[i]);
+          if(!res) continue;
+          var buf = await res.clone().arrayBuffer();
+          total += buf.byteLength || 0;
+        }catch(e){}
+      }
+      return { bytes: total, count: keys.length };
+    }catch(e){ return { bytes: 0, count: 0 }; }
+  }
+
+  function openIdb(){
+    return new Promise(function(resolve, reject){
+      try{
+        var req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = function(){
+          var db = req.result;
+          if(!db.objectStoreNames.contains(IDB_STORE)){
+            db.createObjectStore(IDB_STORE, { keyPath: "url" });
+          }
+        };
+        req.onsuccess = function(){ resolve(req.result); };
+        req.onerror = function(){ reject(req.error); };
+      }catch(e){ reject(e); }
+    });
+  }
+
+  async function partialSize(){
+    try{
+      var db = await openIdb();
+      return await new Promise(function(resolve){
+        var tx = db.transaction(IDB_STORE, "readonly");
+        var store = tx.objectStore(IDB_STORE);
+        var req = store.getAll();
+        req.onsuccess = function(){
+          var rows = req.result || [];
+          var total = 0;
+          for(var i=0;i<rows.length;i++){
+            var b = rows[i] && rows[i].blob;
+            if(b && typeof b.size === "number") total += b.size;
+            else if(rows[i] && rows[i].byteEnd) total += Number(rows[i].byteEnd) || 0;
+          }
+          resolve({ bytes: total, count: rows.length });
+        };
+        req.onerror = function(){ resolve({ bytes: 0, count: 0 }); };
+      });
+    }catch(e){ return { bytes: 0, count: 0 }; }
+  }
+
+  async function timingLocalSize(){
+    var total = 0, count = 0;
+    try{
+      for(var i=0;i<localStorage.length;i++){
+        var k = localStorage.key(i);
+        if(!k) continue;
+        if(k.indexOf("ayaTiming:") === 0 || k.indexOf("ayaViewBox:") === 0 || k.indexOf("ayaPartialMax:") === 0){
+          var v = localStorage.getItem(k) || "";
+          total += (k.length + v.length) * 2;
+          count++;
+        }
+      }
+    }catch(e){}
+    var cachePart = await cacheSize(TIMING_CACHE);
+    return { bytes: total + cachePart.bytes, count: count + cachePart.count };
+  }
+
+  async function refreshStats(){
+    var st = $("stStatus");
+    if(st) st.textContent = "جاري حساب المساحة…";
+    var pages = await cacheSize(PAGE_CACHE);
+    var audio = await cacheSize(AUDIO_CACHE);
+    var partial = await partialSize();
+    var timing = await timingLocalSize();
+    var sum = pages.bytes + audio.bytes + partial.bytes + timing.bytes;
+    if($("stPages")) $("stPages").textContent = fmtSize(pages.bytes) + (pages.count ? " · " + pages.count + " ملف" : "");
+    if($("stAudio")) $("stAudio").textContent = fmtSize(audio.bytes) + (audio.count ? " · " + audio.count + " ملف" : "");
+    if($("stPartial")) $("stPartial").textContent = fmtSize(partial.bytes) + (partial.count ? " · " + partial.count + " مقطع" : "");
+    if($("stTiming")) $("stTiming").textContent = fmtSize(timing.bytes);
+    if($("stTotal")) $("stTotal").textContent = fmtSize(sum);
+    if(st) st.textContent = sum > 0 ? "يمكنك مسح أي قسم دون فقدان الإعدادات أو العلامات." : "لا توجد ملفات منزّلة حالياً.";
+  }
+
+  async function clearCache(name){
+    try{ await caches.delete(name); }catch(e){}
+    try{ await caches.open(name); }catch(e){}
+  }
+
+  async function clearPartials(){
+    try{
+      var db = await openIdb();
+      await new Promise(function(resolve){
+        var tx = db.transaction(IDB_STORE, "readwrite");
+        tx.objectStore(IDB_STORE).clear();
+        tx.oncomplete = function(){ resolve(); };
+        tx.onerror = function(){ resolve(); };
+      });
+    }catch(e){}
+    try{
+      var keys = [];
+      for(var i=0;i<localStorage.length;i++){
+        var k = localStorage.key(i);
+        if(k && k.indexOf("ayaPartialMax:") === 0) keys.push(k);
+      }
+      keys.forEach(function(k){ try{ localStorage.removeItem(k); }catch(e){} });
+    }catch(e){}
+  }
+
+  async function clearTimingLocal(){
+    try{ await caches.delete(TIMING_CACHE); }catch(e){}
+    try{
+      var keys = [];
+      for(var i=0;i<localStorage.length;i++){
+        var k = localStorage.key(i);
+        if(k && (k.indexOf("ayaTiming:") === 0 || k.indexOf("ayaViewBox:") === 0)) keys.push(k);
+      }
+      keys.forEach(function(k){ try{ localStorage.removeItem(k); }catch(e){} });
+    }catch(e){}
+  }
+
+  function openPopup(){
+    var p = $("storageManagePopup");
+    if(!p) return;
+    p.classList.add("show");
+    try{ if(typeof closeSideMenu === "function") closeSideMenu(); }catch(e){}
+    refreshStats();
+  }
+  function closePopup(){
+    var p = $("storageManagePopup");
+    if(p) p.classList.remove("show");
+  }
+
+  var btn = $("storageManageButton");
+  if(btn) btn.addEventListener("click", openPopup);
+  var closeBtn = $("storageManageClose");
+  if(closeBtn) closeBtn.addEventListener("click", closePopup);
+  var pop = $("storageManagePopup");
+  if(pop) pop.addEventListener("click", function(e){ if(e.target === pop) closePopup(); });
+
+  function bindClear(id, fn, label){
+    var el = $(id);
+    if(!el) return;
+    el.addEventListener("click", async function(){
+      if(!confirm(label)) return;
+      var st = $("stStatus");
+      if(st) st.textContent = "جاري المسح…";
+      try{ await fn(); }catch(e){}
+      await refreshStats();
+      if(st) st.textContent = "تم المسح.";
+    });
+  }
+
+  bindClear("stClearPages", function(){ return clearCache(PAGE_CACHE); }, "مسح صفحات المصحف المنزّلة؟");
+  bindClear("stClearAudio", function(){ return clearCache(AUDIO_CACHE); }, "مسح التلاوات الكاملة المنزّلة؟");
+  bindClear("stClearPartial", function(){ return clearPartials(); }, "مسح مقاطع التلاوة التدريجية؟");
+  bindClear("stClearTiming", function(){ return clearTimingLocal(); }, "مسح بيانات التوقيت المحفوظة؟");
+  bindClear("stClearAll", async function(){
+    await clearCache(PAGE_CACHE);
+    await clearCache(AUDIO_CACHE);
+    await clearCache(TIMING_CACHE);
+    await clearPartials();
+    await clearTimingLocal();
+  }, "مسح كل الملفات المنزّلة؟ (لن تُحذف الإعدادات أو العلامات)");
+
+  async function fillAboutStorage(){
+    try{
+      var pages = await cacheSize(PAGE_CACHE);
+      var audio = await cacheSize(AUDIO_CACHE);
+      var partial = await partialSize();
+      var timing = await timingLocalSize();
+      var sum = pages.bytes + audio.bytes + partial.bytes + timing.bytes;
+      var other = partial.bytes + timing.bytes;
+      var t = document.getElementById("aboutStTotal");
+      var p = document.getElementById("aboutStPages");
+      var a = document.getElementById("aboutStAudio");
+      var o = document.getElementById("aboutStOther");
+      if(t) t.textContent = fmtSize(sum);
+      if(p) p.textContent = fmtSize(pages.bytes);
+      if(a) a.textContent = fmtSize(audio.bytes);
+      if(o) o.textContent = fmtSize(other);
+    }catch(e){}
+  }
+
+  try{
+    window.__ayaOpenStorageManager = openPopup;
+    window.__ayaRefreshAboutStorage = fillAboutStorage;
+  }catch(e){}
+
+  var aboutBtn = document.getElementById("aboutStorageManageBtn");
+  if(aboutBtn){
+    aboutBtn.addEventListener("click", function(){
+      try{
+        var about = document.getElementById("aboutOverlay");
+        if(about) about.classList.remove("show");
+      }catch(e){}
+      openPopup();
+    });
+  }
+
+  /* فتح إدارة المساحة من أندرويد: ?storage=1 أو #storage */
+  function shouldOpenStorageFromUrl(){
+    try{
+      var q = (location.search || "").replace(/^\?/, "");
+      var params = new URLSearchParams(q);
+      if(params.get("storage") === "1" || params.get("manageSpace") === "1") return true;
+      if((location.hash || "").indexOf("storage") >= 0) return true;
+    }catch(e){}
+    return false;
+  }
+  function openStorageFromUrl(){
+    if(!shouldOpenStorageFromUrl()) return;
+    try{ if(typeof closeSideMenu === "function") closeSideMenu(); }catch(e){}
+    setTimeout(function(){ openPopup(); }, 400);
+    setTimeout(function(){ openPopup(); }, 1200);
+  }
+  if(document.readyState === "complete") openStorageFromUrl();
+  else window.addEventListener("load", openStorageFromUrl);
+
+  try{ window.__ayaOpenStorageManager = openPopup; }catch(e){}
 })();
 </script>
 
