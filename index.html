@@ -2820,7 +2820,7 @@ body.interface-old *::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.12);
   </button>
 
   <div class="side-menu-footer" id="sideMenuFooter">
-    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.170</span></div>
+    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.171</span></div>
     <button type="button" class="side-menu-update-link" id="sideMenuUpdateLink" aria-label="تحديث التطبيق">إصدار جديد متوفر: تحديث</button>
   </div>
 
@@ -3315,7 +3315,7 @@ body.interface-old #ayaTourDots .tour-dot-active{
       </div>
 
       <div class="about-copy" id="aboutAppVersion">
-        الإصدار <span id="aboutAppVersionNum">1.0.170</span>
+        الإصدار <span id="aboutAppVersionNum">1.0.171</span>
       </div>
 
       <div class="about-copy">
@@ -3936,6 +3936,16 @@ async function fetchTimingForSurah(surahNumber){
   if(timingCache[cacheKey]){
     return tagTimingItems(timingCache[cacheKey], surah);
   }
+  try{
+    const ls = localStorage.getItem("ayaTiming:"+cacheKey);
+    if(ls){
+      const parsed = JSON.parse(ls);
+      if(Array.isArray(parsed) && parsed.length){
+        timingCache[cacheKey] = parsed;
+        return tagTimingItems(parsed, surah);
+      }
+    }
+  }catch(e){}
 
   try{
     const readId = await getTimingReadId();
@@ -3945,7 +3955,26 @@ async function fetchTimingForSurah(surahNumber){
       TIMING_API + "?surah=" + surah + "&read=" + readId,
       {cache:"force-cache"}
     );
-    if(!res.ok) return [];
+    if(!res.ok){
+      try{
+        const cache = await caches.open("aya-timing-v1");
+        const hit = await cache.match(TIMING_API + "?surah=" + surah + "&read=" + readId);
+        if(hit){
+          const data = await hit.json();
+          const list = Array.isArray(data) ? data.filter(x =>
+            x && x.ayah != null &&
+            Number.isFinite(Number(x.start_time)) &&
+            Number.isFinite(Number(x.end_time))
+          ) : [];
+          if(list.length){
+            timingCache[cacheKey] = list;
+            try{ localStorage.setItem("ayaTiming:"+cacheKey, JSON.stringify(list)); }catch(e){}
+            return tagTimingItems(list, surah);
+          }
+        }
+      }catch(e){}
+      return [];
+    }
 
     const data = await res.json();
     const list = Array.isArray(data)
@@ -3959,8 +3988,19 @@ async function fetchTimingForSurah(surahNumber){
 
     /* نخزّن النسخة الخام في الكاش؛ والوسم يُضاف عند كل قراءة */
     timingCache[cacheKey] = list;
+    try{ localStorage.setItem("ayaTiming:"+cacheKey, JSON.stringify(list)); }catch(e){}
     return tagTimingItems(list, surah);
   }catch(e){
+    try{
+      const ls = localStorage.getItem("ayaTiming:"+cacheKey);
+      if(ls){
+        const parsed = JSON.parse(ls);
+        if(Array.isArray(parsed) && parsed.length){
+          timingCache[cacheKey] = parsed;
+          return tagTimingItems(parsed, surah);
+        }
+      }
+    }catch(e2){}
     return [];
   }
 }
@@ -4944,9 +4984,20 @@ async function loadQuranPageFromInternet(pageNumber){
   let detectedViewBox = pageViewBoxCache[n] || null;
   if(!detectedViewBox){
     try{
-      detectedViewBox = await readPageSvgViewBox(url);
-      if(detectedViewBox) pageViewBoxCache[n] = detectedViewBox;
+      const lsVb = localStorage.getItem("ayaViewBox:"+n);
+      if(lsVb) detectedViewBox = lsVb;
     }catch(e){}
+  }
+  if(!detectedViewBox){
+    try{
+      detectedViewBox = await readPageSvgViewBox(url);
+      if(detectedViewBox){
+        pageViewBoxCache[n] = detectedViewBox;
+        try{ localStorage.setItem("ayaViewBox:"+n, detectedViewBox); }catch(e){}
+      }
+    }catch(e){}
+  }else{
+    pageViewBoxCache[n] = detectedViewBox;
   }
 
   if(token !== pageSvgToken) return;
@@ -5377,6 +5428,24 @@ async function loadTimingForCurrentSurah(){
     return;
   }
 
+  /* نسخة محلية من التوقيت للتشغيل بدون نت */
+  try{
+    const ls = localStorage.getItem("ayaTiming:"+cacheKey);
+    if(ls){
+      const parsed = JSON.parse(ls);
+      if(Array.isArray(parsed) && parsed.length){
+        timingCache[cacheKey] = parsed;
+        currentTiming = tagTimingItems(parsed, surah);
+        loadPageHitTiming(currentPage);
+        requestAnimationFrame(function(){
+          if(typeof positionHighlightLayer === "function") positionHighlightLayer();
+          if(typeof syncHighlight === "function") syncHighlight();
+        });
+        return;
+      }
+    }
+  }catch(e){}
+
   timingLoading = true;
 
   try{
@@ -5396,7 +5465,32 @@ async function loadTimingForCurrentSurah(){
         {cache:"force-cache"}
       );
 
-    if(!res.ok) return;
+    if(!res.ok){
+      /* بدون نت: Cache Storage */
+      try{
+        const cache = await caches.open("aya-timing-v1");
+        const hit = await cache.match(TIMING_API + "?surah=" + surah + "&read=" + readId);
+        if(hit){
+          const data = await hit.json();
+          const raw = Array.isArray(data) ? data.filter(x =>
+            x && x.ayah != null &&
+            Number.isFinite(Number(x.start_time)) &&
+            Number.isFinite(Number(x.end_time))
+          ) : [];
+          if(raw.length){
+            timingCache[cacheKey] = raw;
+            try{ localStorage.setItem("ayaTiming:"+cacheKey, JSON.stringify(raw)); }catch(e){}
+            currentTiming = tagTimingItems(raw, surah);
+            requestAnimationFrame(function(){
+              if(typeof positionHighlightLayer === "function") positionHighlightLayer();
+              if(typeof syncHighlight === "function") syncHighlight();
+            });
+            loadPageHitTiming(currentPage);
+          }
+        }
+      }catch(e){}
+      return;
+    }
 
     const data = await res.json();
 
@@ -5548,12 +5642,32 @@ function seekAudioToCurrentPage(){
 function getActiveTiming(){
   if(!currentTiming.length) return null;
 
-  const t = audio.currentTime * 1000;
+  let t = audio.currentTime * 1000;
+  /* ملف جزئي: لا تتجاوز آخر زمن محفوظ */
+  try{
+    const maxSec = Number(audio.__ayaPartialMaxSec) || 0;
+    if(maxSec > 1 && t > maxSec * 1000) t = maxSec * 1000 - 1;
+  }catch(e){}
 
-  return currentTiming.find(item =>
+  const exact = currentTiming.find(item =>
     t >= Number(item.start_time) &&
     t < Number(item.end_time)
-  ) || null;
+  );
+  if(exact) return exact;
+
+  /* أقرب آية بالزمن — يمنع اختفاء/خطأ التظليل عند فجوات بسيطة */
+  let best = null, bestDist = Infinity;
+  for(let i = 0; i < currentTiming.length; i++){
+    const it = currentTiming[i];
+    const st = Number(it.start_time), en = Number(it.end_time);
+    if(!Number.isFinite(st) || !Number.isFinite(en)) continue;
+    let dist = 0;
+    if(t < st) dist = st - t;
+    else if(t >= en) dist = t - en + 0.01;
+    else dist = 0;
+    if(dist < bestDist){ bestDist = dist; best = it; }
+  }
+  return (best && bestDist < 800) ? best : null;
 }
 
 function syncHighlight(){
@@ -8608,7 +8722,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 ===================================================== */
 (function(){
   /* غيّر الرقم فقط هنا عند كل إصدار جديد — كلمة «الإصدار» تُضاف تلقائياً */
-  const APP_VERSION = "1.0.170";
+  const APP_VERSION = "1.0.171";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   /* حدّث الرقم فقط — كلمة «الإصدار» ثابتة في HTML */
   function setAppVersionDisplays(){
@@ -10737,7 +10851,7 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.170";
+    return "1.0.171";
   }
 
   /*
@@ -10782,6 +10896,11 @@ body.interface-old #downloadsPopup .download-native-select{
     عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
     var WHATS_NEW = {
+    "1.0.171": [
+      "تحسين التظليل عند التشغيل بدون إنترنت بعد الحفظ التدريجي",
+      "حفظ التوقيت وأبعاد الصفحة محلياً للعمل دون نت",
+      "تحميل تدريجي للتلاوة حتى موضع القراءة فقط"
+    ],
     "1.0.170": [
       "إصلاحات وتحسينات"
     ],
@@ -12831,8 +12950,24 @@ body.interface-old .app::after{
       var t = 0;
       try{ t = audioEl.currentTime || 0; }catch(e){}
       try{
+        /* علّم أن المصدر جزئي حتى لا يُكسر التزامن */
+        try{ audioEl.__ayaPartialMaxSec = Number(rec.maxSec) || 0; }catch(e){}
         audioEl.src = local;
-        if(t > 0.3 && t < (rec.maxSec || 0)) audioEl.currentTime = t;
+        var restore = (t > 0.3 && t < (rec.maxSec || 0)) ? t : 0;
+        var onMeta = function(){
+          try{ audioEl.removeEventListener("loadedmetadata", onMeta); }catch(e){}
+          try{ if(restore > 0) audioEl.currentTime = restore; }catch(e){}
+          try{
+            if(typeof loadTimingForCurrentSurah === "function") loadTimingForCurrentSurah();
+          }catch(e){}
+          try{
+            if(typeof positionHighlightLayer === "function") positionHighlightLayer();
+            if(typeof syncHighlight === "function") syncHighlight();
+          }catch(e){}
+        };
+        audioEl.addEventListener("loadedmetadata", onMeta);
+        /* إن كانت البيانات جاهزة فوراً */
+        setTimeout(onMeta, 80);
         return audioEl.play().then(function(){ return true; }).catch(function(){ return true; });
       }catch(e){ return false; }
     }).catch(function(){ return false; });
