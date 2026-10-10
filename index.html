@@ -2512,10 +2512,13 @@ body.interface-old *::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.12);
 <link rel="preconnect" href="https://server12.mp3quran.net" crossorigin>
 
 <style id="storage-manage-fullscreen">
-/* نافذة منبثقة عادية — ليست ملء الشاشة */
+/* نافذة منبثقة — مع هامش آمن تحت شريط الحالة */
 #storageManagePopup.popup-overlay{
   z-index:100000 !important;
   background:rgba(8,14,20,.72) !important;
+  padding-top:calc(12px + env(safe-area-inset-top, 0px)) !important;
+  padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+  box-sizing:border-box !important;
 }
 #storageManagePopup.popup-overlay.show{
   display:flex !important;
@@ -2526,25 +2529,20 @@ body.interface-old *::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.12);
   width:min(96vw, 520px) !important;
   max-width:min(96vw, 520px) !important;
   height:auto !important;
-  max-height:min(88dvh, 900px) !important;
+  max-height:min(calc(88dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)), 900px) !important;
   border-radius:18px !important;
-  margin:12px !important;
+  margin:0 12px !important;
   overflow:auto !important;
+  position:relative !important;
+  z-index:100002 !important;
 }
-/* غطاء علوي يخفي أي شريط/زخرفة/كلمة آية فوق النافذة */
+#storageManagePopup .popup-header{
+  padding-top:8px !important;
+  flex-shrink:0 !important;
+}
+/* الغطاء العلوي معطّل — كان يغطي عنوان النافذة */
 #storageTopCover{
-  display:none;
-  position:fixed;
-  top:0; left:0; right:0;
-  height:calc(56px + env(safe-area-inset-top, 0px));
-  background:#0b1218;
-  z-index:100001;
-  pointer-events:none;
-}
-body.aya-storage-from-settings #storageTopCover,
-#storageManagePopup.popup-overlay.show ~ #storageTopCover,
-body.storage-popup-open #storageTopCover{
-  display:block !important;
+  display:none !important;
 }
 #splashScreen.hide,
 body.aya-storage-from-settings #splashScreen{
@@ -2876,7 +2874,7 @@ body.aya-storage-from-settings #splashScreen{
   </button>
 
   <div class="side-menu-footer" id="sideMenuFooter">
-    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.181</span></div>
+    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.182</span></div>
     <button type="button" class="side-menu-update-link" id="sideMenuUpdateLink" aria-label="تحديث التطبيق">إصدار جديد متوفر: تحديث</button>
   </div>
 
@@ -3371,7 +3369,7 @@ body.interface-old #ayaTourDots .tour-dot-active{
       </div>
 
       <div class="about-copy" id="aboutAppVersion">
-        الإصدار <span id="aboutAppVersionNum">1.0.181</span>
+        الإصدار <span id="aboutAppVersionNum">1.0.182</span>
       </div>
 
       <div class="about-copy">
@@ -8783,7 +8781,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 ===================================================== */
 (function(){
   /* غيّر الرقم فقط هنا عند كل إصدار جديد — كلمة «الإصدار» تُضاف تلقائياً */
-  const APP_VERSION = "1.0.181";
+  const APP_VERSION = "1.0.182";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   /* حدّث الرقم فقط — كلمة «الإصدار» ثابتة في HTML */
   function setAppVersionDisplays(){
@@ -10960,7 +10958,7 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.181";
+    return "1.0.182";
   }
 
   /*
@@ -11005,6 +11003,9 @@ body.interface-old #downloadsPopup .download-native-select{
     عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
     var WHATS_NEW = {
+    "1.0.182": [
+      "إصلاحات وتحسينات"
+    ],
     "1.0.181": [
       "إصلاحات وتحسينات"
     ],
