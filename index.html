@@ -2840,6 +2840,8 @@ body.aya-storage-from-settings #splashScreen{
 
   <button class="menu-item" id="downloadsButton">⬇️ تنزيل الملحقات</button>
 
+  <button class="menu-item" id="storageManageMenuButton">💾 إدارة المساحة</button>
+
   <button class="menu-item" id="updatesButton">
     🔄 التحديثات
     <span class="update-badge" id="updatesBadge" aria-hidden="true">1</span>
@@ -2874,7 +2876,7 @@ body.aya-storage-from-settings #splashScreen{
   </button>
 
   <div class="side-menu-footer" id="sideMenuFooter">
-    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.182</span></div>
+    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.183</span></div>
     <button type="button" class="side-menu-update-link" id="sideMenuUpdateLink" aria-label="تحديث التطبيق">إصدار جديد متوفر: تحديث</button>
   </div>
 
@@ -3369,7 +3371,7 @@ body.interface-old #ayaTourDots .tour-dot-active{
       </div>
 
       <div class="about-copy" id="aboutAppVersion">
-        الإصدار <span id="aboutAppVersionNum">1.0.182</span>
+        الإصدار <span id="aboutAppVersionNum">1.0.183</span>
       </div>
 
       <div class="about-copy">
@@ -4043,6 +4045,17 @@ async function fetchTimingForSurah(surahNumber){
     /* نخزّن النسخة الخام في الكاش؛ والوسم يُضاف عند كل قراءة */
     timingCache[cacheKey] = list;
     try{ localStorage.setItem("ayaTiming:"+cacheKey, JSON.stringify(list)); }catch(e){}
+    try{
+      if(list.length && readId){
+        var fu = TIMING_API + "?surah=" + surah + "&read=" + readId;
+        caches.open("aya-timing-v1").then(function(cache){
+          cache.put(fu, new Response(JSON.stringify(list), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          })).catch(function(){});
+        }).catch(function(){});
+      }
+    }catch(e){}
     return tagTimingItems(list, surah);
   }catch(e){
     try{
@@ -5563,6 +5576,24 @@ async function loadTimingForCurrentSurah(){
     timingCache[cacheKey] = raw;
     currentTiming = tagTimingItems(raw, surah);
 
+    /* حفظ دائم للتظليل أوفلاين */
+    try{
+      if(raw.length){
+        localStorage.setItem("ayaTiming:"+cacheKey, JSON.stringify(raw));
+      }
+    }catch(e){}
+    try{
+      if(raw.length && timingReadId){
+        var tUrl = TIMING_API + "?surah=" + surah + "&read=" + timingReadId;
+        caches.open("aya-timing-v1").then(function(cache){
+          cache.put(tUrl, new Response(JSON.stringify(raw), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          })).catch(function(){});
+        }).catch(function(){});
+      }
+    }catch(e){}
+
     /* إعادة المحاولة مهمة للفـاتحة وأول البقرة بعد وصول التوقيت */
     requestAnimationFrame(()=>{
       positionHighlightLayer();
@@ -5853,8 +5884,20 @@ function updateAudioSource(keepPosition = false, options = {}){
       return;
     }
 
+    /* امسح حالة المقطع القديم حتى لا يُشغَّل صوت سورة أخرى */
+    try{
+      audio.__ayaPartialMaxSec = 0;
+      audio.__ayaPartialUrl = "";
+      audio.__ayaResumeAfterPartial = 0;
+      audio.__ayaHandoffBusy = false;
+      audio.__ayaPartialUpgrading = false;
+      audio.__ayaRecovering = false;
+      var offline = (typeof navigator !== "undefined" && navigator.onLine === false);
+      /* لا forceNet عند تبديل السورة — يمنع قفزة وقت خاطئة وتقطيع */
+      try{ audio.__ayaForceNet = false; }catch(e){}
+    }catch(e){}
+
     resetRepeat();
-    /* لا نوقف الصوت مبكراً هنا حتى لا يُلغى userWantsPlay — نبدّل المصدر مباشرة */
     try{ window.__ayaAudioSourceSwitching = true; }catch(e){}
 
     /* رمز تحميل لكل مصدر جديد — يمنع تشغيل مصدر قديم بعد قلب الصفحة */
@@ -5970,11 +6013,14 @@ function updateAudioSource(keepPosition = false, options = {}){
     audio.addEventListener("loadeddata", onCanPlay);
 
     try{
-      const cur = String(audio.getAttribute("src") || audio.src || "");
-      const sameFile = !!(url && cur && (
+      const cur = String(audio.getAttribute("src") || audio.src || audio.currentSrc || "");
+      var leaf = "";
+      try{ leaf = (url.split("/").pop() || "").split("?")[0]; }catch(e){}
+      /* blob أو ملف مختلف = ليس نفس الملف */
+      const sameFile = !!(url && cur && cur.indexOf("blob:") !== 0 && (
         cur === url ||
         cur.split("?")[0] === url.split("?")[0] ||
-        (url.split("/").pop() && cur.indexOf(url.split("/").pop()) >= 0)
+        (leaf && cur.indexOf(leaf) >= 0)
       ));
 
       if(sameFile && Number.isFinite(seekMs)){
@@ -5999,16 +6045,82 @@ function updateAudioSource(keepPosition = false, options = {}){
         try{ audio.removeAttribute("src"); }catch(e){}
       }
       try{ audio.preload = "auto"; }catch(e){}
-      /* تعيين المصدر دون removeAttribute لتجنب تأخير إضافي */
-      audio.src = url;
-      try{ audio.load(); }catch(e){}
 
-      /*
-        تشغيل فوري أثناء التحميل التدريجي.
-        إن لزم القفز لوسط السورة: seek بعد metadata ثم استكمال التشغيل.
-      */
-      if(wasPlaying || autoContinue || __continueAfterSource){
-        tryPlay(0);
+      /* أوقف المصدر القديم فوراً حتى لا يبقى صوت سورة أخرى */
+      try{ audio.pause(); }catch(e){}
+      try{
+        var oldSrc = String(audio.currentSrc || audio.src || "");
+        if(oldSrc.indexOf("blob:") === 0){
+          try{ audio.removeAttribute("src"); audio.load(); }catch(e){}
+        }
+      }catch(e){}
+
+      var offlineNow = false;
+      try{ offlineNow = (typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+      var wantPlay = !!(wasPlaying || autoContinue || __continueAfterSource);
+
+      if(offlineNow){
+        /* أوفلاين: فقط مقطع/كاش لنفس ملف السورة — وإلا أوقف ولا تشغّل سورة خاطئة */
+        var leafNeed = "";
+        try{ leafNeed = (url.split("/").pop() || "").split("?")[0]; }catch(e){}
+        var applied = false;
+        var applyLocal = function(local, maxSec){
+          if(applied) return;
+          applied = true;
+          try{ audio.__ayaPartialUrl = url; }catch(e){}
+          try{ audio.__ayaPartialMaxSec = Number(maxSec) || 0; }catch(e){}
+          try{ audio.src = local; }catch(e){}
+          try{ audio.load(); }catch(e){}
+          if(wantPlay) tryPlay(0);
+        };
+        var failOffline = function(){
+          if(applied) return;
+          applied = true;
+          try{ audio.pause(); }catch(e){}
+          try{ audio.removeAttribute("src"); }catch(e){}
+          try{ playButton.textContent = "▶"; }catch(e){}
+          try{
+            if(typeof setStatus === "function") setStatus("غير متوفر أوفلاين لهذه السورة");
+          }catch(e){}
+          try{ window.__ayaAudioSourceSwitching = false; }catch(e){}
+        };
+        try{
+          if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.idbFindPartial === "function"){
+            window.__ayaAutoOffline.idbFindPartial(url).then(function(rec){
+              if(rec && rec.blob){
+                var leafRec = "";
+                try{ leafRec = ((rec.url || "").split("/").pop() || "").split("?")[0]; }catch(e){}
+                if(leafNeed && leafRec && leafNeed !== leafRec){
+                  failOffline();
+                  return;
+                }
+                var local = URL.createObjectURL(rec.blob);
+                applyLocal(local, rec.maxSec);
+                return;
+              }
+              /* كاش كامل؟ */
+              if(typeof caches !== "undefined"){
+                caches.open("aya-audio-v1").then(function(c){
+                  return c.match(url);
+                }).then(function(hit){
+                  if(!hit){ failOffline(); return; }
+                  return hit.blob().then(function(b){
+                    if(b && b.size) applyLocal(URL.createObjectURL(b), 1e9);
+                    else failOffline();
+                  });
+                }).catch(failOffline);
+                return;
+              }
+              failOffline();
+            }).catch(failOffline);
+          }else{
+            failOffline();
+          }
+        }catch(e){ failOffline(); }
+      }else{
+        audio.src = url;
+        try{ audio.load(); }catch(e){}
+        if(wantPlay) tryPlay(0);
       }
     }catch(e){}
 
@@ -6366,6 +6478,49 @@ audio.addEventListener(
       }
     }catch(e){}
 
+    /*
+      نهاية مقطع جزئي (تنزيل تدريجي) ≠ نهاية السورة.
+      - إن وُجد نت: أكمل من الملف الكامل من موضع النهاية الجزئية.
+      - بدون نت: توقف دون الانتقال للسورة التالية.
+    */
+    try{
+      var maxSec = Number(audio.__ayaPartialMaxSec) || 0;
+      var isPartial = maxSec > 0.5 && maxSec < 1e8;
+      if(isPartial){
+        var surahNow = currentAudioSurah || (typeof getSurahNumberForPage === "function" ? getSurahNumberForPage(currentPage) : 1);
+        var netUrl = "";
+        try{
+          if(typeof getAudioUrl === "function"){
+            netUrl = getAudioUrl(selectedReader, currentPage, surahNow) || "";
+          }
+        }catch(e){}
+        var online = true;
+        try{ online = !(typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+        if(online && netUrl){
+          var resumeAt = Math.max(0, Math.min(maxSec - 0.15, Number(audio.currentTime) || maxSec));
+          try{ audio.__ayaPartialMaxSec = 0; }catch(e){}
+          try{ audio.__ayaResumeAfterPartial = resumeAt; }catch(e){}
+          try{ audio.__ayaForceNet = true; }catch(e){}
+          var onMeta = function(){
+            try{ audio.removeEventListener("loadedmetadata", onMeta); }catch(e){}
+            try{
+              var r = Number(audio.__ayaResumeAfterPartial) || resumeAt;
+              if(r > 0.2) audio.currentTime = r;
+            }catch(e){}
+            try{ audio.play().catch(function(){}); }catch(e){}
+          };
+          audio.addEventListener("loadedmetadata", onMeta);
+          try{ audio.src = netUrl; audio.load(); }catch(e){}
+          setTimeout(onMeta, 120);
+          try{ if(playButton) playButton.textContent = "Ⅱ"; }catch(e){}
+          return;
+        }
+        /* أوفلاين أو لا رابط: توقف عند آخر ما حُفظ */
+        try{ if(playButton) playButton.textContent = "▶"; }catch(e){}
+        return;
+      }
+    }catch(e){}
+
     const finishedSurah =
       currentAudioSurah ||
       getSurahNumberForPage(currentPage);
@@ -6446,30 +6601,130 @@ function bindAudioLoadingUI(){
   if(!audio || audio.__ayaLoadingBound) return;
   audio.__ayaLoadingBound = true;
 
+  function clearWaitTimers(){
+    try{ if(audio.__ayaWaitTimer) clearTimeout(audio.__ayaWaitTimer); }catch(e){}
+    try{ if(audio.__ayaLoadStuckTimer) clearTimeout(audio.__ayaLoadStuckTimer); }catch(e){}
+    audio.__ayaWaitTimer = null;
+    audio.__ayaLoadStuckTimer = null;
+  }
+
+  /* إن علقت الشبكة: ارجع للمقطع المحلي فوراً عند نفس الموضع */
+  function recoverFromPartialIfPossible(){
+    try{
+      if(audio.__ayaRecovering || audio.__ayaHandoffBusy) return;
+      var t = Number(audio.currentTime) || Number(audio.__ayaResumeAfterPartial) || 0;
+      var url = "";
+      try{
+        if(typeof getAudioUrl === "function"){
+          var s = (typeof currentAudioSurah !== "undefined" && currentAudioSurah)
+            ? currentAudioSurah
+            : (typeof getSurahNumberForPage === "function" ? getSurahNumberForPage(currentPage) : 1);
+          url = getAudioUrl(selectedReader, currentPage, s) || "";
+        }
+      }catch(e){}
+      if(!url) try{ url = String(audio.__ayaPartialUrl || ""); }catch(e){}
+      if(!url) return;
+
+      /* إن كنا على blob كافٍ لا تعِد التعيين */
+      try{
+        var cur = String(audio.currentSrc || audio.src || "");
+        var maxSec = Number(audio.__ayaPartialMaxSec) || 0;
+        if(cur.indexOf("blob:") === 0 && maxSec > 1 && t < maxSec - 0.8 && audio.readyState >= 2){
+          setAudioLoading(false);
+          return;
+        }
+      }catch(e){}
+
+      audio.__ayaRecovering = true;
+      try{ audio.__ayaResumeAfterPartial = t; }catch(e){}
+      var handoff = (window.__ayaAutoOffline && window.__ayaAutoOffline.seamlessToPartial)
+        ? window.__ayaAutoOffline.seamlessToPartial(url, t)
+        : Promise.resolve(false);
+      Promise.resolve(handoff).then(function(ok){
+        audio.__ayaRecovering = false;
+        setAudioLoading(false);
+        if(!ok){
+          try{ audio.pause(); }catch(e){}
+          try{
+            var cur = String(audio.currentSrc || audio.src || "");
+            /* لا تُبقِ صوت سورة أخرى يعمل */
+            if(cur.indexOf("blob:") === 0){
+              var need = (url.split("/").pop() || "").split("?")[0];
+              var partialUrl = String(audio.__ayaPartialUrl || "");
+              var got = (partialUrl.split("/").pop() || "").split("?")[0];
+              if(need && got && need !== got){
+                try{ audio.removeAttribute("src"); audio.load(); }catch(e2){}
+              }
+            }
+          }catch(e){}
+        }
+      }).catch(function(){ audio.__ayaRecovering = false; setAudioLoading(false); });
+    }catch(e){ try{ audio.__ayaRecovering = false; setAudioLoading(false); }catch(e2){} }
+  }
+
   audio.addEventListener("loadstart", function(){
-    /* تحميل مصدر جديد */
+    if(audio.__ayaPartialUpgrading || audio.__ayaRecovering) {
+      /* ترقية/استعادة: أظهر تحميلاً قصيراً مع مهلة أمان */
+    }
     setAudioLoading(true);
+    clearWaitTimers();
+    audio.__ayaLoadStuckTimer = setTimeout(function(){
+      /* بعد 6 ثوانٍ عالق: حاول المحلي أو ألغِ التحميل */
+      recoverFromPartialIfPossible();
+      setTimeout(function(){ setAudioLoading(false); }, 500);
+    }, 6000);
   });
   audio.addEventListener("waiting", function(){
     setAudioLoading(true);
+    clearWaitTimers();
+    var offline = false;
+    try{ offline = (typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+    /* أونلاين: انتظر البث أطول قبل التحويل للمحلي (يمنع التقطيع) */
+    var delay = offline ? 800 : 5000;
+    audio.__ayaWaitTimer = setTimeout(function(){
+      recoverFromPartialIfPossible();
+      setTimeout(function(){ setAudioLoading(false); }, 300);
+    }, delay);
   });
   audio.addEventListener("stalled", function(){
     setAudioLoading(true);
+    clearWaitTimers();
+    var offline = false;
+    try{ offline = (typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+    var delay = offline ? 800 : 5000;
+    audio.__ayaWaitTimer = setTimeout(function(){
+      recoverFromPartialIfPossible();
+      setTimeout(function(){ setAudioLoading(false); }, 300);
+    }, delay);
   });
   audio.addEventListener("seeking", function(){
     if(audio.readyState < 3) setAudioLoading(true);
   });
   audio.addEventListener("canplay", function(){
+    clearWaitTimers();
     setAudioLoading(false);
   });
   audio.addEventListener("canplaythrough", function(){
+    clearWaitTimers();
     setAudioLoading(false);
   });
   audio.addEventListener("playing", function(){
+    clearWaitTimers();
     setAudioLoading(false);
   });
+  audio.addEventListener("pause", function(){
+    /* لا تُبقِ دائرة التحميل إن أُوقف مؤقتاً */
+    if(audio.readyState >= 2) setAudioLoading(false);
+  });
   audio.addEventListener("error", function(){
+    clearWaitTimers();
     setAudioLoading(false);
+    try{ recoverFromPartialIfPossible(); }catch(e){}
+  });
+  audio.addEventListener("timeupdate", function(){
+    if(audioIsLoading && !audio.paused && audio.readyState >= 2){
+      setAudioLoading(false);
+    }
   });
 }
 try{ bindAudioLoadingUI(); }catch(e){}
@@ -6477,6 +6732,12 @@ try{ bindAudioLoadingUI(); }catch(e){}
 playButton.onclick = ()=>{
 
   try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
+  /* إن علق التحميل: ألغِ الحالة وحاول المحلي ثم التشغيل */
+  try{
+    if(typeof audioIsLoading !== "undefined" && audioIsLoading){
+      try{ setAudioLoading(false); }catch(e){}
+    }
+  }catch(e){}
 
   var hasSrc = false;
   try{
@@ -8781,7 +9042,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 ===================================================== */
 (function(){
   /* غيّر الرقم فقط هنا عند كل إصدار جديد — كلمة «الإصدار» تُضاف تلقائياً */
-  const APP_VERSION = "1.0.182";
+  const APP_VERSION = "1.0.183";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   /* حدّث الرقم فقط — كلمة «الإصدار» ثابتة في HTML */
   function setAppVersionDisplays(){
@@ -9238,19 +9499,32 @@ document.addEventListener("DOMContentLoaded",()=>{
       <div style="background:rgba(0,0,0,.22);border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
         <span>المجموع</span><strong id="stTotal">—</strong>
       </div>
-      <div style="background:rgba(0,0,0,.14);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
-        <span>صفحات المصحف</span><span id="stPages">—</span>
+      <div class="st-cat" data-cat="pages" style="background:rgba(0,0,0,.14);border-radius:12px;overflow:hidden">
+        <button type="button" class="st-cat-toggle" data-cat="pages" style="width:100%;border:0;background:transparent;color:inherit;font:inherit;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;text-align:right">
+          <span>صفحات المصحف <small style="opacity:.7;font-weight:400">▸</small></span><span id="stPages">—</span>
+        </button>
+        <div id="stPagesDetails" class="st-details" style="display:none;max-height:220px;overflow-y:auto;padding:0 10px 10px;font-size:13px;line-height:1.55;border-top:1px solid rgba(255,255,255,.08)"></div>
       </div>
-      <div style="background:rgba(0,0,0,.14);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
-        <span>التلاوات الكاملة</span><span id="stAudio">—</span>
+      <div class="st-cat" data-cat="audio" style="background:rgba(0,0,0,.14);border-radius:12px;overflow:hidden">
+        <button type="button" class="st-cat-toggle" data-cat="audio" style="width:100%;border:0;background:transparent;color:inherit;font:inherit;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;text-align:right">
+          <span>التلاوات الكاملة <small style="opacity:.7;font-weight:400">▸</small></span><span id="stAudio">—</span>
+        </button>
+        <div id="stAudioDetails" class="st-details" style="display:none;max-height:220px;overflow-y:auto;padding:0 10px 10px;font-size:13px;line-height:1.55;border-top:1px solid rgba(255,255,255,.08)"></div>
       </div>
-      <div style="background:rgba(0,0,0,.14);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
-        <span>التلاوة التدريجية</span><span id="stPartial">—</span>
+      <div class="st-cat" data-cat="partial" style="background:rgba(0,0,0,.14);border-radius:12px;overflow:hidden">
+        <button type="button" class="st-cat-toggle" data-cat="partial" style="width:100%;border:0;background:transparent;color:inherit;font:inherit;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;text-align:right">
+          <span>التلاوة التدريجية <small style="opacity:.7;font-weight:400">▸</small></span><span id="stPartial">—</span>
+        </button>
+        <div id="stPartialDetails" class="st-details" style="display:none;max-height:220px;overflow-y:auto;padding:0 10px 10px;font-size:13px;line-height:1.55;border-top:1px solid rgba(255,255,255,.08)"></div>
       </div>
-      <div style="background:rgba(0,0,0,.14);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
-        <span>التوقيت والتظليل</span><span id="stTiming">—</span>
+      <div class="st-cat" data-cat="timing" style="background:rgba(0,0,0,.14);border-radius:12px;overflow:hidden">
+        <button type="button" class="st-cat-toggle" data-cat="timing" style="width:100%;border:0;background:transparent;color:inherit;font:inherit;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;text-align:right">
+          <span>التوقيت والتظليل <small style="opacity:.7;font-weight:400">▸</small></span><span id="stTiming">—</span>
+        </button>
+        <div id="stTimingDetails" class="st-details" style="display:none;max-height:220px;overflow-y:auto;padding:0 10px 10px;font-size:13px;line-height:1.55;border-top:1px solid rgba(255,255,255,.08)"></div>
       </div>
     </div>
+    <p class="search-hint" style="margin:0 0 4px;font-size:12px;opacity:.85">اضغط على أي قسم لعرض تفاصيل كل ملف منزّل.</p>
     <div style="direction:rtl;display:flex;flex-direction:column;gap:8px;margin-top:8px">
       <button type="button" class="popup-item" id="stClearPages" style="margin:0;text-align:center">مسح صفحات المصحف</button>
       <button type="button" class="popup-item" id="stClearAudio" style="margin:0;text-align:center">مسح التلاوات الكاملة</button>
@@ -9879,7 +10153,8 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   try{
     var audioEl = document.getElementById("audio");
-    if(audioEl){
+    if(audioEl && !audioEl.__ayaPartialSrcHook){
+      audioEl.__ayaPartialSrcHook = true;
       var desc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "src");
       if(desc && desc.set){
         Object.defineProperty(audioEl, "src", {
@@ -9888,31 +10163,100 @@ document.addEventListener("DOMContentLoaded",()=>{
           get: function(){ return desc.get.call(this); },
           set: function(v){
             var self = this;
-            if(typeof v === "string" && v.indexOf("blob:") !== 0 && v.indexOf("http") === 0){
-              /* ابدأ فوراً من الشبكة حتى لا يتأخر التشغيل، واستبدل بالكاش إن وُجد */
+            if(!v || String(v).indexOf("blob:") === 0){
               desc.set.call(self, v);
-              blobUrlFromCache(AUDIO_CACHE, v).then(function(local){
-                if(!local) return;
-                try{
-                  var cur = "";
-                  try{ cur = String(desc.get.call(self) || ""); }catch(e){}
-                  /* لا تستبدل إن تغيّر المصدر أو كان نفس الملف يعمل */
-                  if(cur && cur.indexOf("blob:") === 0) return;
-                  if(cur && cur !== v && cur.indexOf(v.split("/").pop() || "___") < 0) return;
-                  var t = 0;
-                  try{ t = self.currentTime || 0; }catch(e){}
-                  var wasPlaying = false;
-                  try{ wasPlaying = !self.paused; }catch(e){}
-                  desc.set.call(self, local);
-                  try{ if(t > 0.5) self.currentTime = t; }catch(e){}
-                  if(wasPlaying){
-                    try{ self.play().catch(function(){}); }catch(e){}
-                  }
-                }catch(e){}
-              }).catch(function(){});
-            }else{
-              desc.set.call(self, v);
+              return;
             }
+            if(self.__ayaForceNet){
+              try{ self.__ayaForceNet = false; }catch(e){}
+              /* استعادة الوقت فقط إن طُلب صراحة (ترقية مقطع) — لا currentTime من سورة سابقة */
+              var keepT = 0, keepPlay = false;
+              try{
+                keepT = Number(self.__ayaResumeAfterPartial) || 0;
+                keepPlay = !!self.__ayaWantPlayAfterForce;
+              }catch(e){}
+              try{ self.__ayaResumeAfterPartial = 0; self.__ayaWantPlayAfterForce = false; }catch(e){}
+              try{ desc.set.call(self, v); }catch(e){}
+              if(keepT > 0.25){
+                var restoreForce = function(){
+                  try{ self.removeEventListener("loadedmetadata", restoreForce); }catch(e){}
+                  try{ self.currentTime = keepT; }catch(e){}
+                  if(keepPlay) try{ self.play().catch(function(){}); }catch(e){}
+                };
+                self.addEventListener("loadedmetadata", restoreForce);
+                setTimeout(restoreForce, 80);
+                setTimeout(restoreForce, 250);
+              }
+              return;
+            }
+            var offline = false;
+            try{ offline = (typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+
+            /*
+              أونلاين (أول تشغيل أو بث عادي): ضع الشبكة فوراً.
+              لا تنتظر IndexedDB ولا تستبدل المصدر لاحقاً — ذلك يسبب تقطيعاً.
+            */
+            if(!offline){
+              try{ desc.set.call(self, v); }catch(e){}
+              return;
+            }
+
+            /* أوفلاين فقط: فضّل المقطع المحلي */
+            try{
+              var curSrc = "";
+              try{ curSrc = String(desc.get.call(self) || self.currentSrc || ""); }catch(e){}
+              var maxSec = Number(self.__ayaPartialMaxSec) || 0;
+              var t = Number(self.currentTime) || 0;
+              if(curSrc.indexOf("blob:") === 0 && maxSec > 1 && t < maxSec - 0.8){
+                var sameFile = false;
+                try{
+                  var leaf = (v.split("/").pop() || "").split("?")[0];
+                  var pu = String(self.__ayaPartialUrl || "");
+                  if(leaf && pu.indexOf(leaf) >= 0) sameFile = true;
+                }catch(e){}
+                if(sameFile) return;
+              }
+            }catch(e){}
+
+            var applied = false;
+            var token = (self.__ayaSrcToken = (self.__ayaSrcToken || 0) + 1);
+            var prevTime = 0, wasPlaying = false;
+            try{
+              prevTime = Number(self.currentTime) || 0;
+              wasPlaying = !self.paused;
+            }catch(e){}
+            var applyNet = function(){
+              if(applied || token !== self.__ayaSrcToken) return;
+              applied = true;
+              try{ desc.set.call(self, v); }catch(e){}
+            };
+            resolveLocal(v).then(function(local){
+              if(token !== self.__ayaSrcToken) return;
+              if(local){
+                applied = true;
+                try{ self.__ayaPartialUrl = v; }catch(e){}
+                try{ desc.set.call(self, local); }catch(e){}
+                if(prevTime > 0.25){
+                  var rl = function(){
+                    try{ self.removeEventListener("loadedmetadata", rl); }catch(e){}
+                    try{
+                      var d = Number(self.duration);
+                      var target = prevTime;
+                      if(Number.isFinite(d) && d > 0) target = Math.min(prevTime, Math.max(0, d - 0.05));
+                      self.currentTime = target;
+                    }catch(e){}
+                    if(wasPlaying) try{ self.play().catch(function(){}); }catch(e){}
+                  };
+                  self.addEventListener("loadedmetadata", rl);
+                  setTimeout(rl, 80);
+                  setTimeout(rl, 250);
+                }
+              }else applyNet();
+            }).catch(function(){ applyNet(); });
+            setTimeout(function(){
+              if(token !== self.__ayaSrcToken) return;
+              if(!applied) applyNet();
+            }, 900);
           }
         });
       }
@@ -10958,7 +11302,7 @@ body.interface-old #downloadsPopup .download-native-select{
 
   function currentAppVersion(){
     try{ if(window.AYA_APP_VERSION) return String(window.AYA_APP_VERSION); }catch(e){}
-    return "1.0.182";
+    return "1.0.183";
   }
 
   /*
@@ -11003,37 +11347,10 @@ body.interface-old #downloadsPopup .download-native-select{
     عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
     var WHATS_NEW = {
-    "1.0.182": [
-      "إصلاحات وتحسينات"
+    "1.0.183": [
+      "تشغيل أوفلاين أوضح وأكثر استقراراً: المقاطع الجزئية المحفوظة تُستخدم مباشرة عند انقطاع النت، وعند تبديل السورة بدون نت يُوقف المصدر القديم ويُحمَّل مقطع <b>نفس السورة فقط</b> (بدون اختلاط بين السور)"
     ],
     "1.0.181": [
-      "إصلاحات وتحسينات"
-    ],
-    "1.0.180": [
-      "إصلاحات وتحسينات"
-    ],
-    "1.0.179": [
-      "إصلاحات وتحسينات"
-    ],
-    "1.0.178": [
-      "إصلاحات وتحسينات"
-    ],
-    "1.0.177": [
-      "إصلاحات وتحسينات"
-    ],
-    "1.0.176": [
-      "إصلاحات وتحسينات"
-    ],
-    "1.0.175": [
-      "إصلاحات وتحسينات"
-    ],
-    "1.0.174": [
-      "إصلاحات وتحسينات"
-    ],
-    "1.0.173": [
-      "إصلاحات وتحسينات"
-    ],
-    "1.0.172": [
       "إصلاحات وتحسينات"
     ],
     "1.0.171": [
@@ -11838,14 +12155,34 @@ body.interface-old #downloadsPopup .download-native-select{
      هذا مهم لوضع الاستماع فقط، لأن تعيين audio.src مباشرة لا يمر عبر Cache API. */
   async function offlineAudioUrl(url){
     try{
-      if(typeof caches === "undefined" || !url) return url;
-      var cache = await caches.open("aya-audio-v1");
-      var hit = await cache.match(url);
-      if(!hit) return url;
-      var blob = await hit.blob();
-      if(!blob || !blob.size) return url;
-      var audioBlob = new Blob([blob], {type: "audio/mpeg"});
-      return URL.createObjectURL(audioBlob);
+      if(!url) return url;
+      var offline = false;
+      try{ offline = (typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+
+      /* 1) كاش التلاوات الكاملة فقط — آمن مع البث */
+      if(typeof caches !== "undefined"){
+        try{
+          var cache = await caches.open("aya-audio-v1");
+          var hit = await cache.match(url);
+          if(hit){
+            var blob = await hit.blob();
+            if(blob && blob.size){
+              return URL.createObjectURL(new Blob([blob], {type: "audio/mpeg"}));
+            }
+          }
+        }catch(e){}
+      }
+
+      /* 2) مقطع جزئي: أوفلاين فقط (أونلاين يقطع البث) */
+      if(offline){
+        try{
+          if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.resolveLocal === "function"){
+            var local = await window.__ayaAutoOffline.resolveLocal(url);
+            if(local) return local;
+          }
+        }catch(e){}
+      }
+      return url;
     }catch(e){
       return url;
     }
@@ -11854,32 +12191,25 @@ body.interface-old #downloadsPopup .download-native-select{
   async function assignSrc(a, url){
     try{ a.pause(); }catch(e){}
     try{ a.removeAttribute("src"); }catch(e){}
-    /* ابدأ من الرابط مباشرة (أسرع)، ثم استبدل بالكاش إن وُجد */
     try{ a.preload = "auto"; }catch(e){}
+
+    var localUrl = null;
+    try{
+      localUrl = await offlineAudioUrl(url);
+      if(localUrl === url) localUrl = null;
+    }catch(e){ localUrl = null; }
+
+    var finalSrc = localUrl || url;
     try{
       var proto = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "src");
-      if(proto && proto.set) proto.set.call(a, url);
-      else a.src = url;
+      if(proto && proto.set) proto.set.call(a, finalSrc);
+      else a.src = finalSrc;
     }catch(e){
-      try{ a.src = url; }catch(e2){}
+      try{ a.src = finalSrc; }catch(e2){}
     }
     try{ a.load(); }catch(e){}
-    /* ترقية للكاش في الخلفية دون تأخير البدء */
-    offlineAudioUrl(url).then(function(local){
-      if(!local || local === url) return;
-      try{
-        var cur = String(a.currentSrc || a.src || "");
-        if(cur.indexOf("blob:") === 0) return;
-        var t = a.currentTime || 0;
-        var playing = !a.paused;
-        var proto = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "src");
-        if(proto && proto.set) proto.set.call(a, local);
-        else a.src = local;
-        try{ if(t > 0.4) a.currentTime = t; }catch(e){}
-        if(playing) try{ a.play().catch(function(){}); }catch(e){}
-      }catch(e){}
-    }).catch(function(){});
-    return url;
+    /* لا تبديل لاحق للمصدر أثناء التشغيل — كان سبب التقطيع أونلاين */
+    return finalSrc;
   }
 
   var lopToken = 0;
@@ -12269,6 +12599,38 @@ body.interface-old #downloadsPopup .download-native-select{
       });
       a.addEventListener("ended", function(){
         if(!document.body.classList.contains("listen-only-mode")) return;
+        /* نهاية مقطع جزئي: لا تنتقل للسورة التالية */
+        try{
+          var maxSec = Number(a.__ayaPartialMaxSec) || 0;
+          if(maxSec > 0.5 && maxSec < 1e8){
+            var online = true;
+            try{ online = !(typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+            var netUrl = "";
+            try{
+              var sn = getSurah();
+              if(typeof buildUrl === "function") netUrl = buildUrl(sn) || "";
+            }catch(e){}
+            if(online && netUrl){
+              var resumeAt = Math.max(0, Math.min(maxSec - 0.15, Number(a.currentTime) || maxSec));
+              try{ a.__ayaPartialMaxSec = 0; }catch(e){}
+              try{ a.__ayaForceNet = true; }catch(e){}
+              setStatus("إكمال التلاوة من الشبكة…");
+              var onMeta = function(){
+                try{ a.removeEventListener("loadedmetadata", onMeta); }catch(e){}
+                try{ if(resumeAt > 0.2) a.currentTime = resumeAt; }catch(e){}
+                try{ a.play().catch(function(){}); }catch(e){}
+                setStatus("");
+              };
+              a.addEventListener("loadedmetadata", onMeta);
+              try{ a.src = netUrl; a.load(); }catch(e){}
+              setTimeout(onMeta, 120);
+              return;
+            }
+            setPlayIcon("▶");
+            setStatus("انتهى الجزء المحفوظ — يلزم اتصال لإكمال السورة");
+            return;
+          }
+        }catch(e){}
         try{
           var cur = getSurah();
           var nxt = nextAvailable(cur, +1);
@@ -12499,20 +12861,8 @@ body.interface-old #bookmarksPickerList .bm-del{
   /* تحميل مسبق للسورة التالية أثناء التشغيل لتسريع الانتقال */
   var lastPrefetch = "";
   function prefetchUrl(url){
-    if(!url || url === lastPrefetch) return;
-    lastPrefetch = url;
-    try{
-      var link = document.createElement("link");
-      link.rel = "prefetch";
-      link.as = "audio";
-      link.href = url;
-      link.setAttribute("data-aya-prefetch", "1");
-      document.head.appendChild(link);
-      setTimeout(function(){ try{ link.remove(); }catch(e){} }, 120000);
-    }catch(e){}
-    try{
-      fetch(url, { mode: "no-cors", credentials: "omit", cache: "force-cache" }).catch(function(){});
-    }catch(e){}
+    /* عُطّل prefetch الكامل لملف الصوت — ينافس البث الحالي ويسبب تقطيعاً */
+    return;
   }
   function maybePrefetchNext(){
     try{
@@ -12552,29 +12902,8 @@ body.interface-old #bookmarksPickerList .bm-del{
   /* تسخين اتصال الصوت: عند ظهور الصفحة حمّل بداية ملف التلاوة في الخلفية */
   var lastWarm = "";
   function warmCurrentAudio(){
-    try{
-      if(typeof getAudioUrl !== "function") return;
-      var reader = (typeof selectedReader !== "undefined" && selectedReader) ? selectedReader : null;
-      if(!reader) return;
-      var surah = 1;
-      try{
-        if(typeof currentAudioSurah !== "undefined" && currentAudioSurah) surah = Number(currentAudioSurah);
-        else if(typeof getSurahNumberForPage === "function") surah = Number(getSurahNumberForPage(currentPage || 1)) || 1;
-      }catch(e){}
-      var url = getAudioUrl(reader, currentPage || 1, surah);
-      if(!url || url === lastWarm) return;
-      lastWarm = url;
-      /* Range صغير يفتح الاتصال ويجهّز الكاش */
-      fetch(url, {
-        method: "GET",
-        headers: { "Range": "bytes=0-65535" },
-        mode: "cors",
-        credentials: "omit",
-        cache: "force-cache"
-      }).catch(function(){
-        fetch(url, { mode: "no-cors", credentials: "omit", cache: "force-cache" }).catch(function(){});
-      });
-    }catch(e){}
+    /* عُطّل — Range على ملف التلاوة كان يقطع البث من أول تشغيل */
+    return;
   }
   /* بعد تحميل الصفحة */
   if(document.readyState === "complete") setTimeout(warmCurrentAudio, 400);
@@ -12788,6 +13117,41 @@ body.interface-old .app::after{
     }).catch(function(){ return null; });
   }
 
+  function idbGetAll(){
+    return openIdb().then(function(db){
+      return new Promise(function(resolve){
+        var tx = db.transaction(IDB_STORE, "readonly");
+        var req = tx.objectStore(IDB_STORE).getAll();
+        req.onsuccess = function(){ resolve(req.result || []); };
+        req.onerror = function(){ resolve([]); };
+      });
+    }).catch(function(){ return []; });
+  }
+
+  /* بحث مرن: نفس الرابط أو نفس اسم الملف (024.mp3) */
+  function idbFindPartial(url){
+    url = String(url || "");
+    var leaf = "";
+    try{ leaf = (url.split("/").pop() || "").split("?")[0]; }catch(e){}
+    return idbGet(url).then(function(rec){
+      if(rec && rec.blob) return rec;
+      return idbGetAll().then(function(rows){
+        if(!rows || !rows.length) return null;
+        for(var i = 0; i < rows.length; i++){
+          var r = rows[i];
+          if(!r || !r.blob) continue;
+          var u = String(r.url || "");
+          if(u === url) return r;
+          var rLeaf = "";
+          try{ rLeaf = (u.split("/").pop() || "").split("?")[0]; }catch(e){}
+          /* تطابق اسم الملف كاملاً فقط (005.mp3 ≠ 023.mp3) */
+          if(leaf && rLeaf && leaf === rLeaf) return r;
+        }
+        return null;
+      });
+    });
+  }
+
   function idbPut(record){
     return openIdb().then(function(db){
       return new Promise(function(resolve, reject){
@@ -12831,6 +13195,23 @@ body.interface-old .app::after{
 
   function pump(){
     if(busy || !queue.length || !enabled()) return;
+    /* أثناء البث: صفّح ببطء (صفحة واحدة كل 3 ث) بدل الإيقاف الكامل */
+    try{
+      var streaming = false;
+      if(typeof isStreamingOnline === "function") streaming = isStreamingOnline();
+      else {
+        var a2 = document.getElementById("audio");
+        if(a2 && !a2.paused){
+          var s2 = String(a2.currentSrc || a2.src || "");
+          if(s2.indexOf("http") === 0 && navigator.onLine !== false) streaming = true;
+        }
+      }
+      if(streaming){
+        if(pump._streamDelay){ setTimeout(pump, 800); return; }
+        pump._streamDelay = true;
+        setTimeout(function(){ pump._streamDelay = false; }, 3000);
+      }
+    }catch(e){}
     busy = true;
     var job = queue.shift();
     putUrl(job.cache, job.url).then(function(){
@@ -12871,18 +13252,93 @@ body.interface-old .app::after{
     return 1;
   }
 
+  /*
+    تنزيل التوقيت + مضلعات التظليل وحفظها محلياً (localStorage + Cache)
+    ليعملا مع التلاوة أوفلاين مباشرة.
+  */
+  var timingPersistBusy = Object.create(null);
   async function cacheTiming(surah){
     surah = Number(surah) || 1;
     try{
       if(typeof RECITERS === "undefined" || !RECITERS[selectedReader]) return;
       if(RECITERS[selectedReader].listenOnly) return;
+      var readerKey = String(selectedReader || "");
+      var cacheKey = readerKey + ":" + surah;
+      var busyKey = cacheKey;
+      if(timingPersistBusy[busyKey]) return;
+      /* إن كان محفوظاً مسبقاً لا تعِد الطلب */
+      try{
+        var ls0 = localStorage.getItem("ayaTiming:"+cacheKey);
+        if(ls0){
+          var p0 = JSON.parse(ls0);
+          if(Array.isArray(p0) && p0.length){
+            try{ if(typeof timingCache !== "undefined") timingCache[cacheKey] = p0; }catch(e){}
+            return;
+          }
+        }
+      }catch(e){}
+      timingPersistBusy[busyKey] = true;
       var readId = null;
       if(typeof getTimingReadId === "function") readId = await getTimingReadId();
       else readId = RECITERS[selectedReader].timingId;
-      if(!readId) return;
+      if(!readId){ timingPersistBusy[busyKey] = false; return; }
       var url = timingUrl(surah, readId);
       enqueue({ cache: TIMING_CACHE, url: url });
-      try{ fetch(url, { mode: "cors", credentials: "omit", cache: "force-cache" }).catch(function(){}); }catch(e){}
+      var list = null;
+      try{
+        var res = await fetch(url, { mode: "cors", credentials: "omit", cache: "force-cache" });
+        if(res && res.ok){
+          var data = await res.json();
+          list = Array.isArray(data) ? data.filter(function(x){
+            return x && x.ayah != null &&
+              Number.isFinite(Number(x.start_time)) &&
+              Number.isFinite(Number(x.end_time));
+          }) : [];
+          try{
+            var cache = await caches.open(TIMING_CACHE);
+            await cache.put(url, new Response(JSON.stringify(list), {
+              status: 200,
+              headers: { "Content-Type": "application/json" }
+            }));
+          }catch(e){}
+        }
+      }catch(e){}
+      if(!list || !list.length){
+        try{
+          var cache2 = await caches.open(TIMING_CACHE);
+          var hit = await cache2.match(url);
+          if(hit){
+            var data2 = await hit.json();
+            list = Array.isArray(data2) ? data2 : [];
+          }
+        }catch(e){}
+      }
+      if(list && list.length){
+        try{ localStorage.setItem("ayaTiming:"+cacheKey, JSON.stringify(list)); }catch(e){}
+        try{ if(typeof timingCache !== "undefined") timingCache[cacheKey] = list; }catch(e){}
+      }
+      timingPersistBusy[busyKey] = false;
+    }catch(e){
+      timingPersistBusy[busyKey] = false;
+    }
+  }
+
+  /* حفظ viewBox للصفحة (لازم لتظليل مضلعات SVG أوفلاين) */
+  async function cachePageViewBox(pageNum){
+    pageNum = Number(pageNum) || 0;
+    if(pageNum < 1) return;
+    try{
+      if(localStorage.getItem("ayaViewBox:"+pageNum)) return;
+    }catch(e){}
+    try{
+      var url = pageUrl(pageNum);
+      var res = await fetch(url, { mode: "cors", credentials: "omit", cache: "force-cache" });
+      if(!res || !res.ok) return;
+      var txt = await res.text();
+      var m = txt.match(/viewBox\s*=\s*["']([^"']+)["']/i);
+      if(m && m[1]){
+        try{ localStorage.setItem("ayaViewBox:"+pageNum, m[1].trim()); }catch(e){}
+      }
     }catch(e){}
   }
 
@@ -12923,10 +13379,25 @@ body.interface-old .app::after{
     تحميل تدريجي: بايتات 0..(نهاية الآية الحالية) فقط.
     maxSec = زمن نهاية آخر آية وصل إليها القارئ (بالثواني).
   */
-  async function downloadAudioUpTo(url, maxSec){
+  async function downloadAudioUpTo(url, maxSec, maxAyah){
     if(!enabled() || !url || !(maxSec > 0.5)) return;
     maxSec = Number(maxSec);
-    if(savedMaxSec[url] && maxSec <= savedMaxSec[url] + 1.5) return;
+    maxAyah = Number(maxAyah) || 0;
+    if(savedMaxSec[url] && maxSec <= savedMaxSec[url] + 1.5){
+      /* حدّث رقم الآية فقط إن تقدّم */
+      if(maxAyah > 0){
+        try{
+          var prevA = await idbGet(url);
+          if(prevA && (Number(prevA.maxAyah) || 0) < maxAyah){
+            prevA.maxAyah = maxAyah;
+            prevA.maxSec = Math.max(Number(prevA.maxSec) || 0, maxSec);
+            prevA.updatedAt = Date.now();
+            await idbPut(prevA);
+          }
+        }catch(e){}
+      }
+      return;
+    }
     if(partialBusy[url]) return;
     partialBusy[url] = true;
     try{
@@ -12988,35 +13459,163 @@ body.interface-old .app::after{
         }catch(e){}
       }
 
+      var prevAyah = 0, prevSec = 0, prevBlob = null, prevUrl = url;
+      try{
+        var prevRec = prev || await idbFindPartial(url);
+        if(prevRec){
+          prevAyah = Number(prevRec.maxAyah) || 0;
+          prevSec = Number(prevRec.maxSec) || 0;
+          prevBlob = prevRec.blob || null;
+          if(prevRec.url) prevUrl = prevRec.url;
+        }
+      }catch(e){}
+      /* لا تستبدل بمقطع أصغر حجماً أو زمناً */
+      var newSec = Math.max(maxSec, prevSec);
+      if(prevBlob && prevSec >= maxSec - 0.5 && prevBlob.size >= (buf.byteLength || 0)){
+        savedMaxSec[url] = prevSec;
+        try{ if(prevUrl) savedMaxSec[prevUrl] = prevSec; }catch(e){}
+        return;
+      }
       await idbPut({
-        url: url,
+        url: prevUrl || url,
         blob: new Blob([buf], { type: "audio/mpeg" }),
-        maxSec: maxSec,
-        byteEnd: byteEnd,
+        maxSec: newSec,
+        maxAyah: Math.max(maxAyah, prevAyah) || 0,
+        byteEnd: Math.max(byteEnd, 0),
         contentLength: meta.length || 0,
         updatedAt: Date.now()
       });
-      savedMaxSec[url] = maxSec;
-      try{ localStorage.setItem("ayaPartialMax:"+url, String(maxSec)); }catch(e){}
+      savedMaxSec[url] = newSec;
+      try{ if(prevUrl) savedMaxSec[prevUrl] = newSec; }catch(e){}
+      try{ localStorage.setItem("ayaPartialMax:"+url, String(newSec)); }catch(e){}
+      try{ localStorage.setItem("ayaPartialMax:"+(prevUrl||url), String(newSec)); }catch(e){}
     }catch(e){
     }finally{
       partialBusy[url] = false;
     }
   }
 
+  function surahEndPage(surah){
+    surah = Number(surah) || 1;
+    try{
+      if(typeof surahs !== "undefined" && surahs.length){
+        if(surah >= surahs.length) return 604;
+        var nextStart = Number(surahs[surah][1]); /* بداية السورة التالية */
+        if(Number.isFinite(nextStart) && nextStart > 1) return nextStart - 1;
+      }
+    }catch(e){}
+    return 604;
+  }
+
+  function enqueuePageWithViewBox(p, delay){
+    p = Number(p) || 0;
+    if(p < 1 || p > 604) return;
+    enqueue({ cache: PAGE_CACHE, url: pageUrl(p) });
+    setTimeout(function(){ cachePageViewBox(p); }, delay || 40);
+  }
+
+  /*
+    حمّل الصفحات + التظليل قبل وصول التلاوة إليها:
+    - كل صفحات السورة من البداية حتى نهايتها (وليس حتى الصفحة الحالية فقط)
+    - توقيت السورة كاملاً (مضلعات كل الآيات)
+    - صفحة/توقيت السورة التالية عند الاقتراب من النهاية
+  */
   function schedulePagesAndTiming(page, surah){
     if(!enabled()) return;
     page = Number(page) || 1;
     surah = Number(surah) || 1;
-    var key = String(selectedReader || "") + ":p:" + page + ":s:" + surah;
-    if(key === lastPageKey) return;
-    lastPageKey = key;
-
+    var endP = surahEndPage(surah);
     var startP = surahStartPage(surah);
+    /* مفتاح يتغير عند تقدّم كبير في الصفحة لإعادة جدولة ما تبقّى */
+    var key = String(selectedReader || "") + ":s:" + surah + ":e:" + endP;
+    var fullKey = key + ":p:" + page;
+    if(fullKey === lastPageKey) return;
+    lastPageKey = fullKey;
+
+    /* 1) صفحات من أول السورة → الحالية فوراً */
     for(var p = startP; p <= page; p++){
-      enqueue({ cache: PAGE_CACHE, url: pageUrl(p) });
+      enqueuePageWithViewBox(p, 20 + (p - startP) * 25);
     }
+    /* 2) صفحات قادمة قبل وصول التلاوة (باقي السورة) */
+    var aheadLimit = Math.min(endP, page + 12); /* دفعة أولى: 12 صفحة قادمة */
+    for(var p2 = page + 1; p2 <= aheadLimit; p2++){
+      enqueuePageWithViewBox(p2, 80 + (p2 - page) * 35);
+    }
+    /* 3) باقي السورة لاحقاً بهدوء */
+    if(aheadLimit < endP){
+      for(var p3 = aheadLimit + 1; p3 <= endP; p3++){
+        (function(pn, idx){
+          setTimeout(function(){
+            if(!enabled()) return;
+            enqueuePageWithViewBox(pn, 0);
+          }, 600 + idx * 120);
+        })(p3, p3 - aheadLimit);
+      }
+    }
+
+    /* 4) توقيت + تظليل السورة كاملة قبل الوصول للآيات */
     cacheTiming(surah);
+    try{
+      if(typeof getSurahsOnPage === "function"){
+        var ss = getSurahsOnPage(page) || [];
+        for(var i = 0; i < ss.length; i++){
+          if(Number(ss[i]) !== surah) cacheTiming(Number(ss[i]));
+        }
+      }
+    }catch(e){}
+
+    /* 5) عند آخر 3 صفحات: جهّز السورة التالية */
+    if(page >= endP - 2 && surah < 114){
+      var ns = surah + 1;
+      cacheTiming(ns);
+      var nsStart = surahStartPage(ns);
+      var nsEnd = Math.min(surahEndPage(ns), nsStart + 3);
+      for(var np = nsStart; np <= nsEnd; np++){
+        enqueuePageWithViewBox(np, 200 + (np - nsStart) * 50);
+      }
+    }
+  }
+
+  /* أثناء التشغيل: صفحات الآيات القادمة من التوقيت قبل أن يصل الصوت */
+  function prefetchUpcomingFromTiming(){
+    if(!enabled()) return;
+    try{
+      var a = document.getElementById("audio");
+      var t = a ? (Number(a.currentTime) || 0) : 0;
+      var list = null;
+      try{
+        if(typeof currentTiming !== "undefined" && currentTiming && currentTiming.length){
+          list = currentTiming;
+        }
+      }catch(e){}
+      if(!list || !list.length) return;
+      var tMs = t * 1000;
+      var seen = Object.create(null);
+      var count = 0;
+      for(var i = 0; i < list.length && count < 25; i++){
+        var it = list[i];
+        if(!it) continue;
+        var st = Number(it.start_time);
+        /* آيات قادمة أو الجارية خلال الدقائق التالية */
+        if(!Number.isFinite(st) || st < tMs - 500) continue;
+        if(st > tMs + 180000) break; /* حتى 3 دقائق قادمة */
+        var pg = 0;
+        try{
+          if(typeof pageFromTiming === "function") pg = Number(pageFromTiming(it)) || 0;
+        }catch(e){}
+        if(!pg && it.page){
+          var m = String(it.page).match(/(\d{3})/);
+          if(m) pg = Number(m[1]) || 0;
+        }
+        if(pg >= 1 && pg <= 604 && !seen[pg]){
+          seen[pg] = true;
+          enqueuePageWithViewBox(pg, 30 + count * 40);
+          count++;
+        }
+      }
+      /* تأكد من توقيت السورة الحالية */
+      cacheTiming(currentSurahGuess());
+    }catch(e){}
   }
 
   function currentSurahGuess(){
@@ -13053,15 +13652,80 @@ body.interface-old .app::after{
     }catch(e){ return 0; }
   }
 
+  function reachedAyahFromTiming(){
+    try{
+      if(typeof getActiveTiming === "function"){
+        var active = getActiveTiming();
+        if(active && Number.isFinite(Number(active.ayah)) && Number(active.ayah) > 0){
+          return Number(active.ayah);
+        }
+      }
+      var a = document.getElementById("audio");
+      var t = a ? (a.currentTime || 0) : 0;
+      var best = 0;
+      if(typeof currentTiming !== "undefined" && currentTiming && currentTiming.length){
+        for(var i=0;i<currentTiming.length;i++){
+          var it = currentTiming[i];
+          var st = Number(it.start_time) / 1000;
+          var ayah = Number(it.ayah);
+          if(Number.isFinite(ayah) && t >= st - 0.05) best = Math.max(best, ayah);
+        }
+      }
+      return best;
+    }catch(e){ return 0; }
+  }
+
+  function isStreamingOnline(){
+    try{
+      var a = document.getElementById("audio");
+      if(!a || a.paused) return false;
+      if(typeof navigator !== "undefined" && navigator.onLine === false) return false;
+      var src = String(a.currentSrc || a.src || "");
+      return src.indexOf("http") === 0;
+    }catch(e){ return false; }
+  }
+
   function scheduleAudioProgress(){
     if(!enabled()) return;
     try{
       var surah = currentSurahGuess();
       var url = audioUrlFor(surah);
       if(!url) return;
+      var a = document.getElementById("audio");
+      var tNow = a ? (Number(a.currentTime) || 0) : 0;
+
+      if(isStreamingOnline()){
+        try{
+          if(tNow > 0.8){
+            try{ localStorage.setItem("ayaPartialMax:"+url, String(Math.max(tNow, Number(localStorage.getItem("ayaPartialMax:"+url))||0))); }catch(e){}
+          }
+        }catch(e){}
+        /* بعد 40ث تشغيل مستقر: مدّ المقطع في الخلفية (لا يمس src) كل ~50ث */
+        if(tNow > 40){
+          var aEl = document.getElementById("audio");
+          if(aEl && !aEl.paused && !aEl.__ayaBgPartialBusy){
+            aEl.__ayaBgPartialBusy = true;
+            setTimeout(function(){ try{ aEl.__ayaBgPartialBusy = false; }catch(e){} }, 50000);
+            var tgt = Math.max(tNow + 45, Number(aEl.__ayaPartialMaxSec)||0);
+            setTimeout(function(){
+              try{ downloadAudioUpTo(url, tgt, reachedAyahFromTiming()); }catch(e){}
+            }, 800);
+          }
+        }
+        return;
+      }
+
+      cacheTiming(surah);
+      prefetchUpcomingFromTiming();
+      try{
+        var page = typeof currentPage !== "undefined" ? currentPage : 1;
+        schedulePagesAndTiming(page, surah);
+      }catch(e){}
+
       var sec = reachedSecFromTiming();
       if(!(sec > 0.8)) return;
-      downloadAudioUpTo(url, sec);
+      var ayah = reachedAyahFromTiming();
+      downloadAudioUpTo(url, sec, ayah);
     }catch(e){}
   }
 
@@ -13081,37 +13745,150 @@ body.interface-old .app::after{
   }
 
   function tryPlayPartial(url, preferOffline){
-    if(!url) return Promise.resolve(false);
-    return idbGet(url).then(function(rec){
-      if(!rec || !rec.blob) return false;
-      var audioEl = document.getElementById("audio");
-      if(!audioEl) return false;
-      var local = URL.createObjectURL(rec.blob);
-      var t = 0;
-      try{ t = audioEl.currentTime || 0; }catch(e){}
-      try{
-        /* علّم أن المصدر جزئي حتى لا يُكسر التزامن */
-        try{ audioEl.__ayaPartialMaxSec = Number(rec.maxSec) || 0; }catch(e){}
-        audioEl.src = local;
-        var restore = (t > 0.3 && t < (rec.maxSec || 0)) ? t : 0;
-        var onMeta = function(){
-          try{ audioEl.removeEventListener("loadedmetadata", onMeta); }catch(e){}
-          try{ if(restore > 0) audioEl.currentTime = restore; }catch(e){}
-          try{
-            if(typeof loadTimingForCurrentSurah === "function") loadTimingForCurrentSurah();
-          }catch(e){}
-          try{
-            if(typeof positionHighlightLayer === "function") positionHighlightLayer();
-            if(typeof syncHighlight === "function") syncHighlight();
-          }catch(e){}
-        };
-        audioEl.addEventListener("loadedmetadata", onMeta);
-        /* إن كانت البيانات جاهزة فوراً */
-        setTimeout(onMeta, 80);
-        return audioEl.play().then(function(){ return true; }).catch(function(){ return true; });
-      }catch(e){ return false; }
-    }).catch(function(){ return false; });
+    return seamlessToPartial(url, null);
   }
+
+  /*
+    تبديل سلس إلى المقطع المحفوظ مع حفظ الموضع.
+    لا يُعاد التعيين إن كنا أصلاً على blob يغطي الزمن الحالي.
+  */
+  function seamlessToPartial(url, forceTime){
+    if(!url) return Promise.resolve(false);
+    var audioEl = document.getElementById("audio");
+    if(!audioEl) return Promise.resolve(false);
+    if(audioEl.__ayaHandoffBusy) return Promise.resolve(false);
+
+    return idbFindPartial(url).then(function(rec){
+      if(!rec || !rec.blob) return false;
+      /* ارفض إن كان المقطع لسورة أخرى */
+      try{
+        var need = (String(url).split("/").pop() || "").split("?")[0];
+        var got = (String(rec.url || "").split("/").pop() || "").split("?")[0];
+        if(need && got && need !== got) return false;
+      }catch(e){}
+
+      var maxSec = Number(rec.maxSec) || 0;
+      var t = 0;
+      try{
+        if(forceTime != null && Number(forceTime) > 0) t = Number(forceTime);
+        else t = Number(audioEl.currentTime) || 0;
+      }catch(e){}
+      try{
+        var saved = Number(audioEl.__ayaResumeAfterPartial) || 0;
+        if(t < 0.2 && saved > 0.2) t = saved;
+      }catch(e){}
+
+      /* إن كنا على blob لنفس الملف والموضع داخل المدى — لا تبدّل (يمنع التقطيع) */
+      try{
+        var cur = String(audioEl.currentSrc || audioEl.src || "");
+        if(cur.indexOf("blob:") === 0){
+          var same = String(audioEl.__ayaPartialUrl || "") === String(rec.url || url) ||
+                     String(audioEl.__ayaPartialUrl || "").indexOf((url.split("/").pop()||"").split("?")[0]) >= 0;
+          var cover = !(maxSec > 1) || t < maxSec - 0.5;
+          if(same && cover && audioEl.readyState >= 2){
+            try{ audioEl.__ayaPartialMaxSec = maxSec || audioEl.__ayaPartialMaxSec; }catch(e){}
+            return true;
+          }
+        }
+      }catch(e){}
+
+      if(maxSec > 1 && t > maxSec - 0.1){
+        t = Math.max(0, maxSec - 1.2);
+      }
+
+      audioEl.__ayaHandoffBusy = true;
+      var wasPlaying = false;
+      try{ wasPlaying = !audioEl.paused; }catch(e){}
+      var local = URL.createObjectURL(rec.blob);
+      try{ audioEl.__ayaPartialMaxSec = maxSec || 0; }catch(e){}
+      try{ audioEl.__ayaPartialUrl = rec.url || url; }catch(e){}
+      try{ audioEl.__ayaResumeAfterPartial = t; }catch(e){}
+
+      var done = false;
+      var applyPos = function(){
+        if(done) return;
+        try{
+          var r = Number(audioEl.__ayaResumeAfterPartial) || t || 0;
+          var d = Number(audioEl.duration);
+          if(Number.isFinite(d) && d > 0) r = Math.min(r, Math.max(0, d - 0.08));
+          if(r > 0.15) audioEl.currentTime = r;
+        }catch(e){}
+      };
+      var finish = function(){
+        if(done) return;
+        done = true;
+        applyPos();
+        if(wasPlaying){
+          try{ audioEl.play().catch(function(){}); }catch(e){}
+        }
+        try{ if(typeof setAudioLoading === "function") setAudioLoading(false); }catch(e){}
+        audioEl.__ayaHandoffBusy = false;
+        try{
+          if(typeof loadTimingForCurrentSurah === "function") loadTimingForCurrentSurah();
+        }catch(e){}
+        try{
+          if(typeof positionHighlightLayer === "function") positionHighlightLayer();
+          if(typeof syncHighlight === "function") syncHighlight();
+        }catch(e){}
+      };
+
+      audioEl.addEventListener("loadedmetadata", function onM(){
+        try{ audioEl.removeEventListener("loadedmetadata", onM); }catch(e){}
+        applyPos();
+      });
+      audioEl.addEventListener("canplay", function onC(){
+        try{ audioEl.removeEventListener("canplay", onC); }catch(e){}
+        finish();
+      });
+      try{ audioEl.src = local; }catch(e){ audioEl.__ayaHandoffBusy = false; return false; }
+      setTimeout(applyPos, 60);
+      setTimeout(applyPos, 180);
+      setTimeout(finish, 350);
+      setTimeout(function(){ audioEl.__ayaHandoffBusy = false; }, 800);
+      return true;
+    }).catch(function(){
+      try{ var a = document.getElementById("audio"); if(a) a.__ayaHandoffBusy = false; }catch(e){}
+      return false;
+    });
+  }
+
+  /* عند انقطاع النت: انتقل للمقطع فوراً دون انتظار error */
+  function onConnectivityChange(){
+    try{
+      var a = document.getElementById("audio");
+      if(!a) return;
+      var url = audioUrlFor(currentSurahGuess());
+      if(!url) return;
+      var offline = (typeof navigator !== "undefined" && navigator.onLine === false);
+      if(offline){
+        var src = String(a.currentSrc || a.src || "");
+        if(src.indexOf("http") === 0 || (a.error && a.error.code)){
+          var t = Number(a.currentTime) || 0;
+          try{ a.__ayaResumeAfterPartial = t; }catch(e){}
+          seamlessToPartial(url, t);
+        }
+      }else{
+        /* عودة النت: ابقَ على المقطع إن كان يعمل — لا ترجع للشبكة (تقطيع) */
+        try{
+          var src2 = String(a.currentSrc || a.src || "");
+          if(src2.indexOf("blob:") === 0){
+            var maxSec = Number(a.__ayaPartialMaxSec) || 0;
+            var t2 = Number(a.currentTime) || 0;
+            if(maxSec > 1) downloadAudioUpTo(url, Math.max(maxSec, t2) + 60, reachedAyahFromTiming());
+          }
+        }catch(e){}
+      }
+    }catch(e){}
+  }
+
+  try{
+    if(!window.__ayaConnBound){
+      window.__ayaConnBound = true;
+      window.addEventListener("offline", onConnectivityChange);
+      window.addEventListener("online", onConnectivityChange);
+    }
+  }catch(e){}
+
 
   try{
     var a = document.getElementById("audio");
@@ -13119,8 +13896,44 @@ body.interface-old .app::after{
       a.__ayaAutoOffBound = true;
       a.addEventListener("play", function(){
         schedulePagesAndTiming(typeof currentPage !== "undefined" ? currentPage : 1, currentSurahGuess());
-        scheduleAudioProgress();
+        /* لا تنزيل صوت أثناء بداية التشغيل الشبكي */
+        setTimeout(function(){ scheduleAudioProgress(); }, 100);
       });
+      a.addEventListener("pause", function(){
+        /* بعد الإيقاف: احفظ أقصى موضع وصلت إليه (لا تُنقص المقطع أبداً) */
+        setTimeout(function(){
+          try{
+            var surah = currentSurahGuess();
+            var url = audioUrlFor(surah);
+            if(!url) return;
+            var t = 0;
+            try{ t = Number(a.currentTime) || 0; }catch(e){}
+            var sec = 0;
+            try{ sec = Number(reachedSecFromTiming()) || 0; }catch(e){}
+            var target = Math.max(t, sec, Number(a.__ayaPartialMaxSec)||0);
+            if(target > 0.8) downloadAudioUpTo(url, target, reachedAyahFromTiming());
+          }catch(e){}
+        }, 200);
+      });
+      /* عند إخفاء الصفحة/إغلاق التطبيق: احفظ أيضاً */
+      if(!window.__ayaPartialHideBound){
+        window.__ayaPartialHideBound = true;
+        document.addEventListener("visibilitychange", function(){
+          if(document.visibilityState !== "hidden") return;
+          try{
+            var el = document.getElementById("audio");
+            if(!el) return;
+            var surah = currentSurahGuess();
+            var url = audioUrlFor(surah);
+            if(!url) return;
+            var t = Number(el.currentTime) || 0;
+            var sec = 0;
+            try{ sec = Number(reachedSecFromTiming()) || 0; }catch(e){}
+            var target = Math.max(t, sec, Number(el.__ayaPartialMaxSec)||0);
+            if(target > 0.8) downloadAudioUpTo(url, target, reachedAyahFromTiming());
+          }catch(e){}
+        });
+      }
       a.addEventListener("timeupdate", function(){
         if(a.__ayaPartialTick) return;
         a.__ayaPartialTick = true;
@@ -13128,23 +13941,188 @@ body.interface-old .app::after{
           a.__ayaPartialTick = false;
           scheduleAudioProgress();
         }, 2000);
+        /*
+          لا ننتقل للشبكة أثناء التشغيل (تسبب تعليق التحميل).
+          نمدّد المقطع المحلي +90ث، وعند الحاجة نستبدل الـ blob بمقطع أطول مع حفظ الموضع.
+        */
+        try{
+          var maxSec = Number(a.__ayaPartialMaxSec) || 0;
+          var t = Number(a.currentTime) || 0;
+          var url = audioUrlFor(currentSurahGuess());
+          if(!url) return;
+          var online = true;
+          try{ online = !(typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+
+          /* مدّ المقطع فقط إن كنا نلعب من blob محلي — لا أثناء بث http */
+          var srcNow = String(a.currentSrc || a.src || "");
+          if(online && srcNow.indexOf("blob:") === 0 && maxSec > 1){
+            if(!a.__ayaExtendTick){
+              a.__ayaExtendTick = true;
+              setTimeout(function(){ a.__ayaExtendTick = false; }, 5000);
+              var target = Math.max(maxSec, t) + 90;
+              downloadAudioUpTo(url, target, reachedAyahFromTiming());
+            }
+          }
+
+          if(!(maxSec > 2 && maxSec < 1e8)) return;
+          /* بعيد عن النهاية: لا تبدّل المصدر */
+          if(t < maxSec - 1.5) return;
+          if(a.__ayaPartialUpgrading) return;
+          if(!online) return;
+
+          a.__ayaPartialUpgrading = true;
+          var resumeAt = t;
+          (async function(){
+            try{
+              await downloadAudioUpTo(url, resumeAt + 120, reachedAyahFromTiming());
+            }catch(e){}
+            var rec = null;
+            try{ rec = await idbFindPartial(url); }catch(e){}
+            if(rec && rec.blob && Number(rec.maxSec) > resumeAt + 2){
+              try{ a.__ayaPartialMaxSec = Number(rec.maxSec); }catch(e){}
+              try{ a.__ayaPartialUrl = rec.url || url; }catch(e){}
+              try{ a.__ayaResumeAfterPartial = resumeAt; }catch(e){}
+              var wasPlaying = !a.paused;
+              var local = URL.createObjectURL(rec.blob);
+              var onMeta = function(){
+                try{ a.removeEventListener("loadedmetadata", onMeta); }catch(e){}
+                try{
+                  var r = Number(a.__ayaResumeAfterPartial) || resumeAt;
+                  var d = Number(a.duration);
+                  if(Number.isFinite(d) && d > 0) r = Math.min(r, d - 0.05);
+                  if(r > 0.2) a.currentTime = r;
+                }catch(e){}
+                if(wasPlaying) try{ a.play().catch(function(){}); }catch(e){}
+                a.__ayaPartialUpgrading = false;
+                try{ if(typeof setAudioLoading === "function") setAudioLoading(false); }catch(e){}
+              };
+              a.addEventListener("loadedmetadata", onMeta);
+              a.addEventListener("canplay", onMeta);
+              try{ a.src = local; }catch(e){ a.__ayaPartialUpgrading = false; }
+              setTimeout(onMeta, 80);
+              setTimeout(onMeta, 250);
+              return;
+            }
+            a.__ayaPartialUpgrading = false;
+          })().catch(function(){ a.__ayaPartialUpgrading = false; });
+        }catch(e){}
       });
-      /* بدون إنترنت: استخدم الجزء المحفوظ حتى موضع القراءة */
+      /* فشل الشبكة أو انقطاع: استخدم الجزء المحفوظ فوراً */
       a.addEventListener("error", function(){
         try{
           var url = audioUrlFor(currentSurahGuess());
           tryPlayPartial(url);
         }catch(e){}
       });
+      /* لا تبدّل المصدر أثناء التشغيل المستقر — يمنع التقطّع أوفلاين/أونلاين */
+      a.addEventListener("loadstart", function(){
+        try{
+          if(a.__ayaPartialUpgrading || a.__ayaForceNet) return;
+          var cur = String(a.currentSrc || a.src || "");
+          if(!cur || cur.indexOf("blob:") === 0) return;
+          /* إن الشبكة تعمل بالفعل لا تسرقها للجزئي وسط التشغيل */
+          if(!a.paused && a.readyState >= 2 && (a.currentTime || 0) > 0.5) return;
+          var url = audioUrlFor(currentSurahGuess());
+          if(!url) return;
+          var offline = false;
+          try{ offline = (typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+          if(!offline) return; /* أونلاين: اترك الشبكة ما لم يفشل */
+          resolveLocal(url).then(function(local){
+            if(!local) return;
+            var now = String(a.currentSrc || a.src || "");
+            if(now.indexOf("blob:") === 0) return;
+            var t = 0;
+            try{ t = a.currentTime || 0; }catch(e){}
+            var wantPlay = !a.paused;
+            try{
+              a.__ayaPartialUrl = url;
+              a.src = local;
+              var onMeta = function(){
+                try{ a.removeEventListener("loadedmetadata", onMeta); }catch(e){}
+                try{ if(t > 0.3) a.currentTime = t; }catch(e){}
+                if(wantPlay) try{ a.play().catch(function(){}); }catch(e){}
+              };
+              a.addEventListener("loadedmetadata", onMeta);
+              setTimeout(onMeta, 60);
+            }catch(e){}
+          });
+        }catch(e){}
+      });
+
+      /* عند عودة الشبكة: لا تلمس src — فقط مدّد المقطع في الخلفية */
+      try{
+        if(!window.__ayaOnlinePartialBound){
+          window.__ayaOnlinePartialBound = true;
+          window.addEventListener("online", function(){
+            try{
+              var el = document.getElementById("audio");
+              if(!el) return;
+              var maxSec = Number(el.__ayaPartialMaxSec) || 0;
+              if(!(maxSec > 1 && maxSec < 1e8)) return;
+              var url = audioUrlFor(currentSurahGuess());
+              if(!url) return;
+              var t = Number(el.currentTime) || 0;
+              downloadAudioUpTo(url, Math.max(maxSec, t) + 60, reachedAyahFromTiming());
+            }catch(e){}
+          });
+        }
+      }catch(e){}
     }
   }catch(e){}
 
-  /* عند تعيين مصدر الصوت بدون شبكة جرّب الجزء المحفوظ */
+  /*
+    resolveLocal: يعيد blob: من الكاش الكامل أو المقطع الجزئي إن وُجد.
+    يُستخدم عند كل تعيين src حتى لا ننتظر الشبكة بعد أول تنزيل تدريجي.
+  */
+  async function resolveLocal(url){
+    if(!url || String(url).indexOf("blob:") === 0) return null;
+    /* كاش كامل */
+    try{
+      if(typeof caches !== "undefined"){
+        var cache = await caches.open(AUDIO_CACHE);
+        var hit = await cache.match(url);
+        if(hit){
+          var b = await hit.blob();
+          if(b && b.size){
+            try{ savedMaxSec[url] = 1e9; }catch(e){}
+            return URL.createObjectURL(new Blob([b], { type: "audio/mpeg" }));
+          }
+        }
+      }
+    }catch(e){}
+    /* مقطع جزئي IndexedDB (بحث مرن بالرابط أو اسم الملف) */
+    try{
+      var rec = await idbFindPartial(url);
+      if(rec && rec.blob){
+        try{
+          var aEl = document.getElementById("audio");
+          if(aEl){
+            aEl.__ayaPartialMaxSec = Number(rec.maxSec) || 0;
+            aEl.__ayaPartialUrl = rec.url || url;
+          }
+        }catch(e){}
+        try{ savedMaxSec[url] = Number(rec.maxSec) || savedMaxSec[url] || 0; }catch(e){}
+        try{ if(rec.url) savedMaxSec[rec.url] = Number(rec.maxSec) || 0; }catch(e){}
+        return URL.createObjectURL(rec.blob);
+      }
+    }catch(e){}
+    return null;
+  }
+
+  /* معترض src: أونلاين = شبكة فوراً | أوفلاين = محلي إن وُجد لنفس الملف فقط */
   try{
     var audioEl = document.getElementById("audio");
     if(audioEl && !audioEl.__ayaPartialSrcHook){
       audioEl.__ayaPartialSrcHook = true;
-      var desc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "src");
+      var desc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "src")
+        || Object.getOwnPropertyDescriptor(Object.getPrototypeOf(audioEl), "src");
+      /* إن وُجد معترض سابق على العنصر، استبدله بهذا */
+      try{
+        var existing = Object.getOwnPropertyDescriptor(audioEl, "src");
+        if(existing && existing.set){
+          /* أعِد الربط على النموذج الأصلي */
+        }
+      }catch(e){}
       if(desc && desc.set){
         Object.defineProperty(audioEl, "src", {
           configurable: true,
@@ -13152,24 +14130,57 @@ body.interface-old .app::after{
           get: function(){ return desc.get.call(this); },
           set: function(v){
             var self = this;
+            if(!v || String(v).indexOf("blob:") === 0){
+              try{ desc.set.call(self, v); }catch(e){}
+              return;
+            }
+            if(self.__ayaForceNet){
+              try{ self.__ayaForceNet = false; }catch(e){}
+              try{ desc.set.call(self, v); }catch(e){}
+              return;
+            }
             var offline = false;
             try{ offline = (typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
-            if(offline && v && String(v).indexOf("blob:") !== 0){
-              idbGet(v).then(function(rec){
-                if(rec && rec.blob){
-                  desc.set.call(self, URL.createObjectURL(rec.blob));
-                }else{
-                  desc.set.call(self, v);
-                }
-              }).catch(function(){ desc.set.call(self, v); });
-            }else{
-              desc.set.call(self, v);
+            /* أونلاين: شبكة مباشرة — صفر انتظار IndexedDB */
+            if(!offline){
+              try{ desc.set.call(self, v); }catch(e){}
+              return;
             }
+            /* أوفلاين: محلي لنفس اسم الملف فقط */
+            var token = (self.__ayaSrcToken = (self.__ayaSrcToken || 0) + 1);
+            var leafNeed = "";
+            try{ leafNeed = (String(v).split("/").pop() || "").split("?")[0]; }catch(e){}
+            var applied = false;
+            resolveLocal(v).then(function(local){
+              if(token !== self.__ayaSrcToken) return;
+              if(local){
+                try{
+                  var pu = String(self.__ayaPartialUrl || v);
+                  var leafGot = (pu.split("/").pop() || "").split("?")[0];
+                  if(leafNeed && leafGot && leafNeed !== leafGot){
+                    try{ desc.set.call(self, v); }catch(e){}
+                    return;
+                  }
+                }catch(e){}
+                applied = true;
+                try{ desc.set.call(self, local); }catch(e){}
+              }else if(!applied){
+                try{ desc.set.call(self, v); }catch(e){}
+              }
+            }).catch(function(){
+              if(token !== self.__ayaSrcToken) return;
+              try{ desc.set.call(self, v); }catch(e){}
+            });
+            setTimeout(function(){
+              if(token !== self.__ayaSrcToken) return;
+              if(!applied) try{ desc.set.call(self, v); }catch(e){}
+            }, 80);
           }
         });
       }
     }
   }catch(e){}
+
 
   function boot(){
     try{
@@ -13222,7 +14233,13 @@ body.interface-old .app::after{
       if(on) boot();
     },
     scheduleAudioProgress: scheduleAudioProgress,
-    downloadAudioUpTo: downloadAudioUpTo
+    downloadAudioUpTo: downloadAudioUpTo,
+    resolveLocal: resolveLocal,
+    tryPlayPartial: tryPlayPartial,
+    seamlessToPartial: seamlessToPartial,
+    idbGet: idbGet,
+    idbFindPartial: idbFindPartial,
+    idbGetAll: idbGetAll
   };
 })();
 </script>
@@ -13318,9 +14335,523 @@ body.interface-old .app::after{
     return { bytes: total + cachePart.bytes, count: count + cachePart.count };
   }
 
+  function surahName(n){
+    n = Number(n) || 0;
+    try{
+      if(typeof surahs !== "undefined" && surahs[n - 1]) return String(surahs[n - 1][0] || ("سورة " + n));
+    }catch(e){}
+    return n ? ("سورة " + n) : "—";
+  }
+
+  function fmtSec(sec){
+    sec = Math.max(0, Math.floor(Number(sec) || 0));
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return m + ":" + String(s).padStart(2, "0");
+  }
+
+  function reciterNameFromUrl(url){
+    url = String(url || "");
+    try{
+      if(typeof RECITERS !== "undefined"){
+        for(var k in RECITERS){
+          if(!Object.prototype.hasOwnProperty.call(RECITERS, k)) continue;
+          var r = RECITERS[k];
+          if(!r) continue;
+          var server = String(r.server || r.base || "");
+          if(server && url.indexOf(server.replace(/\/?$/, "")) >= 0){
+            return r.name || r.label || k;
+          }
+          if(r.folder && url.indexOf("/" + r.folder + "/") >= 0) return r.name || k;
+        }
+      }
+    }catch(e){}
+    /* استخرج مجلد القارئ من المسار إن أمكن */
+    try{
+      var m = url.match(/\/(?:download|quran)\/([^\/]+)\//i) || url.match(/\/\/([^\/]+)\/(\d{3})\.mp3/i);
+      if(m) return m[1];
+    }catch(e){}
+    return "قارئ";
+  }
+
+  function pageLabelFromUrl(url){
+    url = String(url || "");
+    var m = url.match(/(\d{3})\.svg/i) || url.match(/page[_\-]?(\d+)/i) || url.match(/\/(\d{1,3})(?:\.svg|\.png)?(?:\?|$)/i);
+    if(m) return "صفحة " + String(Number(m[1]));
+    return url.split("/").pop() || url;
+  }
+
+  function surahFromAudioUrl(url){
+    url = String(url || "");
+    var m = url.match(/\/(\d{3})\.mp3/i) || url.match(/[_\-](\d{3})(?:\.mp3)?(?:\?|$)/i);
+    if(m) return Number(m[1]);
+    return 0;
+  }
+
+  async function listCacheEntries(cacheName){
+    var rows = [];
+    if(typeof caches === "undefined") return rows;
+    try{
+      var cache = await caches.open(cacheName);
+      var keys = await cache.keys();
+      for(var i = 0; i < keys.length; i++){
+        var req = keys[i];
+        var url = req && req.url ? req.url : String(req);
+        var bytes = 0;
+        try{
+          var res = await cache.match(req);
+          if(res){
+            var buf = await res.clone().arrayBuffer();
+            bytes = buf.byteLength || 0;
+          }
+        }catch(e){}
+        rows.push({ url: url, bytes: bytes });
+      }
+    }catch(e){}
+    rows.sort(function(a, b){ return (a.url || "").localeCompare(b.url || ""); });
+    return rows;
+  }
+
+  async function listPartials(){
+    var rows = [];
+    try{
+      var db = await openIdb();
+      rows = await new Promise(function(resolve){
+        var tx = db.transaction(IDB_STORE, "readonly");
+        var req = tx.objectStore(IDB_STORE).getAll();
+        req.onsuccess = function(){ resolve(req.result || []); };
+        req.onerror = function(){ resolve([]); };
+      });
+    }catch(e){}
+    return rows;
+  }
+
+  function listTimingKeys(){
+    var items = [];
+    try{
+      for(var i = 0; i < localStorage.length; i++){
+        var k = localStorage.key(i);
+        if(!k) continue;
+        if(k.indexOf("ayaTiming:") === 0 || k.indexOf("ayaViewBox:") === 0 || k.indexOf("ayaPartialMax:") === 0){
+          var v = localStorage.getItem(k) || "";
+          items.push({ key: k, bytes: (k.length + v.length) * 2 });
+        }
+      }
+    }catch(e){}
+    return items;
+  }
+
+  function renderDetailList(el, lines){
+    if(!el) return;
+    if(!lines || !lines.length){
+      el.innerHTML = '<div style="opacity:.7;padding:8px 4px">لا توجد عناصر.</div>';
+      return;
+    }
+    var html = '<div style="display:flex;flex-direction:column;gap:6px;padding-top:8px">';
+    for(var i = 0; i < lines.length; i++){
+      var it = lines[i];
+      html += '<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px 12px">';
+      html += '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">';
+      html += '<div style="min-width:0;flex:1"><div style="font-weight:700">' + it.title + '</div>';
+      if(it.sub) html += '<div style="opacity:.8;font-size:12px;margin-top:3px;line-height:1.55">' + it.sub + '</div>';
+      if(it.meta) html += '<div style="opacity:.7;font-size:11px;margin-top:4px;line-height:1.5">' + it.meta + '</div>';
+      html += '</div><div style="flex:none;font-weight:700;white-space:nowrap">' + it.size + '</div></div>';
+      if(it.pct != null && Number.isFinite(Number(it.pct))){
+        var p = Math.max(0, Math.min(100, Number(it.pct)));
+        html += '<div style="margin-top:8px;height:6px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden">';
+        html += '<div style="height:100%;width:' + p.toFixed(1) + '%;background:linear-gradient(90deg,#16803b,#79d69a);border-radius:999px"></div></div>';
+        html += '<div style="margin-top:4px;font-size:11px;opacity:.85;text-align:left">نسبة التقدم: ' + p.toFixed(0) + '%</div>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  async function fillPagesDetails(){
+    var el = $("stPagesDetails");
+    if(!el) return;
+    el.innerHTML = '<div style="opacity:.7;padding:8px 4px">جاري التحميل…</div>';
+    var rows = await listCacheEntries(PAGE_CACHE);
+    var lines = rows.map(function(r){
+      return { title: pageLabelFromUrl(r.url), sub: "", size: fmtSize(r.bytes) };
+    });
+    /* دمج أرقام الصفحات المتتالية اختياري — نعرض كل صفحة */
+    lines.sort(function(a, b){
+      var na = Number((a.title.match(/\d+/) || [0])[0]);
+      var nb = Number((b.title.match(/\d+/) || [0])[0]);
+      return na - nb;
+    });
+    renderDetailList(el, lines);
+  }
+
+  async function fillAudioDetails(){
+    var el = $("stAudioDetails");
+    if(!el) return;
+    el.innerHTML = '<div style="opacity:.7;padding:8px 4px">جاري التحميل…</div>';
+    var rows = await listCacheEntries(AUDIO_CACHE);
+    var lines = rows.map(function(r){
+      var sn = surahFromAudioUrl(r.url);
+      var rec = reciterNameFromUrl(r.url);
+      return {
+        title: (sn ? surahName(sn) + " (" + sn + ")" : "تلاوة"),
+        sub: rec,
+        size: fmtSize(r.bytes)
+      };
+    });
+    renderDetailList(el, lines);
+  }
+
+  function readerKeyFromUrl(url){
+    url = String(url || "");
+    try{
+      if(typeof RECITERS !== "undefined"){
+        for(var k in RECITERS){
+          if(!Object.prototype.hasOwnProperty.call(RECITERS, k)) continue;
+          var r = RECITERS[k];
+          if(!r) continue;
+          var server = String(r.server || "").replace(/\/+$/, "");
+          if(server && url.indexOf(server) >= 0) return k;
+          if(r.timingAudioServer && url.indexOf(String(r.timingAudioServer).replace(/\/+$/, "")) >= 0) return k;
+        }
+      }
+    }catch(e){}
+    return "";
+  }
+
+  /* آخر آية يغطيها المقطع — يفضّل توقيت نفس القارئ */
+  function ayahReachedAt(surahNum, maxSec, audioUrl){
+    surahNum = Number(surahNum) || 0;
+    maxSec = Number(maxSec) || 0;
+    if(!surahNum || maxSec < 0.2) return 0;
+    var preferReader = readerKeyFromUrl(audioUrl || "");
+    var candidates = [];
+    try{
+      if(typeof timingCache !== "undefined" && timingCache){
+        for(var k in timingCache){
+          if(!Object.prototype.hasOwnProperty.call(timingCache, k)) continue;
+          var parts = String(k).split(":");
+          var sPart = parts.length >= 2 ? parts[parts.length - 1] : parts[0];
+          if(String(sPart) !== String(surahNum)) continue;
+          if(Array.isArray(timingCache[k]) && timingCache[k].length){
+            candidates.push({ key: k, list: timingCache[k], reader: parts[0] || "" });
+          }
+        }
+      }
+    }catch(e){}
+    try{
+      for(var i = 0; i < localStorage.length; i++){
+        var key = localStorage.key(i);
+        if(!key || key.indexOf("ayaTiming:") !== 0) continue;
+        var rest = key.slice("ayaTiming:".length);
+        var p2 = rest.split(":");
+        var s2 = p2.length >= 2 ? p2[p2.length - 1] : p2[0];
+        if(String(s2) !== String(surahNum)) continue;
+        try{
+          var parsed = JSON.parse(localStorage.getItem(key) || "[]");
+          if(Array.isArray(parsed) && parsed.length){
+            candidates.push({ key: key, list: parsed, reader: p2[0] || "" });
+          }
+        }catch(e){}
+      }
+    }catch(e){}
+    if(!candidates.length) return 0;
+    /* فضّل توقيت القارئ المطابق للرابط */
+    var list = null;
+    if(preferReader){
+      for(var c = 0; c < candidates.length; c++){
+        if(candidates[c].reader === preferReader){ list = candidates[c].list; break; }
+      }
+    }
+    if(!list) list = candidates[0].list;
+    var tMs = maxSec * 1000;
+    var best = 0;
+    for(var j = 0; j < list.length; j++){
+      var it = list[j];
+      if(!it) continue;
+      var ayah = Number(it.ayah);
+      if(!Number.isFinite(ayah) || ayah < 1) continue;
+      var st = Number(it.start_time);
+      var en = Number(it.end_time);
+      /* الآية التي بدأها القارئ أو أتمّها ضمن المقطع */
+      if(Number.isFinite(st) && tMs >= st - 80) best = Math.max(best, ayah);
+      else if(Number.isFinite(en) && tMs >= en - 80) best = Math.max(best, ayah);
+    }
+    return best;
+  }
+
+  function getTimingListFor(surahNum, audioUrl){
+    surahNum = Number(surahNum) || 0;
+    if(!surahNum) return null;
+    var preferReader = readerKeyFromUrl(audioUrl || "");
+    var candidates = [];
+    try{
+      if(typeof timingCache !== "undefined" && timingCache){
+        for(var k in timingCache){
+          if(!Object.prototype.hasOwnProperty.call(timingCache, k)) continue;
+          var parts = String(k).split(":");
+          var sPart = parts.length >= 2 ? parts[parts.length - 1] : parts[0];
+          if(String(sPart) !== String(surahNum)) continue;
+          if(Array.isArray(timingCache[k]) && timingCache[k].length){
+            candidates.push({ list: timingCache[k], reader: parts[0] || "" });
+          }
+        }
+      }
+    }catch(e){}
+    try{
+      for(var i = 0; i < localStorage.length; i++){
+        var key = localStorage.key(i);
+        if(!key || key.indexOf("ayaTiming:") !== 0) continue;
+        var rest = key.slice("ayaTiming:".length);
+        var p2 = rest.split(":");
+        var s2 = p2.length >= 2 ? p2[p2.length - 1] : p2[0];
+        if(String(s2) !== String(surahNum)) continue;
+        try{
+          var parsed = JSON.parse(localStorage.getItem(key) || "[]");
+          if(Array.isArray(parsed) && parsed.length){
+            candidates.push({ list: parsed, reader: p2[0] || "" });
+          }
+        }catch(e){}
+      }
+    }catch(e){}
+    if(!candidates.length) return null;
+    if(preferReader){
+      for(var c = 0; c < candidates.length; c++){
+        if(candidates[c].reader === preferReader) return candidates[c].list;
+      }
+    }
+    return candidates[0].list;
+  }
+
+  function pageFromTimingItem(item){
+    try{
+      if(typeof pageFromTiming === "function"){
+        var p = pageFromTiming(item);
+        if(p) return Number(p) || 0;
+      }
+    }catch(e){}
+    try{
+      if(item && item.page){
+        var m = String(item.page).match(/(\d{3})/);
+        if(m) return Number(m[1]) || 0;
+      }
+    }catch(e){}
+    return 0;
+  }
+
+  function progressInfo(surahNum, sec, ayah, audioUrl){
+    var info = {
+      totalAyahs: 0,
+      totalSec: 0,
+      page: 0,
+      ayahPct: null,
+      timePct: null,
+      ayahAt: ayah || 0
+    };
+    var list = getTimingListFor(surahNum, audioUrl);
+    if(!list || !list.length) return info;
+    var maxA = 0, maxEn = 0, pageAt = 0;
+    var tMs = (Number(sec) || 0) * 1000;
+    for(var i = 0; i < list.length; i++){
+      var it = list[i];
+      if(!it) continue;
+      var a = Number(it.ayah) || 0;
+      var en = Number(it.end_time) || 0;
+      var st = Number(it.start_time) || 0;
+      if(a > maxA) maxA = a;
+      if(en > maxEn) maxEn = en;
+      if(ayah > 0 && a === ayah){
+        var pg = pageFromTimingItem(it);
+        if(pg) pageAt = pg;
+      }
+      if(!ayah && tMs >= st - 80){
+        var pg2 = pageFromTimingItem(it);
+        if(pg2) pageAt = pg2;
+        if(a > info.ayahAt) info.ayahAt = a;
+      }
+    }
+    info.totalAyahs = maxA;
+    info.totalSec = maxEn > 0 ? maxEn / 1000 : 0;
+    info.page = pageAt;
+    if(info.ayahAt > 0 && maxA > 0){
+      info.ayahPct = Math.min(100, (info.ayahAt / maxA) * 100);
+    }
+    if(sec > 0 && info.totalSec > 0){
+      info.timePct = Math.min(100, (sec / info.totalSec) * 100);
+    }
+    return info;
+  }
+
+  async function fillPartialDetails(){
+    var el = $("stPartialDetails");
+    if(!el) return;
+    el.innerHTML = '<div style="opacity:.7;padding:8px 4px">جاري التحميل…</div>';
+    var rows = await listPartials();
+    var lines = rows.map(function(r){
+      var url = r.url || "";
+      var sn = surahFromAudioUrl(url);
+      var rec = reciterNameFromUrl(url);
+      var sec = Number(r.maxSec) || 0;
+      var bytes = (r.blob && r.blob.size) ? r.blob.size : (Number(r.byteEnd) || 0);
+      var totalBytes = Number(r.contentLength) || 0;
+      var when = "";
+      try{
+        if(r.updatedAt){
+          var d = new Date(r.updatedAt);
+          when = d.toLocaleDateString("ar") + " · " + d.toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" });
+        }
+      }catch(e){}
+      var ayah = Number(r.maxAyah) || 0;
+      if(!ayah) ayah = ayahReachedAt(sn, sec, url);
+      var prog = progressInfo(sn, sec, ayah, url);
+      if(!ayah && prog.ayahAt) ayah = prog.ayahAt;
+
+      // maxSec may include extra seconds downloaded for smooth offline playback.
+      // Display the actual timing endpoint of the last saved ayah when available.
+      var displaySec = sec;
+      if(sn && ayah > 0){
+        try{
+          var timingRows = getTimingListFor(sn, url);
+          if(timingRows && timingRows.length){
+            var ayahEndMs = 0;
+            for(var ti = 0; ti < timingRows.length; ti++){
+              var timingItem = timingRows[ti];
+              if(Number(timingItem && timingItem.ayah) === ayah){
+                var endMs = Number(timingItem.end_time) || 0;
+                if(endMs > ayahEndMs) ayahEndMs = endMs;
+              }
+            }
+            if(ayahEndMs > 0) displaySec = ayahEndMs / 1000;
+          }
+        }catch(e){}
+      }
+
+      var pct = null;
+      if(prog.timePct != null) pct = prog.timePct;
+      else if(prog.ayahPct != null) pct = prog.ayahPct;
+      else if(totalBytes > 0 && bytes > 0) pct = Math.min(100, (bytes / totalBytes) * 100);
+
+      var range = "";
+      if(ayah > 0) range = "حتى الآية " + ayah;
+      if(displaySec > 0) range += (range ? " · " : "") + fmtSec(displaySec);
+
+      return {
+        title: (sn ? surahName(sn) + " (" + sn + ")" : "مقطع تلاوة") + (range ? " · " + range : ""),
+        reciter: rec || "",
+        when: when,
+        bytes: bytes,
+        pct: pct
+      };
+    });
+
+    if(!lines.length){
+      el.innerHTML = '<div style="opacity:.7;padding:8px 4px;text-align:center">لا توجد مقاطع تلاوة تدريجية.</div>';
+      return;
+    }
+
+    // تخطيط مدمج يحاكي بطاقات إدارة المساحة في الصورة المرجعية.
+    var html = '<div style="display:flex;flex-direction:column;gap:9px;padding:8px 6px 8px">';
+    for(var i = 0; i < lines.length; i++){
+      var it = lines[i];
+      var p = it.pct != null && Number.isFinite(Number(it.pct))
+        ? Math.max(0, Math.min(100, Number(it.pct))) : null;
+
+      html += '<div style="background:rgba(0,0,0,.19);border-radius:17px;padding:12px 14px;direction:rtl;color:#f4f6f8">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px">';
+      html += '<div style="flex:1;min-width:0;text-align:right;font-size:14px;font-weight:700;line-height:1.65;color:#f5f7fa">' + it.title + '</div>';
+      html += '<div style="flex:none;white-space:nowrap;font-size:13px;font-weight:700;color:#f4f6f8">' + (it.bytes > 0 ? fmtSize(it.bytes) : '—') + '</div>';
+      html += '</div>';
+
+      var secondary = [];
+      if(it.reciter) secondary.push(it.reciter);
+      if(it.when) secondary.push(it.when);
+      if(secondary.length){
+        html += '<div style="margin-top:3px;font-size:12px;font-weight:400;color:#aeb8c2;line-height:1.7;text-align:right">' + secondary.join(' · ') + '</div>';
+      }
+
+      if(p != null){
+        html += '<div style="display:flex;align-items:center;gap:9px;margin-top:7px">';
+        html += '<div style="flex:1;height:3px;border-radius:999px;background:rgba(255,255,255,.10);overflow:hidden;direction:ltr">';
+        html += '<div style="height:100%;width:' + p.toFixed(1) + '%;background:#72bd91;border-radius:999px"></div></div>';
+        html += '<span style="font-size:10px;color:#aeb8c2;white-space:nowrap">' + p.toFixed(0) + '%</span>';
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  async function fillTimingDetails(){
+    var el = $("stTimingDetails");
+    if(!el) return;
+    var localItems = listTimingKeys();
+    var n = localItems.length;
+    var bytes = 0;
+    for(var i = 0; i < localItems.length; i++) bytes += Number(localItems[i].bytes) || 0;
+    try{
+      var cacheRows = await listCacheEntries(TIMING_CACHE);
+      n += cacheRows.length;
+      for(var j = 0; j < cacheRows.length; j++) bytes += Number(cacheRows[j].bytes) || 0;
+    }catch(e){}
+    if(n < 1){
+      el.innerHTML = '<div style="opacity:.7;padding:8px 4px">لا توجد بيانات.</div>';
+      return;
+    }
+    el.innerHTML = '<div style="padding:10px 4px;opacity:.85;line-height:1.7">محفوظ للأوفلاين · ' + n + ' عنصر · ' + fmtSize(bytes) + '</div>';
+  }
+
+  var detailsLoaded = Object.create(null);
+
+  function bindDetailToggles(){
+    var btns = document.querySelectorAll("#storageManagePopup .st-cat-toggle");
+    for(var i = 0; i < btns.length; i++){
+      (function(btn){
+        if(btn.__stBound) return;
+        btn.__stBound = true;
+        btn.addEventListener("click", function(){
+          var cat = btn.getAttribute("data-cat");
+          var map = {
+            pages: "stPagesDetails",
+            audio: "stAudioDetails",
+            partial: "stPartialDetails",
+            timing: "stTimingDetails"
+          };
+          var id = map[cat];
+          var panel = id ? $(id) : null;
+          if(!panel) return;
+          var open = panel.style.display === "none" || !panel.style.display;
+          /* أغلق الباقي */
+          var all = document.querySelectorAll("#storageManagePopup .st-details");
+          for(var j = 0; j < all.length; j++) all[j].style.display = "none";
+          var marks = document.querySelectorAll("#storageManagePopup .st-cat-toggle small");
+          for(var k = 0; k < marks.length; k++) marks[k].textContent = "▸";
+          if(open){
+            panel.style.display = "block";
+            var sm = btn.querySelector("small");
+            if(sm) sm.textContent = "▾";
+            if(!detailsLoaded[cat]){
+              detailsLoaded[cat] = true;
+              if(cat === "pages") fillPagesDetails();
+              else if(cat === "audio") fillAudioDetails();
+              else if(cat === "partial") fillPartialDetails();
+              else if(cat === "timing") fillTimingDetails();
+            }else{
+              /* أعد التحميل دائماً ليعكس المسح */
+              if(cat === "pages") fillPagesDetails();
+              else if(cat === "audio") fillAudioDetails();
+              else if(cat === "partial") fillPartialDetails();
+              else if(cat === "timing") fillTimingDetails();
+            }
+          }
+        });
+      })(btns[i]);
+    }
+  }
+
   async function refreshStats(){
     var st = $("stStatus");
     if(st) st.textContent = "جاري حساب المساحة…";
+    detailsLoaded = Object.create(null);
     var pages = await cacheSize(PAGE_CACHE);
     var audio = await cacheSize(AUDIO_CACHE);
     var partial = await partialSize();
@@ -13329,9 +14860,20 @@ body.interface-old .app::after{
     if($("stPages")) $("stPages").textContent = fmtSize(pages.bytes) + (pages.count ? " · " + pages.count + " ملف" : "");
     if($("stAudio")) $("stAudio").textContent = fmtSize(audio.bytes) + (audio.count ? " · " + audio.count + " ملف" : "");
     if($("stPartial")) $("stPartial").textContent = fmtSize(partial.bytes) + (partial.count ? " · " + partial.count + " مقطع" : "");
-    if($("stTiming")) $("stTiming").textContent = fmtSize(timing.bytes);
+    if($("stTiming")) $("stTiming").textContent = fmtSize(timing.bytes) + (timing.count ? " · " + timing.count + " عنصر" : "");
     if($("stTotal")) $("stTotal").textContent = fmtSize(sum);
-    if(st) st.textContent = sum > 0 ? "يمكنك مسح أي قسم دون فقدان الإعدادات أو العلامات." : "لا توجد ملفات منزّلة حالياً.";
+    /* أخفِ التفاصيل المفتوحة وأعد ربط الأزرار */
+    try{
+      var all = document.querySelectorAll("#storageManagePopup .st-details");
+      for(var j = 0; j < all.length; j++){
+        all[j].style.display = "none";
+        all[j].innerHTML = "";
+      }
+      var marks = document.querySelectorAll("#storageManagePopup .st-cat-toggle small");
+      for(var k = 0; k < marks.length; k++) marks[k].textContent = "▸";
+    }catch(e){}
+    bindDetailToggles();
+    if(st) st.textContent = sum > 0 ? "اضغط قسماً لعرض تفاصيل كل تنزيل. يمكنك المسح دون فقدان الإعدادات." : "لا توجد ملفات منزّلة حالياً.";
   }
 
   async function clearCache(name){
@@ -13468,6 +15010,11 @@ body.interface-old .app::after{
   }
 
   /* فتح إدارة المساحة من أندرويد: ?storage=1 أو localStorage أو استدعاء أصلي */
+  var storageMenuButton = document.getElementById("storageManageMenuButton");
+  if(storageMenuButton) storageMenuButton.addEventListener("click", function(){
+    try{ if(typeof closeSideMenu === "function") closeSideMenu(); }catch(e){}
+    if(typeof window.__ayaOpenStorageManager === "function") window.__ayaOpenStorageManager();
+  });
   function shouldOpenStorage(){
     try{
       var q = (location.search || "").replace(/^\?/, "");
