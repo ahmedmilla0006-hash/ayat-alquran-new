@@ -188,28 +188,65 @@ html,body{
   direction:rtl;
 }
 
-.progress{
+.progress,
+.aya-progress{
   flex:1;
   height:8px;
-  appearance:none;
-  -webkit-appearance:none;
+  position:relative;
   border-radius:10px;
   background:#c8c8c8;
   overflow:hidden;
   cursor:pointer;
   touch-action:none;
+  appearance:none;
+  -webkit-appearance:none;
 }
+.progress::-webkit-progress-bar{ background:transparent; }
+.progress::-webkit-progress-value{ background:transparent; }
+.progress::-moz-progress-bar{ background:transparent; }
 
-.progress::-webkit-progress-bar{
-  background:#c8c8c8;
+/* شريط التشغيل كالمعتاد (أخضر) — من اليمين */
+.aya-progress-play{
+  position:absolute;
+  top:0; bottom:0;
+  right:0;
+  left:auto;
+  width:0%;
+  background: var(--green, #16803b);
+  border-radius:10px;
+  pointer-events:none;
+  z-index:2;
 }
-
-.progress::-webkit-progress-value{
-  background:var(--green);
+/* طبقة المنزّل مخفية أونلاين */
+.aya-progress-local{
+  display:none;
+  position:absolute;
+  top:0; bottom:0;
+  right:0;
+  left:auto;
+  width:0%;
+  background:#2f80ed;
+  border-radius:10px;
+  pointer-events:none;
+  z-index:1;
 }
-
-.progress::-moz-progress-bar{
-  background:var(--green);
+/* بدون نت: الشريط الذي يملأ يصبح أزرق */
+.aya-progress.is-offline .aya-progress-play{
+  background:#2f80ed;
+}
+.night-mode .aya-progress,
+.night-mode .progress{
+  background:#555;
+}
+.player .progress,
+.player .aya-progress{
+  background: rgba(15,25,35,.45) !important;
+}
+.player .aya-progress-play{
+  background: #50c878 !important;
+}
+.player .aya-progress.is-offline .aya-progress-play{
+  background: #2f80ed !important;
 }
 
 .progress-time{
@@ -249,6 +286,15 @@ html,body{
   margin-top:1px;
   color:#666;
   font-size:12px;
+}
+#autoNextSurahButton.is-on .control-icon,
+#autoNextSurahButton.is-on .control-text{
+  color: var(--green, #16803b);
+  font-weight: 700;
+}
+.player #autoNextSurahButton.is-on .control-icon,
+.player #autoNextSurahButton.is-on .control-text{
+  color: #79d69a !important;
 }
 
 .play-button{
@@ -1407,14 +1453,15 @@ body {
   color: #f4f7f9 !important;
   border-color: rgba(200,220,235,.16) !important;
 }
-.player .progress {
+.player .progress,
+.player .aya-progress {
   background: rgba(15,25,35,.45) !important;
 }
 .player .progress::-webkit-progress-value {
-  background: #50c878 !important;
+  background: transparent !important;
 }
 .player .progress::-moz-progress-bar {
-  background: #50c878 !important;
+  background: transparent !important;
 }
 .player .play-button {
   background: #50c878 !important;
@@ -2628,12 +2675,17 @@ body.aya-storage-from-settings #splashScreen{
         0:00
       </span>
 
-      <progress
-        class="progress"
+      <div
+        class="progress aya-progress"
         id="progress"
-        value="0"
-        max="100">
-      </progress>
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="0"
+        data-value="0">
+        <div class="aya-progress-local" id="progressLocal" title="المقطع المنزّل"></div>
+        <div class="aya-progress-play" id="progressPlay" title="موضع التشغيل"></div>
+      </div>
 
       <span class="progress-time" id="currentTime">
         0:00
@@ -2662,12 +2714,11 @@ body.aya-storage-from-settings #splashScreen{
         <span class="control-text" id="repeatAyahText">تكرار: إيقاف</span>
       </button>
 
-      <button class="control" id="speedButton" type="button" title="سرعة القراءة">
-        <span class="control-icon">⚡</span>
-        <span class="control-text" id="speedText">السرعة: إيقاف</span>
+      <button class="control" id="autoNextSurahButton" type="button" title="عند انتهاء السورة: الانتقال تلقائياً للسورة التالية وتشغيلها">
+        <span class="control-icon" id="autoNextSurahIcon">⏭</span>
+        <span class="control-text" id="autoNextSurahText">سورة تالية</span>
       </button>
-
-      <button class="control" id="backButton">
+<button class="control" id="backButton">
         <span class="control-icon">⏮</span>
         <span class="control-text">الآية السابقة</span>
       </button>
@@ -2877,7 +2928,7 @@ body.aya-storage-from-settings #splashScreen{
   </button>
 
   <div class="side-menu-footer" id="sideMenuFooter">
-    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.188</span></div>
+    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.189</span></div>
     <button type="button" class="side-menu-update-link" id="sideMenuUpdateLink" aria-label="تحديث التطبيق">إصدار جديد متوفر: تحديث</button>
   </div>
 
@@ -3372,7 +3423,7 @@ body.interface-old #ayaTourDots .tour-dot-active{
       </div>
 
       <div class="about-copy" id="aboutAppVersion">
-        الإصدار <span id="aboutAppVersionNum">1.0.188</span>
+        الإصدار <span id="aboutAppVersionNum">1.0.189</span>
       </div>
 
       <div class="about-copy">
@@ -3516,6 +3567,24 @@ function loadPage(n, options = {}){
     "quranPage",
     currentPage
   );
+
+  /* ثبّت السورة المطلوبة فوراً (لا تعتمد على أول سورة في الصفحة) */
+  try{
+    var sn = Number(options && options.surahNumber);
+    if(sn >= 1 && sn <= 114){
+      currentAudioSurah = sn;
+      try{ if(typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(sn); }catch(e){}
+      try{
+        window.__ayaPendingNav = {
+          surah: sn,
+          page: currentPage,
+          autoPlay: !!(options && options.autoContinue),
+          ts: Date.now()
+        };
+        localStorage.setItem("ayaPendingNav", JSON.stringify(window.__ayaPendingNav));
+      }catch(e){}
+    }
+  }catch(e){}
 
   if(typeof updateMushafPageInfo === "function"){
     updateMushafPageInfo();
@@ -3809,7 +3878,7 @@ setReadingUIHidden(readingUIHidden);
      → فتح تفسير الآية
   3) ضغط مطوّل (>= 700ms)
      → تشغيل تلاوة الآية (بدون فتح التفسير أثناء الضغط)
-  3) سحب أفقي
+  4) سحب أفقي
      → تنقل بين الصفحات (معالج touchstart/touchend المنفصل)
   أزرار المشغّل والقائمة لا تمر من هنا (يُستبعد أقرب عنصر تحكم).
   ============================================================
@@ -4234,6 +4303,7 @@ function seekToAyahItem(item, options = {}){
 
   const targetSurah = Number(
     item._surah ||
+    item.surah ||
     currentAudioSurah ||
     (typeof getSurahNumberForPage === "function"
       ? getSurahNumberForPage(currentPage)
@@ -4244,85 +4314,186 @@ function seekToAyahItem(item, options = {}){
 
   if(typeof resetRepeat === "function") resetRepeat();
 
-  const applySeekAndPlay = ()=>{
+  /* ثبّت هدف الآية — لا تستعد موضع سورة/استماع سابق */
+  try{
+    audio.__ayaSeekTargetSec = targetSec;
+    audio.__ayaResumeAfterPartial = targetSec;
+    audio.__ayaSeekToken = (Number(audio.__ayaSeekToken) || 0) + 1;
+  }catch(e){}
+  const seekToken = Number(audio.__ayaSeekToken) || 1;
+
+  const lockSurahTiming = function(){
     try{
-      audio.currentTime = targetSec;
+      currentAudioSurah = targetSurah;
+      timingSurahLoaded = targetSurah;
+      if(typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(targetSurah);
+      const cacheKey = selectedReader + ":" + targetSurah;
+      if(timingCache[cacheKey]){
+        currentTiming = tagTimingItems(timingCache[cacheKey], targetSurah);
+      }
+    }catch(e){}
+  };
+
+  const applySeekAndPlay = function(){
+    try{
+      if(Number(audio.__ayaSeekToken) !== seekToken) return false;
+    }catch(e){}
+    lockSurahTiming();
+    try{
+      audio.__ayaSeekTargetSec = targetSec;
+      audio.__ayaResumeAfterPartial = targetSec;
+    }catch(e){}
+    var dest = targetSec;
+    try{
+      var maxSec = Number(audio.__ayaPartialMaxSec) || 0;
+      if(maxSec > 0.5 && maxSec < 1e8 && dest > maxSec - 0.05){
+        dest = Math.max(0, maxSec - 0.12);
+      }
+      audio.currentTime = dest;
+      /* تصحيح لمرة أو اثنتين فقط إن لم يلتصق الموضع — ثم إيقاف حتى لا يرتجف */
+      var seekDeadline = Date.now() + 500;
+      var reapply = function(){
+        try{
+          if(Number(audio.__ayaSeekToken) !== seekToken) return;
+          if(Date.now() > seekDeadline) return;
+          var ct = Number(audio.currentTime) || 0;
+          /* إن تقدّم التشغيل بعد الهدف لا نرجعه */
+          if(ct > dest + 0.4) return;
+          if(Math.abs(ct - dest) > 0.3){
+            audio.__ayaResumeAfterPartial = dest;
+            audio.currentTime = dest;
+          }
+        }catch(e){}
+      };
+      requestAnimationFrame(reapply);
+      setTimeout(reapply, 80);
+      setTimeout(function(){
+        try{
+          if(Number(audio.__ayaSeekToken) === seekToken){
+            audio.__ayaSeekTargetSec = null;
+          }
+        }catch(e){}
+      }, 550);
     }catch(e){
       return false;
     }
-    if(typeof syncHighlight === "function"){
-      requestAnimationFrame(()=>syncHighlight());
+    try{
+      if(typeof syncHighlight === "function") requestAnimationFrame(function(){ syncHighlight(); });
+    }catch(e){}
+    if(autoPlay){
+      try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
+      playFromCurrentPosition();
+      setTimeout(function(){
+        try{
+          if(Number(audio.__ayaSeekToken) === seekToken && audio.paused){
+            audio.play().then(function(){
+              try{ if(playButton) playButton.textContent = "Ⅱ"; }catch(e){}
+            }).catch(function(){});
+          }
+        }catch(e){}
+      }, 280);
     }
-    if(autoPlay) playFromCurrentPosition();
     return true;
   };
 
-  /* نفس السورة الحالية: انتقال مباشر ثم تشغيل */
-  const sameSurahReady =
-    Number(currentAudioSurah) === targetSurah &&
-    audio.src &&
-    audio.error == null &&
-    audio.readyState >= 0;
-
-  if(sameSurahReady && audio.readyState >= 1){
-    return applySeekAndPlay();
-  }
-
-  if(sameSurahReady && audio.readyState < 1){
-    const onMeta = function(){
-      audio.removeEventListener("loadedmetadata", onMeta);
-      applySeekAndPlay();
-    };
-    audio.addEventListener("loadedmetadata", onMeta);
-    return true;
-  }
-
-  /* سورة مختلفة (مثلاً من الناس إلى الفلق على نفس الصفحة) */
-  currentAudioSurah = targetSurah;
-
-  const url = typeof getAudioUrl === "function"
+  /* هل المصدر الحالي فعلاً لسورة الهدف؟ (لا تعتمد على الاسم فقط) */
+  var url = typeof getAudioUrl === "function"
     ? getAudioUrl(selectedReader, currentPage, targetSurah)
     : "";
+  var partialMatches = false;
+  try{
+    if(url && audio.__ayaPartialUrl && window.__ayaAutoOffline &&
+       typeof window.__ayaAutoOffline.samePartialAudio === "function"){
+      partialMatches = window.__ayaAutoOffline.samePartialAudio(audio.__ayaPartialUrl, url);
+    }
+  }catch(e){}
 
+  const sameSurahReady =
+    Number(currentAudioSurah) === targetSurah &&
+    !!(audio.currentSrc || audio.src) &&
+    audio.error == null &&
+    (partialMatches || !audio.__ayaPartialUrl || Number(currentAudioSurah) === targetSurah);
+
+  if(sameSurahReady && Number(currentAudioSurah) === targetSurah && audio.readyState >= 1 &&
+     (partialMatches || String(audio.currentSrc||"").indexOf("blob:") !== 0 || !url)){
+    /* إن كان blob لسورة أخرى رغم تطابق الرقم — لا تستخدمه */
+    if(String(audio.currentSrc||"").indexOf("blob:") === 0 && url && !partialMatches && audio.__ayaPartialUrl){
+      /* سقط للمسار الكامل أسفل */
+    }else{
+      return applySeekAndPlay();
+    }
+  }
+
+  /* تبديل كامل لسورة الهدف */
+  currentAudioSurah = targetSurah;
+  lockSurahTiming();
   if(!url) return false;
 
-  if(typeof resetRepeat === "function") resetRepeat();
   audio.pause();
-  audio.src = url;
-  audio.load();
+  try{
+    audio.__ayaPartialMaxSec = 0;
+    audio.__ayaPartialUrl = "";
+    audio.__ayaSeekTargetSec = targetSec;
+    audio.__ayaResumeAfterPartial = targetSec;
+  }catch(e){}
 
-  if(playButton) playButton.textContent = "▶";
   if(typeof clearAyahHighlight === "function") clearAyahHighlight();
+  if(playButton) playButton.textContent = "▶";
 
-  /* حمّل توقيت السورة الجديدة للتمييز أثناء التشغيل */
   const cacheKey = selectedReader + ":" + targetSurah;
   if(timingCache[cacheKey]){
     currentTiming = tagTimingItems(timingCache[cacheKey], targetSurah);
     timingSurahLoaded = targetSurah;
   }else{
-    fetchTimingForSurah(targetSurah).then(list=>{
-      currentTiming = list;
-      timingSurahLoaded = targetSurah;
-      if(typeof syncHighlight === "function") syncHighlight();
-    });
+    try{
+      fetchTimingForSurah(targetSurah).then(function(list){
+        if(Number(currentAudioSurah) !== targetSurah) return;
+        currentTiming = list;
+        timingSurahLoaded = targetSurah;
+        try{ if(typeof syncHighlight === "function") syncHighlight(); }catch(e){}
+      });
+    }catch(e){}
   }
 
-  let seekApplied = false;
-  const onReady = function(){
+  var seekApplied = false;
+  var onReady = function(){
     if(seekApplied) return;
+    if(Number(audio.__ayaSeekToken) !== seekToken) return;
     seekApplied = true;
-    audio.removeEventListener("loadedmetadata", onReady);
-    audio.removeEventListener("canplay", onReady);
+    try{ audio.removeEventListener("loadedmetadata", onReady); }catch(e){}
+    try{ audio.removeEventListener("canplay", onReady); }catch(e){}
     applySeekAndPlay();
   };
-
   audio.addEventListener("loadedmetadata", onReady);
   audio.addEventListener("canplay", onReady);
 
-  /* إن كانت البيانات جاهزة فوراً من الكاش */
-  if(audio.readyState >= 1){
-    onReady();
+  /* أوفلاين: حمّل مقطع السورة المطلوبة فقط */
+  var offline = false;
+  try{ offline = (typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+  if(offline && window.__ayaAutoOffline && typeof window.__ayaAutoOffline.resolveLocal === "function"){
+    window.__ayaAutoOffline.resolveLocal(url).then(function(local){
+      if(Number(audio.__ayaSeekToken) !== seekToken) return;
+      if(!local){
+        try{ if(playButton) playButton.textContent = "▶"; }catch(e){}
+        try{ if(typeof setStatus === "function") setStatus("غير متوفر أوفلاين لهذه السورة"); }catch(e){}
+        return;
+      }
+      try{ audio.__ayaForceNet = false; }catch(e){}
+      try{ audio.__ayaPartialUrl = url; }catch(e){}
+      try{ audio.src = local; audio.load(); }catch(e){}
+      setTimeout(onReady, 80);
+      setTimeout(onReady, 300);
+    }).catch(function(){
+      try{ if(playButton) playButton.textContent = "▶"; }catch(e){}
+    });
+  }else{
+    try{ audio.__ayaForceNet = !offline; }catch(e){}
+    try{ audio.src = url; audio.load(); }catch(e){}
+    try{ audio.__ayaForceNet = false; }catch(e){}
   }
+
+  if(audio.readyState >= 1) onReady();
+  setTimeout(function(){ if(!seekApplied) onReady(); }, 500);
 
   return true;
 }
@@ -4411,6 +4582,7 @@ function onLongPressAyah(clientX, clientY){
   ensureAndSeek();
 }
 
+
 pageArea.addEventListener("pointerdown", e=>{
   /* لا نلتقط الضغط إذا بدأ من عناصر التحكم */
   if(e.target && e.target.closest && (
@@ -4498,6 +4670,7 @@ pageArea.addEventListener("pointercancel", ()=>{
 }, {passive:true});
 
 /* لا نلغي المؤقت عند pointerleave — على الجوال يسبب فشل عشوائي */
+
 
 /*
   عند فتح القائمة من زر ☰ نظهر الواجهة مؤقتاً.
@@ -4882,6 +5055,50 @@ function displayDurationSec(){
   }catch(e){ return Number(audio.duration) || 0; }
 }
 
+/*
+  شريط التقدم:
+  - أزرق أثناء التشغيل من المقطع المحلي (blob) حتى مع وجود نت
+  - أخضر بعد استكمال التلاوة من الشبكة
+*/
+function isPlayingFromLocalPartial(){
+  try{
+    var a = document.getElementById("audio");
+    if(!a) return false;
+    var src = String(a.currentSrc || a.src || "");
+    if(src.indexOf("blob:") === 0) return true;
+    var maxSec = Number(a.__ayaPartialMaxSec) || 0;
+    /* ما زلنا داخل مدى المقطع المنزّل */
+    if(maxSec > 0.5 && maxSec < 1e8){
+      var t = Number(a.currentTime) || 0;
+      if(t <= maxSec + 0.35) return true;
+    }
+    return false;
+  }catch(e){ return false; }
+}
+
+function updateAyaProgressBar(playPct, localPct){
+  try{
+    var bar = document.getElementById("progress");
+    var playEl = document.getElementById("progressPlay");
+    var p = Math.max(0, Math.min(100, Number(playPct) || 0));
+    if(playEl) playEl.style.width = p.toFixed(2) + "%";
+    if(bar){
+      var local = isPlayingFromLocalPartial();
+      try{
+        if(local) bar.classList.add("is-offline");
+        else bar.classList.remove("is-offline");
+      }catch(e){}
+      try{ bar.setAttribute("aria-valuenow", String(Math.round(p))); }catch(e){}
+      try{ bar.dataset.value = String(p); }catch(e){}
+      try{ bar.value = p; }catch(e){}
+    }
+  }catch(e){}
+}
+
+function getPartialLocalPercent(){
+  return 0;
+}
+
 /* تحديث العدادين (الوقت الحالي + طول السورة) دون تصفير طول السورة إن كان معروفاً */
 function refreshTimeDisplay(opts){
   opts = opts || {};
@@ -4901,10 +5118,12 @@ function refreshTimeDisplay(opts){
       }
       /* وإلا اترك القيمة السابقة كما هي */
     }
-    if(progress && Number.isFinite(dur) && dur > 0){
-      progress.value = (cur / dur) * 100;
-    }else if(progress && opts.resetCurrent){
-      progress.value = 0;
+    if(Number.isFinite(dur) && dur > 0){
+      var playPct = (cur / dur) * 100;
+      if(opts.resetCurrent) playPct = 0;
+      updateAyaProgressBar(playPct, getPartialLocalPercent());
+    }else if(opts.resetCurrent){
+      updateAyaProgressBar(0, 0);
     }
   }catch(e){}
 }
@@ -5072,9 +5291,55 @@ function prefetchQuranPage(pageNumber){
     img.decoding = "async";
     img.src = url;
   }catch(e){}
+  /* حفظ الصفحة في كاش التطبيق للعمل أوفلاين */
+  try{
+    if(typeof caches !== "undefined"){
+      caches.open("aya-pages-v1").then(function(cache){
+        return cache.match(url).then(function(hit){
+          if(hit) return null;
+          return fetch(url, { mode: "cors", credentials: "omit", cache: "force-cache" }).then(function(res){
+            if(res && res.ok) return cache.put(url, res.clone());
+          }).catch(function(){
+            return fetch(url, { mode: "cors", credentials: "omit" }).then(function(res2){
+              if(res2 && res2.ok) return cache.put(url, res2.clone());
+            });
+          });
+        });
+      }).catch(function(){});
+    }
+  }catch(e){}
   /* تسخين الكاش الشبكي */
   try{
     fetch(url, { mode: "no-cors", credentials: "omit", cache: "force-cache" }).catch(function(){});
+  }catch(e){}
+}
+
+/* تنزيل تلقائي لتظليل الصفحة التالية (توقيت + مضلعات) دون تغيير تظليل الصفحة الحالية */
+function prefetchNextPageHighlight(pageNumber){
+  try{
+    var n = Number(pageNumber) || 0;
+    if(!n || n < 1 || n >= TOTAL_PAGES) return;
+    var next = n + 1;
+    if(typeof getSurahsOnPage !== "function") return;
+    var surahList = getSurahsOnPage(next) || [];
+    if(!surahList.length && typeof getSurahNumberForPage === "function"){
+      var one = getSurahNumberForPage(next);
+      if(one) surahList = [one];
+    }
+    for(var i = 0; i < surahList.length; i++){
+      var s = Number(surahList[i]);
+      if(!s) continue;
+      try{
+        if(typeof fetchTimingForSurah === "function"){
+          fetchTimingForSurah(s).catch(function(){});
+        }
+      }catch(e){}
+      try{
+        if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.scheduleAudioProgress === "function"){
+          /* لا شيء — التوقيت يُحفظ عبر fetchTimingForSurah */
+        }
+      }catch(e){}
+    }
   }catch(e){}
 }
 
@@ -5129,10 +5394,24 @@ async function loadQuranPageFromInternet(pageNumber){
     });
   }
 
-  /* تحميل مسبق للصفحات المجاورة */
+  /* تحميل مسبق للصفحات المجاورة + حفظها في الكاش */
   prefetchQuranPage(n - 1);
   prefetchQuranPage(n + 1);
   prefetchQuranPage(n + 2);
+  /* تظليل الصفحة التالية تلقائياً */
+  try{ prefetchNextPageHighlight(n); }catch(e){}
+  /* جدولة تنزيل الصفحات والتوقيت للصفحة التالية وما بعدها */
+  try{
+    if(window.__ayaAutoOffline){
+      var surahNow = 1;
+      try{
+        if(typeof getSurahNumberForPage === "function") surahNow = getSurahNumberForPage(n) || 1;
+      }catch(e){}
+      if(typeof window.__ayaAutoOffline.schedulePagesAndTiming === "function"){
+        window.__ayaAutoOffline.schedulePagesAndTiming(n, surahNow);
+      }
+    }
+  }catch(e){}
 }
 
 function positionHighlightLayer(pageNumber){
@@ -5782,16 +6061,26 @@ function getActiveTiming(){
     if(maxSec > 1 && t > maxSec * 1000) t = maxSec * 1000 - 1;
   }catch(e){}
 
+  const surahFilter = Number(currentAudioSurah) || Number(timingSurahLoaded) || 0;
+  const matchesSurah = function(item){
+    if(!surahFilter) return true;
+    const s = Number(item && (item._surah || item.surah) || 0);
+    if(!s) return true;
+    return s === surahFilter;
+  };
+
   const exact = currentTiming.find(item =>
+    matchesSurah(item) &&
     t >= Number(item.start_time) &&
     t < Number(item.end_time)
   );
   if(exact) return exact;
 
-  /* أقرب آية بالزمن — يمنع اختفاء/خطأ التظليل عند فجوات بسيطة */
+  /* أقرب آية بالزمن — ضمن السورة الحالية فقط */
   let best = null, bestDist = Infinity;
   for(let i = 0; i < currentTiming.length; i++){
     const it = currentTiming[i];
+    if(!matchesSurah(it)) continue;
     const st = Number(it.start_time), en = Number(it.end_time);
     if(!Number.isFinite(st) || !Number.isFinite(en)) continue;
     let dist = 0;
@@ -5810,10 +6099,44 @@ function syncHighlight(){
 
   if(!active) return;
 
+  /* مزامنة السورة مع التلاوة الحالية فقط إن طابقت السورة المحمّلة (يمنع خلط الإخلاص/الفلق) */
+  try{
+    var activeSurah = Number(active._surah || active.surah || 0);
+    if(!activeSurah && typeof timingSurahLoaded !== "undefined"){
+      activeSurah = Number(timingSurahLoaded) || 0;
+    }
+    var loaded = Number(currentAudioSurah) || Number(timingSurahLoaded) || 0;
+    if(activeSurah >= 1 && loaded >= 1 && activeSurah === loaded){
+      if(typeof syncPlayerSurahUI === "function"){
+        syncPlayerSurahUI(activeSurah);
+      }
+    }else if(activeSurah >= 1 && loaded >= 1 && activeSurah !== loaded){
+      /* توقيت قديم من سورة أخرى على نفس الصفحة — تجاهل */
+    }else if(activeSurah >= 1 && !loaded){
+      currentAudioSurah = activeSurah;
+      if(typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(activeSurah);
+    }
+  }catch(e){}
+
   const targetPage =
     pageFromTiming(active);
 
+  /* جهّز الصفحة/الصفحات القادمة قبل وصول الصوت إليها */
+  try{
+    if(typeof prefetchAheadOfAudio === "function") prefetchAheadOfAudio();
+  }catch(e){}
+
   if(targetPage && targetPage !== currentPage){
+    /* حمّل تظليل الصفحة المستهدفة مسبقاً ثم اقلب */
+    try{
+      if(typeof prefetchQuranPage === "function"){
+        prefetchQuranPage(targetPage);
+        prefetchQuranPage(targetPage + 1);
+      }
+      if(typeof prefetchNextPageHighlight === "function"){
+        prefetchNextPageHighlight(targetPage - 1);
+      }
+    }catch(e){}
     loadPage(
       targetPage,
       {keepAudio:true}
@@ -5824,6 +6147,71 @@ function syncHighlight(){
   if(targetPage === currentPage){
     drawAyahHighlight(active);
   }
+}
+
+/*
+  أثناء التلاوة (خصوصاً التنزيل الجزئي):
+  حضّر الصفحات والتظليل لـ ~90 ثانية قادمة حتى لا تسبق التلاوة العرض.
+*/
+function prefetchAheadOfAudio(){
+  try{
+    if(!audio || audio.paused) return;
+    var _now = Date.now();
+    if(window.__ayaPrefetchAheadAt && (_now - window.__ayaPrefetchAheadAt) < 1500) return;
+    window.__ayaPrefetchAheadAt = _now;
+    if(typeof navigator !== "undefined" && navigator.onLine === false){
+      /* أوفلاين: اعتمد على ما في الكاش فقط */
+    }
+    var now = Number(audio.currentTime) || 0;
+    var nowMs = now * 1000;
+    var list = currentTiming;
+    if(!list || !list.length) return;
+
+    var pagesNeeded = Object.create(null);
+    var surahsNeeded = Object.create(null);
+    var horizonMs = nowMs + 90000; /* 90 ثانية قادمة */
+
+    for(var i = 0; i < list.length; i++){
+      var it = list[i];
+      if(!it) continue;
+      var st = Number(it.start_time);
+      if(!Number.isFinite(st)) continue;
+      if(st < nowMs - 1000) continue;
+      if(st > horizonMs) break;
+      var pg = null;
+      try{ pg = pageFromTiming(it, it._surah); }catch(e){}
+      if(pg && pg >= 1 && pg <= 604) pagesNeeded[pg] = true;
+      var s = Number(it._surah || it.surah || 0);
+      if(s) surahsNeeded[s] = true;
+    }
+
+    /* الصفحة الحالية + التالية فوراً */
+    try{
+      var cp = Number(currentPage) || 1;
+      pagesNeeded[cp] = true;
+      pagesNeeded[cp + 1] = true;
+      pagesNeeded[cp + 2] = true;
+    }catch(e){}
+
+    var keys = Object.keys(pagesNeeded).map(Number).sort(function(a,b){ return a-b; });
+    for(var k = 0; k < keys.length; k++){
+      try{ if(typeof prefetchQuranPage === "function") prefetchQuranPage(keys[k]); }catch(e){}
+    }
+
+    var sKeys = Object.keys(surahsNeeded).map(Number);
+    for(var j = 0; j < sKeys.length; j++){
+      try{
+        if(typeof fetchTimingForSurah === "function") fetchTimingForSurah(sKeys[j]).catch(function(){});
+      }catch(e){}
+    }
+
+    try{
+      if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.schedulePagesAndTiming === "function"){
+        var surahNow = Number(currentAudioSurah) || (typeof getSurahNumberForPage === "function" ? getSurahNumberForPage(currentPage) : 1) || 1;
+        window.__ayaAutoOffline.schedulePagesAndTiming(Number(currentPage) || 1, surahNow);
+      }
+    }catch(e){}
+  }catch(e){}
 }
 
 
@@ -5958,11 +6346,11 @@ function updateAudioSource(keepPosition = false, options = {}){
         refreshTimeDisplay({ resetCurrent: true });
       }else{
         currentTime.textContent = "0:00";
-        progress.value = 0;
+        try{ if(typeof updateAyaProgressBar === "function") updateAyaProgressBar(0, 0); else if(progress) progress.value = 0; }catch(e){ try{ progress.value = 0; }catch(e2){} }
       }
     }catch(e){
       currentTime.textContent = "0:00";
-      progress.value = 0;
+      try{ if(typeof updateAyaProgressBar === "function") updateAyaProgressBar(0, 0); else if(progress) progress.value = 0; }catch(e){ try{ progress.value = 0; }catch(e2){} }
     }
     playButton.textContent = "▶";
     clearAyahHighlight();
@@ -6062,13 +6450,10 @@ function updateAudioSource(keepPosition = false, options = {}){
 
     try{
       const cur = String(audio.getAttribute("src") || audio.src || audio.currentSrc || "");
-      var leaf = "";
-      try{ leaf = (url.split("/").pop() || "").split("?")[0]; }catch(e){}
-      /* blob أو ملف مختلف = ليس نفس الملف */
+      /* blob أو ملف مختلف = ليس نفس الملف (قارئ+سورة) */
       const sameFile = !!(url && cur && cur.indexOf("blob:") !== 0 && (
         cur === url ||
-        cur.split("?")[0] === url.split("?")[0] ||
-        (leaf && cur.indexOf(leaf) >= 0)
+        cur.split("?")[0] === url.split("?")[0]
       ));
 
       if(sameFile && Number.isFinite(seekMs)){
@@ -6108,9 +6493,7 @@ function updateAudioSource(keepPosition = false, options = {}){
       var wantPlay = !!(wasPlaying || autoContinue || __continueAfterSource);
 
       if(offlineNow){
-        /* أوفلاين: فقط مقطع/كاش لنفس ملف السورة — وإلا أوقف ولا تشغّل سورة خاطئة */
-        var leafNeed = "";
-        try{ leafNeed = (url.split("/").pop() || "").split("?")[0]; }catch(e){}
+        /* أوفلاين: فقط مقطع/كاش لنفس القارئ+السورة — وإلا أوقف ولا تشغّل مقطع خاطئ */
         var applied = false;
         var applyLocal = function(local, maxSec){
           if(applied) return;
@@ -6136,9 +6519,17 @@ function updateAudioSource(keepPosition = false, options = {}){
           if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.idbFindPartial === "function"){
             window.__ayaAutoOffline.idbFindPartial(url).then(function(rec){
               if(rec && rec.blob){
-                var leafRec = "";
-                try{ leafRec = ((rec.url || "").split("/").pop() || "").split("?")[0]; }catch(e){}
-                if(leafNeed && leafRec && leafNeed !== leafRec){
+                var okRec = true;
+                try{
+                  if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.samePartialAudio === "function"){
+                    okRec = window.__ayaAutoOffline.samePartialAudio(rec.url || "", url);
+                  }else{
+                    var idA = String(rec.url || "").split("?")[0].toLowerCase();
+                    var idB = String(url || "").split("?")[0].toLowerCase();
+                    okRec = !!(idA && idB && idA === idB);
+                  }
+                }catch(e){ okRec = false; }
+                if(!okRec){
                   failOffline();
                   return;
                 }
@@ -6166,9 +6557,64 @@ function updateAudioSource(keepPosition = false, options = {}){
           }
         }catch(e){ failOffline(); }
       }else{
-        audio.src = url;
-        try{ audio.load(); }catch(e){}
-        if(wantPlay) tryPlay(0);
+        /* أونلاين: فضّل المحلي إن وُجد، وإلا الشبكة — بدون سباق يقطع التشغيل */
+        var decidedOnline = false;
+        var applyLocalOnline = function(local, maxSec){
+          if(decidedOnline || audio._ayaLoadToken !== loadToken) return;
+          decidedOnline = true;
+          try{ audio.__ayaPartialUrl = url; }catch(e){}
+          try{ audio.__ayaPartialMaxSec = Number(maxSec) || 0; }catch(e){}
+          try{ audio.__ayaForceNet = false; }catch(e){}
+          try{ audio.src = local; }catch(e){}
+          try{ audio.load(); }catch(e){}
+          if(wantPlay) tryPlay(0);
+        };
+        var fallNet = function(){
+          if(decidedOnline || audio._ayaLoadToken !== loadToken) return;
+          decidedOnline = true;
+          try{ audio.__ayaForceNet = true; }catch(e){}
+          try{ audio.__ayaPartialMaxSec = 0; audio.__ayaPartialUrl = ""; }catch(e){}
+          try{ audio.removeAttribute("src"); }catch(e){}
+          try{ audio.src = url; }catch(e){}
+          try{ audio.load(); }catch(e){}
+          try{ audio.__ayaForceNet = false; }catch(e){}
+          if(wantPlay){
+            tryPlay(0);
+            setTimeout(function(){ try{ if(audio.paused) tryPlay(1); }catch(e){} }, 100);
+            setTimeout(function(){ try{ if(audio.paused) tryPlay(2); }catch(e){} }, 300);
+          }
+        };
+        try{
+          var pLocal = null;
+          if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.resolveLocal === "function"){
+            pLocal = window.__ayaAutoOffline.resolveLocal(url);
+          }else if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.idbFindPartial === "function"){
+            pLocal = window.__ayaAutoOffline.idbFindPartial(url).then(function(rec){
+              if(rec && rec.blob){
+                try{ audio.__ayaPartialMaxSec = Number(rec.maxSec) || 0; }catch(e){}
+                return URL.createObjectURL(rec.blob);
+              }
+              return null;
+            });
+          }
+          if(pLocal && typeof pLocal.then === "function"){
+            pLocal.then(function(local){
+              if(audio._ayaLoadToken !== loadToken) return;
+              if(local){
+                var maxSec = 0;
+                try{ maxSec = Number(audio.__ayaPartialMaxSec) || 0; }catch(e){}
+                applyLocalOnline(local, maxSec);
+              }else fallNet();
+            }).catch(fallNet);
+            /* مهلة احتياطية فقط إن تأخر التخزين */
+            setTimeout(function(){
+              if(audio._ayaLoadToken !== loadToken) return;
+              if(!decidedOnline) fallNet();
+            }, 900);
+          }else{
+            fallNet();
+          }
+        }catch(e){ fallNet(); }
       }
     }catch(e){}
 
@@ -6285,18 +6731,40 @@ function updateAudioSource(keepPosition = false, options = {}){
   startFromTop();
 }
 
+
+/* تنبيه بسيط: ملف الصوت غير متوفر أوفلاين */
+function showOfflineAudioMissingAlert(){
+  var msg = "عفوا ملف الصوت غير موجود ولا يمكن تنزيله - فضلا تأكد من الإتصال بالانترنت";
+  try{ window.confirm(msg); return; }catch(e){}
+  try{ window.alert(msg); return; }catch(e){}
+  try{ if(typeof setStatus === "function") setStatus(msg); }catch(e){}
+}
+function showOfflineIncompleteAlert(){
+  /* مرة واحدة فقط حتى يعود النت */
+  try{
+    if(window.__ayaIncompleteAlertShown) return;
+    window.__ayaIncompleteAlertShown = true;
+  }catch(e){}
+  var msg = "عفوا ملف الصوت غير مكتمل محلياً ولا يمكن متابعة التلاوة - فضلا تأكد من الإتصال بالانترنت";
+  try{ window.confirm(msg); return; }catch(e){}
+  try{ window.alert(msg); return; }catch(e){}
+  try{ if(typeof setStatus === "function") setStatus(msg); }catch(e){}
+}
+
 readerSelect.value = selectedReader;
 updateReaderName();
 
 readerSelect.onchange = ()=>{
 
-  /* احفظ الآية الحالية قبل تبديل القارئ لنبدأ منها بعد التحميل */
+  /* احفظ الآية والسورة الحالية قبل تبديل القارئ */
   const wasPlaying = audio && !audio.paused;
   let targetAyah = null;
   let targetSurah = Number(
     currentAudioSurah ||
     getSurahNumberForPage(currentPage)
   );
+  if(!targetSurah || targetSurah < 1) targetSurah = 1;
+
   if(typeof getActiveTiming === "function"){
     const active = getActiveTiming();
     if(active && active.ayah != null){
@@ -6304,7 +6772,6 @@ readerSelect.onchange = ()=>{
       if(active._surah) targetSurah = Number(active._surah);
     }
   }
-  /* إن لم نجد آية نشطة (مثلاً عند الإيقاف) نأخذ أقرب آية حسب الوقت */
   if(targetAyah == null && currentTiming && currentTiming.length && audio){
     const t = (audio.currentTime || 0) * 1000;
     let nearest = null;
@@ -6333,103 +6800,199 @@ readerSelect.onchange = ()=>{
 
   updateReaderName();
   currentAudioSurah = targetSurah;
+  try{ if(typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(targetSurah); }catch(e){}
 
-  /* حمّل صوت القارئ الجديد ثم ابحث عن نفس الآية في توقيته */
-  const url = getAudioUrl(selectedReader, currentPage, currentAudioSurah);
+  /* امسح حالة المقطع الجزئي للقارئ السابق */
+  try{
+    audio.__ayaPartialMaxSec = 0;
+    audio.__ayaPartialUrl = "";
+    audio.__ayaResumeAfterPartial = 0;
+    audio.__ayaPartialUpgrading = false;
+    audio.__ayaHandoffBusy = false;
+    audio.__ayaForceNet = false;
+    audio.__ayaSeekTargetSec = null;
+  }catch(e){}
+
+  const url = getAudioUrl(selectedReader, currentPage, targetSurah);
   if(!url){
-    updateAudioSource(false);
+    try{ if(typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(targetSurah); }catch(e){}
+    try{ showOfflineAudioMissingAlert(); }catch(e){}
+    playButton.textContent = "▶";
     return;
   }
 
   resetRepeat();
   audio.pause();
-  try{ audio.preload = "auto"; }catch(e){}
-  audio.src = url;
-  audio.load();
-  try{
-    if(typeof refreshTimeDisplay === "function"){
-      refreshTimeDisplay({ resetCurrent: true, forceZeroDuration: true });
-    }else{
-      currentTime.textContent = "0:00";
-      duration.textContent = "0:00";
-      progress.value = 0;
-    }
-  }catch(e){
-    currentTime.textContent = "0:00";
-    duration.textContent = "0:00";
-    progress.value = 0;
-  }
-  playButton.textContent = wasPlaying ? "Ⅱ" : "▶";
-  clearAyahHighlight();
+  try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = false; }catch(e){}
 
-  /* ابدأ التشغيل فوراً عند تبديل القارئ — لا تنتظر التوقيت */
-  if(wasPlaying){
-    try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
-    const kick = (n)=>{
-      const p = audio.play();
-      if(p && typeof p.then === "function"){
-        p.then(()=>{ playButton.textContent = "Ⅱ"; }).catch(()=>{
-          if(n < 6) setTimeout(()=>kick(n+1), 70 + n*40);
-        });
+  var finishMissing = function(){
+    try{
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+    }catch(e){}
+    try{
+      audio.__ayaPartialMaxSec = 0;
+      audio.__ayaPartialUrl = "";
+      audio.__ayaMissingOffline = true;
+    }catch(e){}
+    currentAudioSurah = targetSurah;
+    try{ if(typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(targetSurah); }catch(e){}
+    try{
+      if(typeof refreshTimeDisplay === "function"){
+        refreshTimeDisplay({ resetCurrent: true, forceZeroDuration: true });
+      }else{
+        currentTime.textContent = "0:00";
+        duration.textContent = "0:00";
       }
-    };
-    kick(0);
-  }
+    }catch(e){}
+    playButton.textContent = "▶";
+    try{ clearAyahHighlight(); }catch(e){}
+    try{ showOfflineAudioMissingAlert(); }catch(e){}
+  };
 
-  const applyAyahSeek = ()=>{
-    if(targetAyah == null || !currentTiming.length){
+  var applyNewReader = function(localOrNet, isLocal){
+    try{ audio.__ayaMissingOffline = false; }catch(e){}
+    try{ audio.__ayaForceNet = !isLocal; }catch(e){}
+    try{ audio.preload = "auto"; }catch(e){}
+    try{
+      if(isLocal){
+        audio.__ayaPartialUrl = url;
+        audio.src = localOrNet;
+      }else{
+        audio.src = localOrNet;
+      }
+      audio.load();
+    }catch(e){}
+    try{ audio.__ayaForceNet = false; }catch(e){}
+    try{
+      if(typeof refreshTimeDisplay === "function"){
+        refreshTimeDisplay({ resetCurrent: true, forceZeroDuration: true });
+      }else{
+        currentTime.textContent = "0:00";
+        duration.textContent = "0:00";
+      }
+    }catch(e){}
+    playButton.textContent = wasPlaying ? "Ⅱ" : "▶";
+    try{ clearAyahHighlight(); }catch(e){}
+
+    if(wasPlaying){
+      try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
+      const kick = (n)=>{
+        const p = audio.play();
+        if(p && typeof p.then === "function"){
+          p.then(()=>{ playButton.textContent = "Ⅱ"; }).catch(()=>{
+            if(n < 4) setTimeout(()=>kick(n+1), 80 + n*50);
+            else playButton.textContent = "▶";
+          });
+        }
+      };
+      kick(0);
+    }
+
+    const applyAyahSeek = ()=>{
+      if(targetAyah == null || !currentTiming.length){
+        if(wasPlaying && audio.paused){
+          audio.play().then(()=>{ playButton.textContent = "Ⅱ"; }).catch(()=>{});
+        }
+        return;
+      }
+      const match = currentTiming.find(item =>
+        Number(item.ayah) === targetAyah &&
+        (item._surah == null || Number(item._surah) === targetSurah)
+      );
+      if(match && Number.isFinite(Number(match.start_time))){
+        try{
+          audio.currentTime = Math.max(0, Number(match.start_time) / 1000);
+        }catch(e){}
+        if(typeof syncHighlight === "function") syncHighlight();
+      }
       if(wasPlaying && audio.paused){
         audio.play().then(()=>{ playButton.textContent = "Ⅱ"; }).catch(()=>{});
       }
-      return;
-    }
-    const match = currentTiming.find(item =>
-      Number(item.ayah) === targetAyah &&
-      (item._surah == null || Number(item._surah) === targetSurah)
-    );
-    if(match && Number.isFinite(Number(match.start_time))){
+    };
+
+    const waitTimingAndSeek = async ()=>{
       try{
-        audio.currentTime = Math.max(0, Number(match.start_time) / 1000);
+        currentAudioSurah = targetSurah;
+        if(typeof fetchTimingForSurah === "function"){
+          const list = await fetchTimingForSurah(targetSurah);
+          if(Number(currentAudioSurah) === targetSurah && list){
+            currentTiming = list;
+            timingSurahLoaded = targetSurah;
+          }
+        }
       }catch(e){}
-      if(typeof syncHighlight === "function") syncHighlight();
-    }
-    if(wasPlaying && audio.paused){
-      audio.play().then(()=>{ playButton.textContent = "Ⅱ"; }).catch(()=>{});
-    }
+      let seekApplied = false;
+      const onReady = function(){
+        if(seekApplied) return;
+        seekApplied = true;
+        try{ audio.removeEventListener("loadedmetadata", onReady); }catch(e){}
+        try{ audio.removeEventListener("canplay", onReady); }catch(e){}
+        applyAyahSeek();
+      };
+      audio.addEventListener("loadedmetadata", onReady);
+      audio.addEventListener("canplay", onReady);
+      if(audio.readyState >= 1) onReady();
+      setTimeout(function(){ if(!seekApplied) onReady(); }, 600);
+    };
+    waitTimingAndSeek();
+
+    /* إن فشل التحميل من الشبكة أثناء الأونلاين */
+    try{
+      var onErr = function(){
+        try{ audio.removeEventListener("error", onErr); }catch(e){}
+        var offline2 = false;
+        try{ offline2 = (typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+        if(offline2 || !isLocal){
+          /* لا تنقل للسورة التالية */
+          currentAudioSurah = targetSurah;
+          try{ if(typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(targetSurah); }catch(e){}
+          if(offline2) finishMissing();
+        }
+      };
+      audio.addEventListener("error", onErr);
+      setTimeout(function(){ try{ audio.removeEventListener("error", onErr); }catch(e){} }, 8000);
+    }catch(e){}
   };
 
-  /* التوقيت في الخلفية ثم القفز للآية دون تأخير البدء */
-  const waitTimingAndSeek = async ()=>{
-    await loadTimingForCurrentSurah();
-    if(audio.readyState >= 1){
-      applyAyahSeek();
-      return;
+  /* أوفلاين: لا تحمّل من الشبكة — تحقق من المحلي أولاً */
+  var offline = false;
+  try{ offline = (typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+
+  if(offline){
+    if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.resolveLocal === "function"){
+      window.__ayaAutoOffline.resolveLocal(url).then(function(local){
+        if(local){
+          applyNewReader(local, true);
+        }else{
+          finishMissing();
+        }
+      }).catch(function(){ finishMissing(); });
+    }else{
+      finishMissing();
     }
-    const onReady = function(){
-      audio.removeEventListener("loadedmetadata", onReady);
-      audio.removeEventListener("canplay", onReady);
-      applyAyahSeek();
-    };
-    audio.addEventListener("loadedmetadata", onReady);
-    audio.addEventListener("canplay", onReady);
-  };
-  waitTimingAndSeek();
+    return;
+  }
+
+  /* أونلاين: فضّل المحلي إن وُجد وإلا الشبكة */
+  if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.resolveLocal === "function"){
+    window.__ayaAutoOffline.resolveLocal(url).then(function(local){
+      if(local) applyNewReader(local, true);
+      else applyNewReader(url, false);
+    }).catch(function(){ applyNewReader(url, false); });
+  }else{
+    applyNewReader(url, false);
+  }
 
 };
+
 
 
 /* =========================
    سرعة القراءة
    إيقاف → 0.75 → 1 → 1.25 → 1.5 → إيقاف
 ========================= */
-let speedIndex=0;
-const speedValues=[1,0.75,1,1.25,1.5];
-const speedLabels=["السرعة: إيقاف","السرعة: 0.75×","السرعة: 1×","السرعة: 1.25×","السرعة: 1.5×"];
-const speedButton=document.getElementById("speedButton");
-const speedText=document.getElementById("speedText");
-function setSpeed(){audio.playbackRate=speedValues[speedIndex];if(speedText)speedText.textContent=speedLabels[speedIndex];}
-if(speedButton){speedButton.onclick=()=>{speedIndex=(speedIndex+1)%speedValues.length;setSpeed();};}
-setSpeed();
 
 /* =========================
    تكرار الآية — النسخة المستقرة
@@ -6446,6 +7009,50 @@ function resetRepeat(){repeatCount=0;repeatItem=null;repeatKey=null;repeatJumpin
 function setRepeatLabel(){const i=repeatModes.indexOf(repeatMode);if(repeatAyahText)repeatAyahText.textContent=repeatLabels[i>=0?i:0];}
 if(repeatAyahButton){repeatAyahButton.onclick=()=>{const i=repeatModes.indexOf(repeatMode);repeatMode=repeatModes[(i+1)%repeatModes.length];resetRepeat();repeatColorActive=(repeatMode!==0);setRepeatLabel();syncHighlight();};}
 setRepeatLabel();
+
+/* تشغيل تلقائي للسورة التالية */
+var autoNextSurah = true;
+try{
+  var savedAuto = localStorage.getItem("ayaAutoNextSurah");
+  if(savedAuto === "0") autoNextSurah = false;
+  else if(savedAuto === "1") autoNextSurah = true;
+  else autoNextSurah = true; /* افتراضي: مفعّل */
+}catch(e){}
+function setAutoNextSurahUI(){
+  try{
+    var btn = document.getElementById("autoNextSurahButton");
+    var txt = document.getElementById("autoNextSurahText");
+    var ic = document.getElementById("autoNextSurahIcon");
+    /* نص أوضح: هل يكمل للسورة التالية أم يتوقف */
+    if(txt) txt.textContent = autoNextSurah ? "سورة تالية\nتشغيل" : "سورة تالية\nإيقاف";
+    /* سطر واحد أوضح على الشاشات الصغيرة */
+    if(txt) txt.textContent = autoNextSurah ? "تالية: تشغيل" : "تالية: إيقاف";
+    if(ic) ic.textContent = autoNextSurah ? "⏭" : "⏸";
+    if(btn){
+      if(autoNextSurah) btn.classList.add("is-on");
+      else btn.classList.remove("is-on");
+      btn.setAttribute("aria-pressed", autoNextSurah ? "true" : "false");
+      btn.title = autoNextSurah
+        ? "مفعّل: عند انتهاء السورة ينتقل تلقائياً للسورة التالية ويشغّلها"
+        : "متوقف: عند انتهاء السورة يتوقف التشغيل ولا ينتقل للتالية";
+    }
+  }catch(e){}
+}
+function toggleAutoNextSurah(){
+  autoNextSurah = !autoNextSurah;
+  try{ localStorage.setItem("ayaAutoNextSurah", autoNextSurah ? "1" : "0"); }catch(e){}
+  setAutoNextSurahUI();
+}
+try{
+  var autoBtn = document.getElementById("autoNextSurahButton");
+  if(autoBtn) autoBtn.addEventListener("click", function(e){
+    try{ e.preventDefault(); e.stopPropagation(); }catch(err){}
+    toggleAutoNextSurah();
+  });
+  setAutoNextSurahUI();
+}catch(e){}
+try{ window.__ayaAutoNextSurah = function(){ return !!autoNextSurah; }; }catch(e){}
+
 function repeatTick(){
  if(repeatMode===0||audio.paused||!currentTiming.length||repeatJumping)return;
  const now=audio.currentTime*1000;
@@ -6492,13 +7099,37 @@ audio.addEventListener(
   }
 );
 
+try{
+  if(!audio.__ayaPrefetchOnPlay){
+    audio.__ayaPrefetchOnPlay = true;
+    audio.addEventListener("play", function(){
+      try{ if(typeof prefetchAheadOfAudio === "function") prefetchAheadOfAudio(); }catch(e){}
+      try{
+        if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.schedulePagesAndTiming === "function"){
+          var s = Number(currentAudioSurah) || 1;
+          window.__ayaAutoOffline.schedulePagesAndTiming(Number(currentPage)||1, s);
+        }
+      }catch(e){}
+    });
+  }
+}catch(e){}
+
 audio.addEventListener(
   "timeupdate",
   ()=>{
     if(typeof refreshTimeDisplay === "function") refreshTimeDisplay();
     else {
       currentTime.textContent = fmt(audio.currentTime);
-      progress.value = audio.duration ? audio.currentTime / audio.duration * 100 : 0;
+      try{
+        if(typeof updateAyaProgressBar === "function"){
+          updateAyaProgressBar(
+            audio.duration ? audio.currentTime / audio.duration * 100 : 0,
+            typeof getPartialLocalPercent === "function" ? getPartialLocalPercent() : 0
+          );
+        }else if(progress){
+          progress.value = audio.duration ? audio.currentTime / audio.duration * 100 : 0;
+        }
+      }catch(e){}
     }
     syncHighlight();
   }
@@ -6563,11 +7194,80 @@ audio.addEventListener(
           try{ if(playButton) playButton.textContent = "Ⅱ"; }catch(e){}
           return;
         }
-        /* أوفلاين أو لا رابط: توقف عند آخر ما حُفظ */
-        try{ if(playButton) playButton.textContent = "▶"; }catch(e){}
+        /* أوفلاين أو لا رابط */
+        try{
+          var endAt = Math.max(Number(audio.__ayaPartialMaxSec) || 0, Number(audio.currentTime) || 0);
+          /* هل المقطع المحفوظ ≈ كامل السورة؟ إن نعم اسمح بالانتقال للسورة التالية أوفلاين */
+          var fullDur = 0;
+          try{
+            if(typeof timingCoverageSec === "function") fullDur = Number(timingCoverageSec()) || 0;
+          }catch(e){}
+          try{
+            if(!(fullDur > 5) && typeof currentTiming !== "undefined" && currentTiming && currentTiming.length){
+              var lastT = currentTiming[currentTiming.length - 1];
+              fullDur = (Number(lastT.end_time) || Number(lastT.start_time) || 0) / 1000;
+            }
+          }catch(e){}
+          var durNow = Number(audio.duration) || 0;
+          var looksComplete = false;
+          if(fullDur > 5){
+            looksComplete = (maxSec >= fullDur - 5) || (durNow >= fullDur - 5);
+          }else if(durNow > 20 && maxSec >= durNow - 1.5){
+            /* بدون توقيت: إن انتهى الملف كاملاً اعتبره مكتملاً */
+            looksComplete = true;
+          }
+          if(looksComplete){
+            /* امسح علامة الجزئي حتى يكمل مسار الانتقال للسورة التالية بالأسفل */
+            try{ audio.__ayaPartialMaxSec = 0; }catch(e){}
+            try{ audio.__ayaOfflineEnded = false; }catch(e){}
+            try{ audio.__ayaOfflineHold = false; }catch(e){}
+            /* لا تُرجع — اترك مسار autoNext يعمل */
+          }else{
+            if(endAt > 0.5){
+              audio.__ayaOfflineEnded = true;
+              audio.__ayaOfflineHold = true;
+              audio.__ayaResumeAfterPartial = endAt;
+              audio.__ayaConnSwitchPos = endAt;
+              try{ audio.__ayaSeekTargetSec = null; }catch(e){}
+            }
+            try{ if(playButton) playButton.textContent = "▶"; }catch(e){}
+            return;
+          }
+        }catch(e){
+          try{ if(playButton) playButton.textContent = "▶"; }catch(e2){}
+          return;
+        }
+      }
+    }catch(e){}
+
+    /* لا تنتقل إن كان الملف مفقوداً أوفلاين أو لم يبدأ تشغيل حقيقي */
+    try{
+      if(audio && audio.__ayaMissingOffline){
+        try{ playButton.textContent = "▶"; }catch(e){}
+        try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = false; }catch(e){}
+        return;
+      }
+      var dur = Number(audio && audio.duration);
+      var ct = Number(audio && audio.currentTime) || 0;
+      if(!(Number.isFinite(dur) && dur > 1) && ct < 0.5){
+        try{ playButton.textContent = "▶"; }catch(e){}
         return;
       }
     }catch(e){}
+
+    /* الانتقال للسورة التالية فقط إذا كان التشغيل التلقائي مفعّلاً */
+    var doAutoNext = false;
+    try{
+      if(typeof autoNextSurah !== "undefined") doAutoNext = !!autoNextSurah;
+      else if(typeof window.__ayaAutoNextSurah === "function") doAutoNext = !!window.__ayaAutoNextSurah();
+      else doAutoNext = localStorage.getItem("ayaAutoNextSurah") === "1";
+    }catch(e){}
+
+    if(!doAutoNext){
+      try{ playButton.textContent = "▶"; }catch(e){}
+      try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = false; }catch(e){}
+      return;
+    }
 
     const finishedSurah =
       currentAudioSurah ||
@@ -6660,7 +7360,31 @@ function bindAudioLoadingUI(){
   function recoverFromPartialIfPossible(){
     try{
       if(audio.__ayaRecovering || audio.__ayaHandoffBusy) return;
-      var t = Number(audio.currentTime) || Number(audio.__ayaResumeAfterPartial) || 0;
+      /* إن انتهى المقطع المحلي أوفلاين: لا تُعد التشغيل من موضع التبديل */
+      try{
+        if(audio.__ayaOfflineEnded){
+          var endPos = Number(audio.__ayaResumeAfterPartial) || Number(audio.__ayaPartialMaxSec) || 0;
+          if(endPos > 0.5){
+            audio.__ayaConnSwitchPos = endPos;
+            audio.__ayaOfflineHold = true;
+          }
+          setAudioLoading(false);
+          return;
+        }
+      }catch(e){}
+      /* أعلى موضع معروف (وقت حي أو ذروة التشغيل) — يمنع القفز لنهاية المقطع الأقصر */
+      var t = Number(audio.currentTime) || 0;
+      try{
+        var offlineNow = (typeof navigator !== "undefined" && navigator.onLine === false);
+        if(offlineNow){
+          var peak = Number(audio.__ayaPeakPos) || 0;
+          var res = Number(audio.__ayaResumeAfterPartial) || 0;
+          var sw = Number(audio.__ayaConnSwitchPos) || 0;
+          t = Math.max(t, peak, res, sw);
+        }else if(!(t > 0.2)){
+          t = Number(audio.__ayaResumeAfterPartial) || Number(audio.__ayaConnSwitchPos) || 0;
+        }
+      }catch(e){}
       var url = "";
       try{
         if(typeof getAudioUrl === "function"){
@@ -6694,13 +7418,38 @@ function bindAudioLoadingUI(){
         if(!ok){
           try{ audio.pause(); }catch(e){}
           try{
+            var offlineR = (typeof navigator !== "undefined" && navigator.onLine === false);
+            if(offlineR){
+              audio.__ayaOfflineHold = true;
+              if(!(Number(audio.__ayaConnSwitchPos) > 0.2)){
+                audio.__ayaConnSwitchPos = t;
+              }
+              audio.__ayaResumeAfterPartial = Number(audio.__ayaConnSwitchPos) || t;
+              try{
+                var pb2 = document.getElementById("playButton");
+                if(pb2) pb2.textContent = "▶";
+              }catch(e){}
+              try{
+                if(!window.__ayaIncompleteAlertShown && typeof showOfflineIncompleteAlert === "function"){
+                  showOfflineIncompleteAlert();
+                }
+              }catch(e){}
+            }
+          }catch(e){}
+          try{
             var cur = String(audio.currentSrc || audio.src || "");
             /* لا تُبقِ صوت سورة أخرى يعمل */
             if(cur.indexOf("blob:") === 0){
-              var need = (url.split("/").pop() || "").split("?")[0];
               var partialUrl = String(audio.__ayaPartialUrl || "");
-              var got = (partialUrl.split("/").pop() || "").split("?")[0];
-              if(need && got && need !== got){
+              var sameRec = false;
+              try{
+                if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.samePartialAudio === "function"){
+                  sameRec = window.__ayaAutoOffline.samePartialAudio(partialUrl, url);
+                }else{
+                  sameRec = String(partialUrl).split("?")[0] === String(url).split("?")[0];
+                }
+              }catch(e){}
+              if(!sameRec){
                 try{ audio.removeAttribute("src"); audio.load(); }catch(e2){}
               }
             }
@@ -6779,6 +7528,15 @@ try{ bindAudioLoadingUI(); }catch(e){}
 
 playButton.onclick = ()=>{
 
+  try{
+    var offlinePlay = (typeof navigator !== "undefined" && navigator.onLine === false);
+    if(offlinePlay && audio && audio.__ayaMissingOffline){
+      try{ if(typeof showOfflineAudioMissingAlert === "function") showOfflineAudioMissingAlert(); }catch(e){}
+      playButton.textContent = "▶";
+      return;
+    }
+  }catch(e){}
+
   try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
   /* إن علق التحميل: ألغِ الحالة وحاول المحلي ثم التشغيل */
   try{
@@ -6787,13 +7545,73 @@ playButton.onclick = ()=>{
     }
   }catch(e){}
 
+  var online = true;
+  try{ online = !(typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+
   var hasSrc = false;
   try{
     hasSrc = !!(audio.currentSrc || audio.getAttribute("src") || audio.src);
     if(hasSrc && (audio.src === window.location.href || audio.getAttribute("src") === "")) hasSrc = false;
   }catch(e){}
 
-  if(!hasSrc || audio.error){
+  /* مصدر تالف أو فارغ بعد تجربة أوفلاين لقارئ غير محفوظ */
+  var needReload = !hasSrc || !!audio.error;
+  try{
+    var rs = Number(audio.readyState) || 0;
+    var srcStr = String(audio.currentSrc || audio.src || "");
+    /* blob فارغ/منتهٍ بدون بيانات صالحة */
+    if(srcStr.indexOf("blob:") === 0 && rs < 2 && audio.paused) needReload = true;
+  }catch(e){}
+
+  /*
+    عند وجود نت: إن لم يكن هناك مصدر صالح شغّل فوراً من الشبكة.
+    لا تبقَ عالقاً بعد فشل أوفلاين لقارئ غير منزّل.
+  */
+  if(needReload){
+    if(online){
+      try{
+        audio.__ayaForceNet = true;
+        audio.__ayaPartialMaxSec = 0;
+        audio.__ayaPartialUrl = "";
+        audio.__ayaHandoffBusy = false;
+        audio.__ayaRecovering = false;
+        audio.__ayaOfflineEnded = false;
+      }catch(e){}
+      try{ setAudioLoading(true); }catch(e){}
+      updateAudioSource(false, { autoContinue: true });
+      /* تأكيد تشغيل بعد تعيين المصدر */
+      setTimeout(function(){
+        try{
+          if(audio.paused){
+            audio.play().then(function(){
+              playButton.textContent = "Ⅱ";
+              try{ setAudioLoading(false); }catch(e){}
+            }).catch(function(){
+              try{ audio.__ayaForceNet = true; }catch(e){}
+              updateAudioSource(false, { autoContinue: true });
+            });
+          }
+        }catch(e){}
+      }, 120);
+      setTimeout(function(){
+        try{
+          if(audio.paused && online){
+            var u = null;
+            try{
+              u = getAudioUrl(selectedReader, currentPage, currentAudioSurah || getSurahNumberForPage(currentPage));
+            }catch(e){}
+            if(u){
+              try{ audio.__ayaForceNet = true; }catch(e){}
+              try{ audio.src = u; audio.load(); }catch(e){}
+              audio.play().then(function(){ playButton.textContent = "Ⅱ"; }).catch(function(){});
+            }
+          }
+        }catch(e){}
+        try{ setAudioLoading(false); }catch(e){}
+      }, 500);
+      return;
+    }
+    /* أوفلاين بدون مصدر: أعد المحاولة المحلية فقط */
     updateAudioSource(false, { autoContinue: true });
     return;
   }
@@ -6814,7 +7632,19 @@ playButton.onclick = ()=>{
     }catch(e){}
     if(p && typeof p.then === "function"){
       p.then(function(){ playButton.textContent = "Ⅱ"; }).catch(function(){
-        /* محاولة ثانية بعد لحظة قصيرة قبل إعادة التحميل */
+        /* مع وجود نت: أعد التحميل من الشبكة فوراً */
+        if(online){
+          try{
+            audio.__ayaForceNet = true;
+            audio.__ayaPartialMaxSec = 0;
+            audio.__ayaPartialUrl = "";
+          }catch(e){}
+          updateAudioSource(false, { autoContinue: true });
+          setTimeout(function(){
+            try{ audio.play().then(function(){ playButton.textContent = "Ⅱ"; }).catch(function(){}); }catch(e){}
+          }, 150);
+          return;
+        }
         setTimeout(function(){
           audio.play().then(function(){ playButton.textContent = "Ⅱ"; }).catch(function(){
             updateAudioSource(true, { autoContinue: true });
@@ -8545,10 +9375,21 @@ function chooseDirectSurah(n){
   if(!s) return;
 
   currentAudioSurah=n;
+  var startPage = Number(s[1]) || 1;
+  try{
+    window.__ayaPendingNav = {
+      surah: n,
+      page: startPage,
+      autoPlay: true,
+      ts: Date.now()
+    };
+    localStorage.setItem("ayaPendingNav", JSON.stringify(window.__ayaPendingNav));
+  }catch(e){}
+  try{ if(typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(n); }catch(e){}
 
   if(typeof loadPage==="function"){
     loadPage(
-      Number(s[1]),
+      startPage,
       {
         surahNumber:n,
         autoContinue:true
@@ -9090,7 +9931,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 ===================================================== */
 (function(){
   /* غيّر الرقم فقط هنا عند كل إصدار جديد — كلمة «الإصدار» تُضاف تلقائياً */
-  const APP_VERSION = "1.0.188";
+  const APP_VERSION = "1.0.189";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   /* حدّث الرقم فقط — كلمة «الإصدار» ثابتة في HTML */
   function setAppVersionDisplays(){
@@ -9680,7 +10521,10 @@ document.addEventListener("DOMContentLoaded",()=>{
 (function(){
   const PAGE_CACHE = "aya-pages-v1";
   const AUDIO_CACHE = "aya-audio-v1";
+  /* running | paused | idle */
+  let dlRunState = "idle";
   let cancelFlag = false;
+  let dlJob = null; /* { urls, cacheName, label, ok, total, remaining } */
 
   const popup = document.getElementById("downloadsPopup");
   const statusEl = document.getElementById("dlStatus");
@@ -9689,12 +10533,30 @@ document.addEventListener("DOMContentLoaded",()=>{
   const tabAudio = document.getElementById("dlTabAudio");
   const panelPages = document.getElementById("dlPanelPages");
   const panelAudio = document.getElementById("dlPanelAudio");
+  const cancelEl = document.getElementById("dlCancel");
 
   function setStatus(msg){ if(statusEl) statusEl.textContent = msg; }
   function setProgress(done, total){
     if(!progressEl) return;
     progressEl.max = total || 100;
     progressEl.value = done || 0;
+  }
+  function setToggleBtn(mode){
+    /* mode: stop | resume | idle */
+    if(!cancelEl) return;
+    if(mode === "resume"){
+      cancelEl.textContent = "استمرار";
+      cancelEl.style.background = "#2a5a3a";
+    }else if(mode === "stop"){
+      cancelEl.textContent = "إيقاف";
+      cancelEl.style.background = "#666";
+    }else{
+      cancelEl.textContent = "إيقاف";
+      cancelEl.style.background = "#666";
+    }
+  }
+  function isOnline(){
+    try{ return !(typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){ return true; }
   }
   function openPopup(){
     if(!popup) return;
@@ -9731,10 +10593,27 @@ document.addEventListener("DOMContentLoaded",()=>{
     });
   }
 
-  var cancelEl = document.getElementById("dlCancel");
   if(cancelEl) cancelEl.addEventListener("click", function(){
+    if(dlRunState === "running"){
+      /* إيقاف مؤقت */
+      cancelFlag = true;
+      dlRunState = "paused";
+      setToggleBtn("resume");
+      setStatus("تم الإيقاف — اضغط استمرار للمتابعة");
+      return;
+    }
+    if(dlRunState === "paused" && dlJob && dlJob.remaining && dlJob.remaining.length){
+      /* استمرار */
+      cancelFlag = false;
+      dlRunState = "running";
+      setToggleBtn("stop");
+      setStatus("جاري الاستمرار…");
+      resumeDownloadJob();
+      return;
+    }
+    /* لا مهمة نشطة */
     cancelFlag = true;
-    setStatus("جاري الإيقاف…");
+    setStatus("لا يوجد تنزيل جارٍ");
   });
 
   var clearEl = document.getElementById("dlClear");
@@ -9856,20 +10735,49 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   async function downloadList(urls, cacheName, label){
     cancelFlag = false;
-    var done = 0;
-    var ok = 0;
-    var fail = 0;
-    var total = urls.length;
+    var list = (urls || []).slice();
+    var total = list.length;
     if(!total){
       setStatus("لا توجد ملفات للتنزيل");
+      dlRunState = "idle";
+      setToggleBtn("idle");
       return;
     }
-    /* تنزيل متوازٍ أسرع: عدة ملفات معاً */
-    var CONCURRENCY = 6;
+    dlJob = {
+      urls: list.slice(),
+      remaining: list.slice(),
+      cacheName: cacheName,
+      label: label || "التنزيل",
+      ok: 0,
+      total: total
+    };
+    dlRunState = "running";
+    setToggleBtn("stop");
     setProgress(0, total);
-    setStatus(label + ": بدء 0 / " + total + " (متوازٍ ×" + CONCURRENCY + ")");
+    setStatus(dlJob.label + ": بدء 0 / " + total);
+    await runDownloadWorkers();
+  }
 
-    /* افتح الكاش مرة واحدة لجميع العمليات */
+  async function resumeDownloadJob(){
+    if(!dlJob || !dlJob.remaining || !dlJob.remaining.length){
+      dlRunState = "idle";
+      setToggleBtn("idle");
+      setStatus("لا تبقى ملفات للتنزيل");
+      return;
+    }
+    cancelFlag = false;
+    dlRunState = "running";
+    setToggleBtn("stop");
+    await runDownloadWorkers();
+  }
+
+  async function runDownloadWorkers(){
+    if(!dlJob) return;
+    var label = dlJob.label;
+    var cacheName = dlJob.cacheName;
+    var total = dlJob.total;
+    var CONCURRENCY = 4;
+
     var sharedCache = null;
     try{ sharedCache = await caches.open(cacheName); }catch(e){ sharedCache = null; }
 
@@ -9883,35 +10791,90 @@ document.addEventListener("DOMContentLoaded",()=>{
       return cachePutUrl(cacheName, url);
     }
 
-    var index = 0;
+    function statusLine(){
+      var left = (dlJob.remaining && dlJob.remaining.length) || 0;
+      var ok = dlJob.ok || 0;
+      if(dlRunState === "paused"){
+        return "متوقف — تم " + ok + " من " + total + (left ? (" · متبقي " + left) : "");
+      }
+      return label + ": " + ok + " / " + total + (left ? (" · متبقي " + left) : "");
+    }
+
+    /* قائمة عمل مشتركة: نسحب من remaining */
     async function worker(){
       while(true){
-        if(cancelFlag) return;
-        var i = index++;
-        if(i >= total) return;
-        try{
-          var result = await putOne(urls[i]);
-          if(result) ok++;
-          else fail++;
-        }catch(e){
-          fail++;
+        if(cancelFlag || dlRunState !== "running") return;
+        if(!isOnline()){
+          /* بدون نت: أوقف وانتظر استمرار المستخدم — بدون عدّ فشل */
+          dlRunState = "paused";
+          cancelFlag = true;
+          setToggleBtn("resume");
+          setStatus("لا يوجد اتصال — اضغط استمرار عند عودة الشبكة · تم " + (dlJob.ok||0) + " من " + total);
+          return;
         }
-        done++;
-        setProgress(done, total);
-        setStatus(label + ": " + done + " / " + total + " (نجاح " + ok + " · فشل " + fail + ")");
+        var url = null;
+        if(dlJob.remaining && dlJob.remaining.length){
+          url = dlJob.remaining.shift();
+        }
+        if(!url) return;
+        try{
+          var result = await putOne(url);
+          if(result){
+            dlJob.ok++;
+          }else{
+            /* أعد للمحاولة لاحقاً بدل عدّها فشلاً */
+            dlJob.remaining.push(url);
+          }
+        }catch(e){
+          if(!isOnline()){
+            dlJob.remaining.unshift(url);
+            dlRunState = "paused";
+            cancelFlag = true;
+            setToggleBtn("resume");
+            setStatus("لا يوجد اتصال — اضغط استمرار عند عودة الشبكة · تم " + (dlJob.ok||0) + " من " + total);
+            return;
+          }
+          /* أخطاء مؤقتة: أعد للمحاولة في نهاية الطابور */
+          dlJob.remaining.push(url);
+          /* حماية من حلقة لا نهائية لنفس الملف */
+          if(dlJob.remaining.length > total * 3){
+            /* تخطَّ بعد محاولات كثيرة */
+            try{ dlJob.remaining = dlJob.remaining.filter(function(u){ return u !== url; }); }catch(e2){}
+          }
+        }
+        setProgress(dlJob.ok, total);
+        setStatus(statusLine());
       }
     }
 
     var workers = [];
-    var n = Math.min(CONCURRENCY, total);
+    var n = Math.min(CONCURRENCY, Math.max(1, (dlJob.remaining && dlJob.remaining.length) || 1));
     for(var w = 0; w < n; w++) workers.push(worker());
     await Promise.all(workers);
 
-    if(cancelFlag){
-      setStatus("تم الإيقاف — نجح " + ok + " / فشل " + fail + " من " + total);
-    }else{
-      setStatus("اكتمل " + label + ": نجاح " + ok + " · فشل " + fail + " من " + total);
+    if(dlRunState === "paused" || cancelFlag){
+      setToggleBtn("resume");
+      setProgress(dlJob.ok, total);
+      setStatus("تم الإيقاف — تم " + (dlJob.ok||0) + " من " + total +
+        ((dlJob.remaining && dlJob.remaining.length) ? (" · متبقي " + dlJob.remaining.length) : "") +
+        " — اضغط استمرار للمتابعة");
+      return;
     }
+
+    if(dlJob.remaining && dlJob.remaining.length){
+      /* بقيت عناصر بعد أخطاء — اعرض استمرار بدون كلمة فشل */
+      dlRunState = "paused";
+      setToggleBtn("resume");
+      setProgress(dlJob.ok, total);
+      setStatus("توقف مؤقت — تم " + (dlJob.ok||0) + " من " + total + " · متبقي " + dlJob.remaining.length + " — اضغط استمرار");
+      return;
+    }
+
+    dlRunState = "idle";
+    setToggleBtn("idle");
+    setProgress(dlJob.ok, total);
+    setStatus("اكتمل " + label + ": تم " + (dlJob.ok||0) + " من " + total);
+    dlJob = null;
   }
 
   async function startPages(mode){
@@ -9929,6 +10892,10 @@ document.addEventListener("DOMContentLoaded",()=>{
     setStatus("بدء تنزيل الصفحات…");
     await downloadList(urls, PAGE_CACHE, "الصفحات");
   }
+  try{
+    window.__ayaStartPagesDownload = startPages;
+    window.__ayaOpenDownloadsPopup = openPopup;
+  }catch(e){}
 
   function fillReciterAndSurahSelects(){
     var recSel = document.getElementById("dlReciterSelect");
@@ -10172,6 +11139,65 @@ document.addEventListener("DOMContentLoaded",()=>{
     }catch(e){ return null; }
   }
 
+  /*
+    عند غياب صفحة المصحف من الكاش (خصوصاً أوفلاين):
+    اعرض رسالة تأكيد مثل أندرويد لعرض تنزيل الصفحات.
+  */
+  var __ayaMissingPagesPromptAt = 0;
+  var __ayaMissingPagesPromptBusy = false;
+  function promptDownloadMissingPages(reasonPage){
+    try{
+      if(__ayaMissingPagesPromptBusy) return;
+      var now = Date.now();
+      /* لا تكرر الرسالة أكثر من مرة كل 25 ثانية */
+      if(now - __ayaMissingPagesPromptAt < 25000) return;
+      __ayaMissingPagesPromptBusy = true;
+      __ayaMissingPagesPromptAt = now;
+      var msg = "بعض صفحات المصحف غير متوفرة لديك هل ترغب في تنزيلها الآن";
+      var ok = false;
+      try{ ok = window.confirm(msg); }catch(e){ ok = false; }
+      __ayaMissingPagesPromptBusy = false;
+      if(!ok) return;
+      try{
+        if(typeof window.__ayaOpenDownloadsPopup === "function"){
+          window.__ayaOpenDownloadsPopup();
+        }else{
+          var pop = document.getElementById("downloadsPopup");
+          if(pop) pop.classList.add("show");
+        }
+      }catch(e){}
+      try{
+        var tabP = document.getElementById("dlTabPages");
+        var tabA = document.getElementById("dlTabAudio");
+        var panelP = document.getElementById("dlPanelPages");
+        var panelA = document.getElementById("dlPanelAudio");
+        if(panelP) panelP.style.display = "";
+        if(panelA) panelA.style.display = "none";
+        if(tabP) tabP.style.opacity = "1";
+        if(tabA) tabA.style.opacity = ".75";
+      }catch(e){}
+      setTimeout(function(){
+        try{
+          if(typeof window.__ayaStartPagesDownload === "function"){
+            window.__ayaStartPagesDownload("all");
+          }
+        }catch(e){}
+      }, 120);
+    }catch(e){
+      __ayaMissingPagesPromptBusy = false;
+    }
+  }
+
+  async function pageInCache(pageNumber){
+    try{
+      var url = (typeof quranPageSvgUrl === "function") ? quranPageSvgUrl(pageNumber) : null;
+      if(!url || typeof caches === "undefined") return false;
+      var cache = await caches.open(PAGE_CACHE);
+      var hit = await cache.match(url);
+      return !!(hit);
+    }catch(e){ return false; }
+  }
+
   if(typeof loadQuranPageFromInternet === "function"){
     var _orig = loadQuranPageFromInternet;
     window.loadQuranPageFromInternet = async function(pageNumber){
@@ -10195,6 +11221,51 @@ document.addEventListener("DOMContentLoaded",()=>{
           }
         }
       }catch(e){}
+
+      var offline = false;
+      try{ offline = (typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+
+      /* الصفحة غير موجودة في الكاش */
+      if(offline){
+        try{ promptDownloadMissingPages(pageNumber); }catch(e){}
+        /* أوفلاين وبدون كاش: لا تحمّل من الشبكة */
+        try{
+          if(typeof page !== "undefined" && page){
+            var token2 = ++pageSvgToken;
+            if(typeof clearAyahHighlight === "function") clearAyahHighlight();
+            /* أبقِ الصفحة الحالية إن وُجدت، وإلا امسح المصدر */
+            try{
+              var cur = String(page.getAttribute("src") || page.src || "");
+              if(!cur || cur.indexOf("http") === 0){
+                page.removeAttribute("src");
+              }
+            }catch(e){}
+          }
+        }catch(e){}
+        return;
+      }
+
+      /* أونلاين: حمّل من الشبكة، وإن فشل العرض اعرض رسالة التنزيل */
+      try{
+        if(typeof page !== "undefined" && page && !page.__ayaMissingErrBound){
+          page.__ayaMissingErrBound = true;
+          page.addEventListener("error", function(){
+            try{
+              var offline2 = false;
+              try{ offline2 = (typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
+              if(offline2){
+                promptDownloadMissingPages(typeof currentPage !== "undefined" ? currentPage : 1);
+                return;
+              }
+              /* فشل التحميل رغم وجود نت (أو انقطاع مفاجئ) */
+              pageInCache(typeof currentPage !== "undefined" ? currentPage : 1).then(function(ok){
+                if(!ok) promptDownloadMissingPages(typeof currentPage !== "undefined" ? currentPage : 1);
+              });
+            }catch(e){}
+          });
+        }
+      }catch(e){}
+
       return _orig.apply(this, arguments);
     };
   }
@@ -10220,10 +11291,13 @@ document.addEventListener("DOMContentLoaded",()=>{
               /* استعادة الوقت فقط إن طُلب صراحة (ترقية مقطع) — لا currentTime من سورة سابقة */
               var keepT = 0, keepPlay = false;
               try{
-                keepT = Number(self.__ayaResumeAfterPartial) || 0;
+                var sk = Number(self.__ayaSeekTargetSec);
+                if(Number.isFinite(sk) && sk >= 0) keepT = sk;
+                else keepT = Number(self.__ayaResumeAfterPartial) || 0;
                 keepPlay = !!self.__ayaWantPlayAfterForce;
               }catch(e){}
-              try{ self.__ayaResumeAfterPartial = 0; self.__ayaWantPlayAfterForce = false; }catch(e){}
+              try{ self.__ayaResumeAfterPartial = keepT; self.__ayaWantPlayAfterForce = false; }catch(e){}
+              try{ self.__ayaSeekTargetSec = null; }catch(e){}
               try{ desc.set.call(self, v); }catch(e){}
               if(keepT > 0.25){
                 var restoreForce = function(){
@@ -10237,19 +11311,11 @@ document.addEventListener("DOMContentLoaded",()=>{
               }
               return;
             }
-            var offline = false;
-            try{ offline = (typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
-
             /*
-              أونلاين (أول تشغيل أو بث عادي): ضع الشبكة فوراً.
-              لا تنتظر IndexedDB ولا تستبدل المصدر لاحقاً — ذلك يسبب تقطيعاً.
+              فضّل المقطع/الكاش المحلي إن وُجد (أونلاين أو أوفلاين).
+              الشبكة فقط عند عدم وجود محلي أو عند __ayaForceNet.
             */
-            if(!offline){
-              try{ desc.set.call(self, v); }catch(e){}
-              return;
-            }
-
-            /* أوفلاين فقط: فضّل المقطع المحلي */
+            /* متابعة منطق المحلي للجميع */
             try{
               var curSrc = "";
               try{ curSrc = String(desc.get.call(self) || self.currentSrc || ""); }catch(e){}
@@ -10258,9 +11324,12 @@ document.addEventListener("DOMContentLoaded",()=>{
               if(curSrc.indexOf("blob:") === 0 && maxSec > 1 && t < maxSec - 0.8){
                 var sameFile = false;
                 try{
-                  var leaf = (v.split("/").pop() || "").split("?")[0];
                   var pu = String(self.__ayaPartialUrl || "");
-                  if(leaf && pu.indexOf(leaf) >= 0) sameFile = true;
+                  if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.samePartialAudio === "function"){
+                    sameFile = window.__ayaAutoOffline.samePartialAudio(pu, v);
+                  }else{
+                    sameFile = String(pu).split("?")[0] === String(v).split("?")[0];
+                  }
                 }catch(e){}
                 if(sameFile) return;
               }
@@ -10268,43 +11337,89 @@ document.addEventListener("DOMContentLoaded",()=>{
 
             var applied = false;
             var token = (self.__ayaSrcToken = (self.__ayaSrcToken || 0) + 1);
-            var prevTime = 0, wasPlaying = false;
+            var prevTime = 0, wasPlaying = false, seekTarget = null;
             try{
               prevTime = Number(self.currentTime) || 0;
               wasPlaying = !self.paused;
+              var sk = Number(self.__ayaSeekTargetSec);
+              if(Number.isFinite(sk) && sk >= 0) seekTarget = sk;
             }catch(e){}
             var applyNet = function(){
               if(applied || token !== self.__ayaSrcToken) return;
               applied = true;
               try{ desc.set.call(self, v); }catch(e){}
             };
-            resolveLocal(v).then(function(local){
-              if(token !== self.__ayaSrcToken) return;
-              if(local){
-                applied = true;
-                try{ self.__ayaPartialUrl = v; }catch(e){}
-                try{ desc.set.call(self, local); }catch(e){}
-                if(prevTime > 0.25){
-                  var rl = function(){
-                    try{ self.removeEventListener("loadedmetadata", rl); }catch(e){}
-                    try{
-                      var d = Number(self.duration);
-                      var target = prevTime;
-                      if(Number.isFinite(d) && d > 0) target = Math.min(prevTime, Math.max(0, d - 0.05));
-                      self.currentTime = target;
-                    }catch(e){}
-                    if(wasPlaying) try{ self.play().catch(function(){}); }catch(e){}
-                  };
-                  self.addEventListener("loadedmetadata", rl);
-                  setTimeout(rl, 80);
-                  setTimeout(rl, 250);
-                }
-              }else applyNet();
-            }).catch(function(){ applyNet(); });
-            setTimeout(function(){
-              if(token !== self.__ayaSrcToken) return;
-              if(!applied) applyNet();
-            }, 900);
+            var tryLocal = null;
+            try{
+              if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.resolveLocal === "function"){
+                tryLocal = window.__ayaAutoOffline.resolveLocal(v);
+              }
+            }catch(e){}
+            if(tryLocal && typeof tryLocal.then === "function"){
+              tryLocal.then(function(local){
+                if(token !== self.__ayaSrcToken) return;
+                if(local){
+                  applied = true;
+                  try{ self.__ayaPartialUrl = v; }catch(e){}
+                  try{ desc.set.call(self, local); }catch(e){}
+                  /*
+                    عند اختيار آية: استخدم موضع الآية وليس وقت السورة السابقة.
+                    وإلا أبقِ prevTime إن وُجد.
+                  */
+                  var wantPlay = wasPlaying;
+                  try{
+                    if(typeof userWantsPlay !== "undefined" && userWantsPlay) wantPlay = true;
+                  }catch(e){}
+                  var targetPos = (seekTarget != null) ? seekTarget : prevTime;
+                  try{ self.__ayaResumeAfterPartial = targetPos; }catch(e){}
+                  if(targetPos >= 0 || wantPlay){
+                    var rlDone = false;
+                    var rlDeadline = Date.now() + 480;
+                    var rl = function(){
+                      if(rlDone && Date.now() > rlDeadline) return;
+                      try{
+                        var d = Number(self.duration);
+                        var target = Number(targetPos) || 0;
+                        if(Number.isFinite(d) && d > 0) target = Math.min(Math.max(0, target), Math.max(0, d - 0.05));
+                        var ct = Number(self.currentTime) || 0;
+                        /* لا ترجع الوقت إذا التشغيل تقدّم (يمنع الترجف) */
+                        if(ct > target + 0.45){
+                          rlDone = true;
+                          try{ self.__ayaSeekTargetSec = null; }catch(e){}
+                          return;
+                        }
+                        if(Math.abs(ct - target) > 0.25){
+                          self.currentTime = target;
+                        }
+                        if(!rlDone){
+                          rlDone = true;
+                          try{ self.removeEventListener("loadedmetadata", rl); }catch(e){}
+                          try{ self.removeEventListener("canplay", rl); }catch(e){}
+                          try{ self.__ayaSeekTargetSec = null; }catch(e){}
+                          if(wantPlay && self.paused){
+                            try{
+                              self.play().then(function(){
+                                try{ if(playButton) playButton.textContent = "Ⅱ"; }catch(e){}
+                              }).catch(function(){});
+                            }catch(e){}
+                          }
+                        }
+                      }catch(e){}
+                    };
+                    self.addEventListener("loadedmetadata", rl);
+                    self.addEventListener("canplay", rl);
+                    setTimeout(rl, 70);
+                    setTimeout(rl, 220);
+                  }
+                }else applyNet();
+              }).catch(function(){ applyNet(); });
+              setTimeout(function(){
+                if(token !== self.__ayaSrcToken) return;
+                if(!applied) applyNet();
+              }, 400);
+            }else{
+              applyNet();
+            }
           }
         });
       }
@@ -11381,7 +12496,7 @@ body.interface-old #downloadsPopup .download-native-select{
     {
       selector: ".player",
       title: "مشغّل التلاوة",
-      body: "التشغيل، السابق/التالي، التكرار، السرعة، واختيار القارئ والسورة من الأسفل."
+      body: "التشغيل، السابق/التالي، التكرار، واختيار القارئ والسورة من الأسفل."
     }
   ];
 
@@ -11395,6 +12510,9 @@ body.interface-old #downloadsPopup .download-native-select{
     عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
     var WHATS_NEW = {
+    "1.0.189": [
+      "تحسينات وإصلاحات"
+    ],
     "1.0.188": [
       "إضافة القارئ <b>الشيخ عبدالله الخلف</b> مع تزامن تظليل الآيات (توقيت كامل)"
     ],
@@ -12882,7 +14000,11 @@ body.interface-old #bookmarksPickerList .bm-del{
       var target = off + ratio * effectiveDur;
       try{ a.currentTime = Math.max(0, Math.min(a.duration, target)); }catch(err){}
       try{
-        prog.value = ratio * 100;
+        if(typeof updateAyaProgressBar === "function"){
+          updateAyaProgressBar(ratio * 100, typeof getPartialLocalPercent === "function" ? getPartialLocalPercent() : 0);
+        }else{
+          prog.value = ratio * 100;
+        }
         var ct = document.getElementById("currentTime");
         if(ct && typeof fmt === "function"){
           ct.textContent = fmt(typeof displayCurrentTimeSec === "function" ? displayCurrentTimeSec() : a.currentTime);
@@ -13198,24 +14320,47 @@ body.interface-old .app::after{
     }).catch(function(){ return []; });
   }
 
-  /* بحث مرن: نفس الرابط أو نفس اسم الملف (024.mp3) */
+  /*
+    هوية ملف الصوت: المضيف + المسار كاملاً (يشمل مجلد القارئ).
+    لا نطابق باسم الملف فقط (024.mp3) لأن كل القرّاء يستخدمون نفس الاسم.
+  */
+  function audioIdentity(url){
+    url = String(url || "");
+    if(!url) return "";
+    try{
+      var u = new URL(url, (typeof location !== "undefined" ? location.href : "https://local/"));
+      return (String(u.host || "") + String(u.pathname || "")).toLowerCase().replace(/\/+$/,"");
+    }catch(e){}
+    try{
+      return url.split("?")[0].split("#")[0].toLowerCase().replace(/^https?:\/\//,"").replace(/\/+$/,"");
+    }catch(e2){}
+    return url.toLowerCase();
+  }
+
+  function samePartialAudio(a, b){
+    var ia = audioIdentity(a);
+    var ib = audioIdentity(b);
+    if(!ia || !ib) return false;
+    if(ia === ib) return true;
+    try{
+      var pa = ia.replace(/^www\./,"");
+      var pb = ib.replace(/^www\./,"");
+      if(pa === pb) return true;
+    }catch(e){}
+    return false;
+  }
+
+  /* بحث: نفس الرابط/نفس القارئ+السورة فقط — لا تشارك المقطع بين القرّاء */
   function idbFindPartial(url){
     url = String(url || "");
-    var leaf = "";
-    try{ leaf = (url.split("/").pop() || "").split("?")[0]; }catch(e){}
     return idbGet(url).then(function(rec){
-      if(rec && rec.blob) return rec;
+      if(rec && rec.blob && samePartialAudio(rec.url || url, url)) return rec;
       return idbGetAll().then(function(rows){
         if(!rows || !rows.length) return null;
         for(var i = 0; i < rows.length; i++){
           var r = rows[i];
           if(!r || !r.blob) continue;
-          var u = String(r.url || "");
-          if(u === url) return r;
-          var rLeaf = "";
-          try{ rLeaf = (u.split("/").pop() || "").split("?")[0]; }catch(e){}
-          /* تطابق اسم الملف كاملاً فقط (005.mp3 ≠ 023.mp3) */
-          if(leaf && rLeaf && leaf === rLeaf) return r;
+          if(samePartialAudio(String(r.url || ""), url)) return r;
         }
         return null;
       });
@@ -13453,6 +14598,16 @@ body.interface-old .app::after{
     if(!enabled() || !url || !(maxSec > 0.5)) return;
     maxSec = Number(maxSec);
     maxAyah = Number(maxAyah) || 0;
+    /* اربط سقف التنزيل بمدى التوقيت حتى لا يُحفظ صوت بلا تظليل */
+    try{
+      if(typeof timingCoverageSec === "function"){
+        var cov = Number(timingCoverageSec()) || 0;
+        if(cov > 1){
+          maxSec = Math.min(maxSec, cov + 2);
+        }
+      }
+    }catch(e){}
+    if(!(maxSec > 0.5)) return;
     if(savedMaxSec[url] && maxSec <= savedMaxSec[url] + 1.5){
       /* حدّث رقم الآية فقط إن تقدّم */
       if(maxAyah > 0){
@@ -13591,7 +14746,10 @@ body.interface-old .app::after{
     - صفحة/توقيت السورة التالية عند الاقتراب من النهاية
   */
   function schedulePagesAndTiming(page, surah){
-    if(!enabled()) return;
+    /* يعمل دائماً عند وجود نت لتنزيل الصفحة التالية والتظليل تلقائياً */
+    try{
+      if(typeof navigator !== "undefined" && navigator.onLine === false) return;
+    }catch(e){}
     page = Number(page) || 1;
     surah = Number(surah) || 1;
     var endP = surahEndPage(surah);
@@ -13648,8 +14806,9 @@ body.interface-old .app::after{
 
   /* أثناء التشغيل: صفحات الآيات القادمة من التوقيت قبل أن يصل الصوت */
   function prefetchUpcomingFromTiming(){
-    if(!enabled()) return;
     try{
+      try{ if(typeof navigator !== "undefined" && navigator.onLine === false) return; }catch(e){}
+
       var a = document.getElementById("audio");
       var t = a ? (Number(a.currentTime) || 0) : 0;
       var list = null;
@@ -13755,47 +14914,121 @@ body.interface-old .app::after{
     }catch(e){ return false; }
   }
 
+  /*
+    مدى التلوين المتوفر (بالثواني) = نهاية آخر آية لها توقيت محفوظ.
+    هذا هو المرجع لطول الملف أوفلاين — وليس موضع التشغيل الصوتي.
+  */
+  function timingCoverageSec(){
+    try{
+      var best = 0;
+      var list = null;
+      try{
+        if(typeof currentTiming !== "undefined" && currentTiming && currentTiming.length){
+          list = currentTiming;
+        }
+      }catch(e){}
+      if(!list){
+        try{
+          var surah = currentSurahGuess();
+          var key = String(selectedReader || "") + ":" + surah;
+          if(typeof timingCache !== "undefined" && timingCache[key] && timingCache[key].length){
+            list = timingCache[key];
+          }
+        }catch(e){}
+      }
+      if(!list){
+        try{
+          var surah2 = currentSurahGuess();
+          var key2 = String(selectedReader || "") + ":" + surah2;
+          var raw = localStorage.getItem("ayaTiming:"+key2);
+          if(raw){
+            var p = JSON.parse(raw);
+            if(Array.isArray(p) && p.length) list = p;
+          }
+        }catch(e){}
+      }
+      if(!list || !list.length) return 0;
+      for(var i = 0; i < list.length; i++){
+        var en = Number(list[i].end_time) / 1000;
+        if(Number.isFinite(en) && en > best) best = en;
+      }
+      return best;
+    }catch(e){ return 0; }
+  }
+  try{ window.timingCoverageSec = timingCoverageSec; }catch(e){}
+
+  function timingCoverageAyah(){
+    try{
+      var best = 0;
+      var list = null;
+      try{
+        if(typeof currentTiming !== "undefined" && currentTiming && currentTiming.length) list = currentTiming;
+      }catch(e){}
+      if(!list){
+        try{
+          var surah = currentSurahGuess();
+          var key = String(selectedReader || "") + ":" + surah;
+          if(typeof timingCache !== "undefined" && timingCache[key]) list = timingCache[key];
+        }catch(e){}
+      }
+      if(!list || !list.length) return 0;
+      for(var i = 0; i < list.length; i++){
+        var a = Number(list[i].ayah);
+        if(Number.isFinite(a) && a > best) best = a;
+      }
+      return best;
+    }catch(e){ return 0; }
+  }
+
+  /*
+    طول الملف أوفلاين = أين وصل تنزيل التلوين (والصفحات المرتبطة)،
+    وليس طول/موضع المقطع الصوتي أثناء البث.
+    الترتيب: صوت يعمل → صفحة+تظليل → صوت محلي بطول التظليل فقط.
+  */
   function scheduleAudioProgress(){
-    if(!enabled()) return;
     try{
       var surah = currentSurahGuess();
       var url = audioUrlFor(surah);
       if(!url) return;
       var a = document.getElementById("audio");
-      var tNow = a ? (Number(a.currentTime) || 0) : 0;
 
-      if(isStreamingOnline()){
-        try{
-          if(tNow > 0.8){
-            try{ localStorage.setItem("ayaPartialMax:"+url, String(Math.max(tNow, Number(localStorage.getItem("ayaPartialMax:"+url))||0))); }catch(e){}
-          }
-        }catch(e){}
-        /* بعد 40ث تشغيل مستقر: مدّ المقطع في الخلفية (لا يمس src) كل ~50ث */
-        if(tNow > 40){
-          var aEl = document.getElementById("audio");
-          if(aEl && !aEl.paused && !aEl.__ayaBgPartialBusy){
-            aEl.__ayaBgPartialBusy = true;
-            setTimeout(function(){ try{ aEl.__ayaBgPartialBusy = false; }catch(e){} }, 50000);
-            var tgt = Math.max(tNow + 45, Number(aEl.__ayaPartialMaxSec)||0);
-            setTimeout(function(){
-              try{ downloadAudioUpTo(url, tgt, reachedAyahFromTiming()); }catch(e){}
-            }, 800);
-          }
-        }
-        return;
-      }
-
-      cacheTiming(surah);
-      prefetchUpcomingFromTiming();
+      /* 1) الصفحة + التظليل أولاً */
+      try{ cacheTiming(surah); }catch(e){}
       try{
         var page = typeof currentPage !== "undefined" ? currentPage : 1;
         schedulePagesAndTiming(page, surah);
       }catch(e){}
+      try{ prefetchUpcomingFromTiming(); }catch(e){}
 
-      var sec = reachedSecFromTiming();
-      if(!(sec > 0.8)) return;
-      var ayah = reachedAyahFromTiming();
-      downloadAudioUpTo(url, sec, ayah);
+      /* 2) طول الأوفلاين من مدى التلوين فقط */
+      var cover = 0;
+      try{ cover = Number(timingCoverageSec()) || 0; }catch(e){}
+      if(!(cover > 1)){
+        /* لا تلوين بعد: لا تمدّد الملف الصوتي المحلي */
+        return;
+      }
+      var tgt = cover;
+      var ayah = 0;
+      try{ ayah = Number(timingCoverageAyah()) || 0; }catch(e){}
+      if(!(ayah > 0)){
+        try{ ayah = reachedAyahFromTiming(); }catch(e){}
+      }
+
+      try{
+        localStorage.setItem("ayaPartialMax:"+url, String(cover));
+      }catch(e){}
+
+      var curMax = 0;
+      try{ curMax = Number(a && a.__ayaPartialMaxSec) || 0; }catch(e){}
+      if(curMax >= tgt - 1) return;
+
+      if(a && !a.__ayaBgPartialBusy){
+        a.__ayaBgPartialBusy = true;
+        setTimeout(function(){ try{ a.__ayaBgPartialBusy = false; }catch(e){} }, 12000);
+        downloadAudioUpTo(url, tgt, ayah);
+      }else if(!a){
+        downloadAudioUpTo(url, tgt, ayah);
+      }
     }catch(e){}
   }
 
@@ -13830,30 +15063,39 @@ body.interface-old .app::after{
 
     return idbFindPartial(url).then(function(rec){
       if(!rec || !rec.blob) return false;
-      /* ارفض إن كان المقطع لسورة أخرى */
+      /* ارفض إن كان المقطع لقارئ أو سورة أخرى */
       try{
-        var need = (String(url).split("/").pop() || "").split("?")[0];
-        var got = (String(rec.url || "").split("/").pop() || "").split("?")[0];
-        if(need && got && need !== got) return false;
+        if(!samePartialAudio(rec.url || "", url)) return false;
       }catch(e){}
 
       var maxSec = Number(rec.maxSec) || 0;
       var t = 0;
       try{
-        if(forceTime != null && Number(forceTime) > 0) t = Number(forceTime);
-        else t = Number(audioEl.currentTime) || 0;
+        /* أولوية: هدف seek صريح (ضغط على آية) ثم forceTime ثم الوقت الحالي */
+        var seekT = Number(audioEl.__ayaSeekTargetSec);
+        if(Number.isFinite(seekT) && seekT >= 0){
+          t = seekT;
+          try{ audioEl.__ayaSeekTargetSec = null; }catch(e){}
+        }else if(forceTime != null && Number(forceTime) >= 0){
+          t = Number(forceTime);
+        }else{
+          t = Number(audioEl.currentTime) || 0;
+        }
       }catch(e){}
       try{
         var saved = Number(audioEl.__ayaResumeAfterPartial) || 0;
-        if(t < 0.2 && saved > 0.2) t = saved;
+        /* لا تستبدل هدف الآية بموضع قديم إن كان seek نشطاً */
+        if(!(Number(audioEl.__ayaSeekToken) > 0 && Number.isFinite(Number(audioEl.__ayaSeekTargetSec)))){
+          if(t < 0.2 && saved > 0.2 && forceTime == null) t = saved;
+        }
       }catch(e){}
 
       /* إن كنا على blob لنفس الملف والموضع داخل المدى — لا تبدّل (يمنع التقطيع) */
       try{
         var cur = String(audioEl.currentSrc || audioEl.src || "");
         if(cur.indexOf("blob:") === 0){
-          var same = String(audioEl.__ayaPartialUrl || "") === String(rec.url || url) ||
-                     String(audioEl.__ayaPartialUrl || "").indexOf((url.split("/").pop()||"").split("?")[0]) >= 0;
+          var same = samePartialAudio(audioEl.__ayaPartialUrl || "", rec.url || url) ||
+                     samePartialAudio(audioEl.__ayaPartialUrl || "", url);
           var cover = !(maxSec > 1) || t < maxSec - 0.5;
           if(same && cover && audioEl.readyState >= 2){
             try{ audioEl.__ayaPartialMaxSec = maxSec || audioEl.__ayaPartialMaxSec; }catch(e){}
@@ -13862,37 +15104,113 @@ body.interface-old .app::after{
         }
       }catch(e){}
 
-      if(maxSec > 1 && t > maxSec - 0.1){
-        t = Math.max(0, maxSec - 1.2);
+      /* إن تجاوز الموضع (أو ذروة التشغيل) المقطع المحفوظ: لا تبدّل */
+      try{
+        var peak2 = Number(audioEl.__ayaPeakPos) || 0;
+        if(peak2 > t) t = peak2;
+        var res2 = Number(audioEl.__ayaResumeAfterPartial) || 0;
+        if(res2 > t) t = res2;
+      }catch(e){}
+      if(maxSec > 1 && t > maxSec - 0.35){
+        try{ audioEl.__ayaOfflineHold = true; }catch(e){}
+        return false;
+      }
+      /* مقطع قصير جداً والموضع أبعد: نفس السلوك */
+      if(maxSec > 0.5 && maxSec <= 1 && t > maxSec + 0.5){
+        return false;
       }
 
       audioEl.__ayaHandoffBusy = true;
       var wasPlaying = false;
       try{ wasPlaying = !audioEl.paused; }catch(e){}
+      /* أوقف فوراً قبل تبديل المصدر حتى لا يشتغل من الصفر */
+      try{ audioEl.pause(); }catch(e){}
       var local = URL.createObjectURL(rec.blob);
       try{ audioEl.__ayaPartialMaxSec = maxSec || 0; }catch(e){}
       try{ audioEl.__ayaPartialUrl = rec.url || url; }catch(e){}
       try{ audioEl.__ayaResumeAfterPartial = t; }catch(e){}
+      try{ audioEl.__ayaSeekTargetSec = t; }catch(e){}
+      try{ audioEl.__ayaOfflineEnded = false; }catch(e){}
 
       var done = false;
+      var targetPos = Math.max(0, Number(t) || 0);
+      var incompleteHold = false;
       var applyPos = function(){
-        if(done) return;
         try{
-          var r = Number(audioEl.__ayaResumeAfterPartial) || t || 0;
+          var r = targetPos;
+          try{
+            var rs = Number(audioEl.__ayaResumeAfterPartial);
+            if(rs > r) r = rs;
+          }catch(e){}
           var d = Number(audioEl.duration);
+          if(Number.isFinite(d) && d > 1){
+            /* المدة الفعلية للمقطع — المصدر الحقيقي للطول */
+            maxSec = Math.min(maxSec > 1 ? maxSec : d, d);
+            try{ audioEl.__ayaPartialMaxSec = maxSec; }catch(e){}
+          }
+          if(maxSec > 1) r = Math.min(r, Math.max(0, maxSec - 0.12));
           if(Number.isFinite(d) && d > 0) r = Math.min(r, Math.max(0, d - 0.08));
-          if(r > 0.15) audioEl.currentTime = r;
-        }catch(e){}
+          if(r > 0.12){
+            try{ audioEl.currentTime = r; }catch(e){}
+          }
+          return r;
+        }catch(e){ return targetPos; }
       };
       var finish = function(){
         if(done) return;
         done = true;
-        applyPos();
-        if(wasPlaying){
-          try{ audioEl.play().catch(function(){}); }catch(e){}
+        /* بعد معرفة المدة الحقيقية: هل الموضع أبعد من المقطع؟ */
+        try{
+          var d2 = Number(audioEl.duration);
+          if(Number.isFinite(d2) && d2 > 1){
+            maxSec = Math.min(maxSec > 1 ? maxSec : d2, d2);
+            audioEl.__ayaPartialMaxSec = maxSec;
+          }
+        }catch(e){}
+        if(maxSec > 1 && targetPos > maxSec - 0.35){
+          incompleteHold = true;
+          try{
+            audioEl.__ayaOfflineHold = true;
+            audioEl.__ayaResumeAfterPartial = targetPos;
+            audioEl.__ayaConnSwitchPos = targetPos;
+            audioEl.__ayaPeakPos = Math.max(Number(audioEl.__ayaPeakPos)||0, targetPos);
+          }catch(e){}
+          try{ audioEl.pause(); }catch(e){}
+          try{
+            var pb = document.getElementById("playButton");
+            if(pb) pb.textContent = "▶";
+          }catch(e){}
+          try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = false; }catch(e){}
+          /* اعرض نهاية المتاح فقط دون تشغيل */
+          try{ audioEl.currentTime = Math.max(0, maxSec - 0.15); }catch(e){}
+          try{
+            if(typeof showOfflineIncompleteAlert === "function") showOfflineIncompleteAlert();
+          }catch(e){}
+        }else{
+          applyPos();
+          var tryPlay = function(attempt){
+            if(incompleteHold) return;
+            try{
+              var ct = Number(audioEl.currentTime) || 0;
+              if(targetPos > 0.5 && Math.abs(ct - targetPos) > 0.6 && attempt < 6){
+                applyPos();
+                setTimeout(function(){ tryPlay(attempt + 1); }, 50);
+                return;
+              }
+              if(wasPlaying){
+                audioEl.play().catch(function(){});
+              }
+            }catch(e){
+              if(wasPlaying){ try{ audioEl.play().catch(function(){}); }catch(e2){} }
+            }
+          };
+          setTimeout(function(){ tryPlay(0); }, 40);
         }
+        setTimeout(function(){
+          try{ audioEl.__ayaSeekTargetSec = null; }catch(e){}
+        }, 700);
         try{ if(typeof setAudioLoading === "function") setAudioLoading(false); }catch(e){}
-        audioEl.__ayaHandoffBusy = false;
+        setTimeout(function(){ try{ audioEl.__ayaHandoffBusy = false; }catch(e){} }, 600);
         try{
           if(typeof loadTimingForCurrentSurah === "function") loadTimingForCurrentSurah();
         }catch(e){}
@@ -13910,11 +15228,16 @@ body.interface-old .app::after{
         try{ audioEl.removeEventListener("canplay", onC); }catch(e){}
         finish();
       });
+      audioEl.addEventListener("seeked", function onSk(){
+        try{ audioEl.removeEventListener("seeked", onSk); }catch(e){}
+        /* بعد seek ناجح — لا تعِد من الصفر */
+      });
       try{ audioEl.src = local; }catch(e){ audioEl.__ayaHandoffBusy = false; return false; }
-      setTimeout(applyPos, 60);
-      setTimeout(applyPos, 180);
-      setTimeout(finish, 350);
-      setTimeout(function(){ audioEl.__ayaHandoffBusy = false; }, 800);
+      setTimeout(applyPos, 40);
+      setTimeout(applyPos, 120);
+      setTimeout(applyPos, 280);
+      setTimeout(finish, 400);
+      setTimeout(function(){ try{ audioEl.__ayaHandoffBusy = false; }catch(e){} }, 1000);
       return true;
     }).catch(function(){
       try{ var a = document.getElementById("audio"); if(a) a.__ayaHandoffBusy = false; }catch(e){}
@@ -13930,23 +15253,206 @@ body.interface-old .app::after{
       var url = audioUrlFor(currentSurahGuess());
       if(!url) return;
       var offline = (typeof navigator !== "undefined" && navigator.onLine === false);
+
       if(offline){
-        var src = String(a.currentSrc || a.src || "");
-        if(src.indexOf("http") === 0 || (a.error && a.error.code)){
-          var t = Number(a.currentTime) || 0;
-          try{ a.__ayaResumeAfterPartial = t; }catch(e){}
-          seamlessToPartial(url, t);
+        /* أعلى موضع لحظة الانقطاع (حي أو ذروة التشغيل) */
+        var t = 0;
+        try{ t = Number(a.currentTime) || 0; }catch(e){}
+        try{
+          var peak = Number(a.__ayaPeakPos) || 0;
+          var res = Number(a.__ayaResumeAfterPartial) || 0;
+          t = Math.max(t, peak, res);
+        }catch(e){}
+        if(!(t > 0.2)){
+          try{ t = Number(a.__ayaResumeAfterPartial) || 0; }catch(e){}
         }
+        try{ a.__ayaConnSwitchPos = t; }catch(e){}
+        try{ a.__ayaResumeAfterPartial = t; }catch(e){}
+        try{ a.__ayaPeakPos = Math.max(Number(a.__ayaPeakPos)||0, t); }catch(e){}
+        try{ a.__ayaWasPlayingBeforeOffline = !a.paused; }catch(e){}
+        try{ a.__ayaOfflineHold = false; }catch(e){}
+
+        var src = String(a.currentSrc || a.src || "");
+        var onHttp = (src.indexOf("http") === 0);
+        if(onHttp || (a.error && a.error.code)){
+          try{ a.pause(); }catch(e){}
+          try{ a.__ayaSeekTargetSec = t; }catch(e){}
+
+          var holdIncomplete = function(){
+            try{
+              if(a.__ayaOfflineHold && window.__ayaIncompleteAlertShown) return;
+            }catch(e){}
+            try{
+              a.__ayaOfflineHold = true;
+              a.__ayaResumeAfterPartial = t;
+              a.__ayaConnSwitchPos = t;
+              a.__ayaWasPlayingBeforeOffline = true;
+            }catch(e){}
+            try{ a.pause(); }catch(e){}
+            try{
+              var pb = document.getElementById("playButton");
+              if(pb) pb.textContent = "▶";
+            }catch(e){}
+            try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = false; }catch(e){}
+            try{
+              if(typeof showOfflineIncompleteAlert === "function") showOfflineIncompleteAlert();
+              else if(typeof setStatus === "function") setStatus("الملف غير مكتمل محلياً");
+            }catch(e){}
+          };
+
+          /* تحقق مسبقاً: هل المقطع المحلي يغطي موضع التوقف؟ */
+          Promise.resolve(idbFindPartial(url)).then(function(rec){
+            var maxSec = rec ? (Number(rec.maxSec) || 0) : 0;
+            var hasBlob = !!(rec && rec.blob);
+            if(!hasBlob || !(maxSec > 1) || t > maxSec - 0.35){
+              /* لا يغطي الموضع — رسالة ولا تبديل للمقطع (يمنع القفز لنهاية 7:24) */
+              holdIncomplete();
+              return;
+            }
+            Promise.resolve(seamlessToPartial(url, t)).then(function(ok){
+              if(!ok){
+                holdIncomplete();
+                return;
+              }
+              var fix = function(){
+                try{
+                  var want = Number(a.__ayaConnSwitchPos);
+                  if(!(want > 0.2)) want = Number(a.__ayaResumeAfterPartial) || t || 0;
+                  var ct = Number(a.currentTime) || 0;
+                  if(want > 0.3 && Math.abs(ct - want) > 0.7){
+                    a.currentTime = want;
+                  }
+                }catch(e){}
+              };
+              setTimeout(fix, 120);
+              setTimeout(fix, 350);
+              setTimeout(function(){
+                fix();
+                try{
+                  if(a.__ayaWasPlayingBeforeOffline && a.paused){
+                    a.play().catch(function(){});
+                  }
+                }catch(e){}
+              }, 500);
+            }).catch(function(){ holdIncomplete(); });
+          }).catch(function(){ holdIncomplete(); });
+        }
+        /* إن كنّا أصلاً على blob محلي — لا تغيّر شيئاً، يكمل من نفس الموضع */
       }else{
-        /* عودة النت: ابقَ على المقطع إن كان يعمل — لا ترجع للشبكة (تقطيع) */
+        /* عودة الشبكة */
+        try{ window.__ayaIncompleteAlertShown = false; }catch(e){}
+        try{
+          /* سورة معلّقة من اختيار أوفلاين */
+          var pend = null;
+          try{ pend = window.__ayaPendingNav; }catch(e){}
+          if(!pend){
+            try{
+              var raw = localStorage.getItem("ayaPendingNav");
+              if(raw) pend = JSON.parse(raw);
+            }catch(e){}
+          }
+          if(pend && Number(pend.surah) >= 1 && Number(pend.surah) <= 114){
+            var age = Date.now() - (Number(pend.ts) || 0);
+            if(age >= 0 && age < 2 * 60 * 60 * 1000){
+              var pSurah = Number(pend.surah);
+              var pPage = Number(pend.page) || 1;
+              var wantPlay = pend.autoPlay !== false;
+              try{ window.__ayaPendingNav = null; localStorage.removeItem("ayaPendingNav"); }catch(e){}
+              try{ currentAudioSurah = pSurah; }catch(e){}
+              try{ if(typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(pSurah); }catch(e){}
+              try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = !!wantPlay; }catch(e){}
+              setTimeout(function(){
+                try{
+                  if(typeof loadPage === "function"){
+                    loadPage(pPage, { surahNumber: pSurah, autoContinue: !!wantPlay });
+                  }
+                }catch(e){}
+              }, 80);
+              return;
+            }
+          }
+        }catch(e){}
+
+        /*
+          موضع واحد حي عند لحظة عودة النت = currentTime الآن
+          (إن كان يعمل أوفلاين من مقطع، أكمل من هنا — لا ترجع لموضع قديم).
+        */
+        var liveNow = 0;
+        try{ liveNow = Number(a.currentTime) || 0; }catch(e){}
+        try{
+          if(a.__ayaOfflineEnded){
+            var endR = Number(a.__ayaResumeAfterPartial) || Number(a.__ayaPartialMaxSec) || 0;
+            if(endR > liveNow) liveNow = endR;
+          }
+        }catch(e){}
+        if(!(liveNow > 0.2)){
+          try{ liveNow = Number(a.__ayaResumeAfterPartial) || 0; }catch(e){}
+        }
+        try{ a.__ayaResumeAfterPartial = liveNow; }catch(e){}
+        try{ a.__ayaConnSwitchPos = liveNow; }catch(e){}
+        try{ a.__ayaOfflineEnded = false; }catch(e){}
+
+        var wasHold = !!a.__ayaOfflineHold;
+        try{ a.__ayaOfflineHold = false; }catch(e){}
+
+        if(wasHold && liveNow > 0.3 && url){
+          /* كان متوقفاً لأن الملف غير مكتمل — انتقل للشبكة من نفس الموضع */
+          var wantPlay2 = !!a.__ayaWasPlayingBeforeOffline;
+          try{ a.__ayaForceNet = true; }catch(e){}
+          try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = wantPlay2; }catch(e){}
+          var doneResume = false;
+          var applyResume = function(){
+            if(doneResume) return;
+            if(a.readyState < 1) return;
+            doneResume = true;
+            try{ a.removeEventListener("loadedmetadata", applyResume); }catch(e){}
+            try{ a.removeEventListener("canplay", applyResume); }catch(e){}
+            try{
+              var d = Number(a.duration);
+              var pos = liveNow;
+              if(Number.isFinite(d) && d > 1) pos = Math.min(pos, d - 0.05);
+              if(pos > 0.2) a.currentTime = pos;
+            }catch(e){}
+            try{ a.__ayaForceNet = false; }catch(e){}
+            /* إعادة مزامنة التلوين مع موضع التشغيل بعد العودة أونلاين */
+            try{ if(typeof loadTimingForCurrentSurah === "function") loadTimingForCurrentSurah(); }catch(e){}
+            try{ if(typeof positionHighlightLayer === "function") positionHighlightLayer(); }catch(e){}
+            try{ if(typeof syncHighlight === "function") syncHighlight(); }catch(e){}
+            setTimeout(function(){ try{ if(typeof syncHighlight === "function") syncHighlight(); }catch(e){} }, 120);
+            setTimeout(function(){ try{ if(typeof syncHighlight === "function") syncHighlight(); }catch(e){} }, 400);
+            if(wantPlay2){
+              try{
+                a.play().then(function(){
+                  try{
+                    var pb = document.getElementById("playButton");
+                    if(pb) pb.textContent = "Ⅱ";
+                  }catch(e){}
+                  try{ if(typeof syncHighlight === "function") syncHighlight(); }catch(e){}
+                }).catch(function(){});
+              }catch(e){}
+            }
+          };
+          a.addEventListener("loadedmetadata", applyResume);
+          a.addEventListener("canplay", applyResume);
+          try{ a.src = url; a.load(); }catch(e){}
+          setTimeout(applyResume, 200);
+          setTimeout(applyResume, 600);
+          return;
+        }
+
+        /* يعمل أصلاً على blob: مدّد التنزيل فقط — لا تعِد الموضع */
         try{
           var src2 = String(a.currentSrc || a.src || "");
           if(src2.indexOf("blob:") === 0){
             var maxSec = Number(a.__ayaPartialMaxSec) || 0;
-            var t2 = Number(a.currentTime) || 0;
-            if(maxSec > 1) downloadAudioUpTo(url, Math.max(maxSec, t2) + 60, reachedAyahFromTiming());
+            var t2 = liveNow;
+            if(maxSec > 1) downloadAudioUpTo(url, Math.max(maxSec, t2 + 18), reachedAyahFromTiming());
           }
         }catch(e){}
+        /* تأكيد مزامنة التلوين بعد عودة الشبكة */
+        try{ if(typeof loadTimingForCurrentSurah === "function") loadTimingForCurrentSurah(); }catch(e){}
+        try{ if(typeof syncHighlight === "function") syncHighlight(); }catch(e){}
+        setTimeout(function(){ try{ if(typeof syncHighlight === "function") syncHighlight(); }catch(e){} }, 250);
       }
     }catch(e){}
   }
@@ -13956,6 +15462,78 @@ body.interface-old .app::after{
       window.__ayaConnBound = true;
       window.addEventListener("offline", onConnectivityChange);
       window.addEventListener("online", onConnectivityChange);
+      /* احتياطي: بعض واجهات WebView لا تُطلق offline فوراً */
+      if(!window.__ayaNetPollBound){
+        window.__ayaNetPollBound = true;
+        var __ayaLastOnline = (typeof navigator !== "undefined") ? !!navigator.onLine : true;
+        setInterval(function(){
+          try{
+            var now = (typeof navigator !== "undefined") ? !!navigator.onLine : true;
+            if(now !== __ayaLastOnline){
+              __ayaLastOnline = now;
+              onConnectivityChange();
+            }
+          }catch(e){}
+        }, 1500);
+      }
+
+/* استئناف السورة المختارة أوفلاين فور عودة الشبكة */
+(function(){
+  function resumePendingNavOnOnline(){
+    try{
+      if(typeof navigator !== "undefined" && navigator.onLine === false) return;
+      var pend = null;
+      try{ pend = window.__ayaPendingNav; }catch(e){}
+      if(!pend){
+        try{
+          var raw = localStorage.getItem("ayaPendingNav");
+          if(raw) pend = JSON.parse(raw);
+        }catch(e){}
+      }
+      if(!pend || !(Number(pend.surah) >= 1 && Number(pend.surah) <= 114)) return;
+      var age = Date.now() - (Number(pend.ts) || 0);
+      if(age < 0 || age > 2 * 60 * 60 * 1000){
+        try{ window.__ayaPendingNav = null; localStorage.removeItem("ayaPendingNav"); }catch(e){}
+        return;
+      }
+      var pSurah = Number(pend.surah);
+      var pPage = Number(pend.page) || 1;
+      var wantPlay = pend.autoPlay !== false;
+      /* إن كنّا بالفعل على نفس السورة والصفحة مع تشغيل — لا تعِد */
+      try{
+        if(Number(currentAudioSurah) === pSurah && Number(currentPage) === pPage){
+          var a = document.getElementById("audio");
+          if(a && !a.paused && a.readyState >= 2){
+            try{ window.__ayaPendingNav = null; localStorage.removeItem("ayaPendingNav"); }catch(e){}
+            return;
+          }
+        }
+      }catch(e){}
+      try{
+        window.__ayaPendingNav = null;
+        localStorage.removeItem("ayaPendingNav");
+      }catch(e){}
+      try{ currentAudioSurah = pSurah; }catch(e){}
+      try{ if(typeof syncPlayerSurahUI === "function") syncPlayerSurahUI(pSurah); }catch(e){}
+      try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = !!wantPlay; }catch(e){}
+      setTimeout(function(){
+        try{
+          if(typeof loadPage === "function"){
+            loadPage(pPage, { surahNumber: pSurah, autoContinue: !!wantPlay });
+          }
+        }catch(e){}
+      }, 120);
+    }catch(e){}
+  }
+  try{
+    window.addEventListener("online", function(){
+      setTimeout(resumePendingNavOnOnline, 200);
+      setTimeout(resumePendingNavOnOnline, 900);
+    });
+  }catch(e){}
+  try{ window.__ayaResumePendingNav = resumePendingNavOnOnline; }catch(e){}
+})();
+
     }
   }catch(e){}
 
@@ -14005,6 +15583,17 @@ body.interface-old .app::after{
         });
       }
       a.addEventListener("timeupdate", function(){
+        /* احفظ أعلى موضع حي — لا تكتب صفراً بعد ended للمقطع */
+        try{
+          if(a.__ayaOfflineEnded) return;
+          var lt = Number(a.currentTime) || 0;
+          if(lt > 0.2){
+            a.__ayaResumeAfterPartial = lt;
+            a.__ayaConnSwitchPos = lt;
+            var peak = Number(a.__ayaPeakPos) || 0;
+            if(lt > peak) a.__ayaPeakPos = lt;
+          }
+        }catch(e){}
         if(a.__ayaPartialTick) return;
         a.__ayaPartialTick = true;
         setTimeout(function(){
@@ -14012,8 +15601,9 @@ body.interface-old .app::after{
           scheduleAudioProgress();
         }, 2000);
         /*
-          لا ننتقل للشبكة أثناء التشغيل (تسبب تعليق التحميل).
-          نمدّد المقطع المحلي +90ث، وعند الحاجة نستبدل الـ blob بمقطع أطول مع حفظ الموضع.
+          أثناء التشغيل من المقطع المحلي:
+          - مدّد المقطع في الخلفية (بدون تبديل المصدر)
+          - قرّب النهاية: جهّز الشبكة مسبقاً فقط، والتبديل عند ended لمنع التقطيع
         */
         try{
           var maxSec = Number(a.__ayaPartialMaxSec) || 0;
@@ -14022,67 +15612,42 @@ body.interface-old .app::after{
           if(!url) return;
           var online = true;
           try{ online = !(typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
-
-          /* مدّ المقطع فقط إن كنا نلعب من blob محلي — لا أثناء بث http */
           var srcNow = String(a.currentSrc || a.src || "");
-          if(online && srcNow.indexOf("blob:") === 0 && maxSec > 1){
-            if(!a.__ayaExtendTick){
-              a.__ayaExtendTick = true;
-              setTimeout(function(){ a.__ayaExtendTick = false; }, 5000);
-              var target = Math.max(maxSec, t) + 90;
-              downloadAudioUpTo(url, target, reachedAyahFromTiming());
-            }
+          if(!(online && srcNow.indexOf("blob:") === 0 && maxSec > 1 && maxSec < 1e8)) return;
+
+          /* تمديد صامت في الخلفية */
+          if(!a.__ayaExtendTick){
+            a.__ayaExtendTick = true;
+            setTimeout(function(){ a.__ayaExtendTick = false; }, 5000);
+            downloadAudioUpTo(url, Math.max(maxSec, t + 18), reachedAyahFromTiming());
           }
 
-          if(!(maxSec > 2 && maxSec < 1e8)) return;
-          /* بعيد عن النهاية: لا تبدّل المصدر */
-          if(t < maxSec - 1.5) return;
-          if(a.__ayaPartialUpgrading) return;
-          if(!online) return;
-
-          /*
-            إصلاح تقطّع الصوت عند عودة الشبكة:
-            لا تستبدل مصدر blob الجاري تشغيله بمقطع آخر أثناء التلاوة.
-            يستمر تنزيل الجزء التالي في الخلفية أعلاه، ويُترك الانتقال للمسار
-            المخصص عند نهاية المقطع، حتى لا يعاد تحميل الصوت أو يقفز التوقيت.
-          */
-          if(!a.paused && a.readyState >= 2) return;
-
-          a.__ayaPartialUpgrading = true;
-          var resumeAt = t;
-          (async function(){
-            try{
-              await downloadAudioUpTo(url, resumeAt + 120, reachedAyahFromTiming());
-            }catch(e){}
-            var rec = null;
-            try{ rec = await idbFindPartial(url); }catch(e){}
-            if(rec && rec.blob && Number(rec.maxSec) > resumeAt + 2){
-              try{ a.__ayaPartialMaxSec = Number(rec.maxSec); }catch(e){}
-              try{ a.__ayaPartialUrl = rec.url || url; }catch(e){}
-              try{ a.__ayaResumeAfterPartial = resumeAt; }catch(e){}
-              var wasPlaying = !a.paused;
-              var local = URL.createObjectURL(rec.blob);
-              var onMeta = function(){
-                try{ a.removeEventListener("loadedmetadata", onMeta); }catch(e){}
-                try{
-                  var r = Number(a.__ayaResumeAfterPartial) || resumeAt;
-                  var d = Number(a.duration);
-                  if(Number.isFinite(d) && d > 0) r = Math.min(r, d - 0.05);
-                  if(r > 0.2) a.currentTime = r;
-                }catch(e){}
-                if(wasPlaying) try{ a.play().catch(function(){}); }catch(e){}
-                a.__ayaPartialUpgrading = false;
-                try{ if(typeof setAudioLoading === "function") setAudioLoading(false); }catch(e){}
-              };
-              a.addEventListener("loadedmetadata", onMeta);
-              a.addEventListener("canplay", onMeta);
-              try{ a.src = local; }catch(e){ a.__ayaPartialUpgrading = false; }
-              setTimeout(onMeta, 80);
-              setTimeout(onMeta, 250);
-              return;
+          /* قبل النهاية بـ ~6 ث: حدّث maxSec من التخزين إن تمدّد المقطع، وجهّز الشبكة */
+          if(t >= maxSec - 6 && t < maxSec - 0.3){
+            if(!a.__ayaNearEndPrep){
+              a.__ayaNearEndPrep = true;
+              setTimeout(function(){ a.__ayaNearEndPrep = false; }, 4000);
+              idbFindPartial(url).then(function(rec){
+                if(!rec) return;
+                var ns = Number(rec.maxSec) || 0;
+                if(ns > maxSec + 1){
+                  try{ a.__ayaPartialMaxSec = ns; }catch(e){}
+                }
+              }).catch(function(){});
+              /* تسخين الشبكة دون تشغيل */
+              try{
+                if(!a.__ayaNetWarm || a.__ayaNetWarmUrl !== url){
+                  a.__ayaNetWarmUrl = url;
+                  if(a.__ayaNetWarm){ try{ a.__ayaNetWarm.src = ""; }catch(e){} }
+                  var warm = new Audio();
+                  warm.preload = "auto";
+                  warm.src = url;
+                  try{ warm.load(); }catch(e){}
+                  a.__ayaNetWarm = warm;
+                }
+              }catch(e){}
             }
-            a.__ayaPartialUpgrading = false;
-          })().catch(function(){ a.__ayaPartialUpgrading = false; });
+          }
         }catch(e){}
       });
       /*
@@ -14097,10 +15662,50 @@ body.interface-old .app::after{
           /* إذا انتهى الجزء المحلي والشبكة ما زالت مقطوعة، احفظ نقطة النهاية
              لأن المتصفح قد يعيد currentTime إلى صفر بعد حدث ended. */
           if(srcEnded.indexOf("blob:") === 0 && !onlineNow){
-            var offlineEnd = Number(a.__ayaPartialMaxSec) || Number(a.duration) || Number(a.currentTime) || 0;
+            var offlineEnd = Number(a.__ayaPartialMaxSec) || Number(a.duration) || 0;
+            var ctEnd = Number(a.currentTime) || 0;
+            /* بعد ended المتصفح قد يصفّر currentTime — اعتمد نهاية المقطع */
+            if(ctEnd > offlineEnd) offlineEnd = ctEnd;
+            if(!(offlineEnd > 0.5)) offlineEnd = Math.max(ctEnd, Number(a.__ayaResumeAfterPartial) || 0);
+            /* إن كان المقطع ≈ كامل السورة: لا تُمسك — اترك مسار السورة التالية */
+            var fullDur2 = 0;
+            try{
+              if(typeof timingCoverageSec === "function") fullDur2 = Number(timingCoverageSec()) || 0;
+            }catch(e){}
+            try{
+              if(!(fullDur2 > 5) && typeof currentTiming !== "undefined" && currentTiming && currentTiming.length){
+                var lt2 = currentTiming[currentTiming.length - 1];
+                fullDur2 = (Number(lt2.end_time) || Number(lt2.start_time) || 0) / 1000;
+              }
+            }catch(e){}
+            var dur2 = Number(a.duration) || 0;
+            var complete2 = (fullDur2 > 5 && (offlineEnd >= fullDur2 - 5 || dur2 >= fullDur2 - 5))
+              || (!(fullDur2 > 5) && dur2 > 20 && offlineEnd >= dur2 - 1.5);
+            if(complete2){
+              try{ a.__ayaPartialMaxSec = 0; }catch(e){}
+              try{ a.__ayaOfflineEnded = false; }catch(e){}
+              try{ a.__ayaOfflineHold = false; }catch(e){}
+              return;
+            }
             if(offlineEnd > 0.5){
               a.__ayaOfflineEnded = true;
+              a.__ayaOfflineHold = true;
               a.__ayaResumeAfterPartial = offlineEnd;
+              a.__ayaConnSwitchPos = offlineEnd;
+              try{ a.__ayaSeekTargetSec = null; }catch(e){}
+              try{ a.__ayaWasPlayingBeforeOffline = true; }catch(e){}
+              try{
+                if(Number.isFinite(Number(a.duration)) && a.duration > 0){
+                  a.currentTime = Math.max(0, Math.min(offlineEnd, a.duration - 0.05));
+                }
+              }catch(e){}
+              try{
+                var pb = document.getElementById("playButton");
+                if(pb) pb.textContent = "▶";
+              }catch(e){}
+              try{
+                if(typeof setStatus === "function") setStatus("انتهى الجزء المحفوظ — عند عودة الشبكة يُستأنف من هنا");
+              }catch(e){}
             }
             return;
           }
@@ -14117,8 +15722,9 @@ body.interface-old .app::after{
           var tokenEnded = (a.__ayaEndedHandoffToken || 0) + 1;
           a.__ayaEndedHandoffToken = tokenEnded;
           a.__ayaResumeAfterPartial = resumeEnded;
+          a.__ayaWantPlayAfterForce = true;
           a.__ayaForceNet = true;
-          try{ a.pause(); }catch(e){}
+          try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
 
           var finishedEnded = false;
           var continueNetwork = function(){
@@ -14127,33 +15733,47 @@ body.interface-old .app::after{
             finishedEnded = true;
             try{ a.removeEventListener("loadedmetadata", continueNetwork); }catch(e){}
             try{ a.removeEventListener("canplay", continueNetwork); }catch(e){}
+            try{ a.removeEventListener("canplaythrough", continueNetwork); }catch(e){}
             try{
               var durationEnded = Number(a.duration);
               var targetEnded = resumeEnded;
               if(Number.isFinite(durationEnded) && durationEnded > 0){
-                targetEnded = Math.min(targetEnded, Math.max(0, durationEnded - 0.15));
+                targetEnded = Math.min(targetEnded, Math.max(0, durationEnded - 0.08));
               }
-              a.currentTime = targetEnded;
+              if(targetEnded > 0.1) a.currentTime = targetEnded;
             }catch(e){}
             try{ a.__ayaPartialUrl = urlEnded; a.__ayaPartialMaxSec = 0; }catch(e){}
-            try{ a.play().then(function(){
-              try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
-            }).catch(function(){}); }catch(e){}
+            var doPlay = function(){
+              try{
+                a.play().then(function(){
+                  try{ if(typeof userWantsPlay !== "undefined") userWantsPlay = true; }catch(e){}
+                }).catch(function(){
+                  setTimeout(function(){ try{ a.play().catch(function(){}); }catch(e){} }, 80);
+                });
+              }catch(e){}
+            };
+            doPlay();
+            setTimeout(doPlay, 60);
+            setTimeout(doPlay, 200);
             setTimeout(function(){
               try{ if(a.__ayaEndedHandoffToken === tokenEnded) a.__ayaEndedHandoffBusy = false; }catch(e){}
-            }, 700);
+              try{ a.__ayaForceNet = false; }catch(e){}
+            }, 500);
           };
           a.addEventListener("loadedmetadata", continueNetwork);
           a.addEventListener("canplay", continueNetwork);
+          a.addEventListener("canplaythrough", continueNetwork);
           try{ a.src = urlEnded; a.load(); }catch(e){
             a.__ayaEndedHandoffBusy = false;
             try{ a.__ayaForceNet = false; }catch(ignore){}
           }
-          setTimeout(continueNetwork, 500);
+          setTimeout(continueNetwork, 180);
+          setTimeout(continueNetwork, 450);
           setTimeout(function(){
             if(!finishedEnded && a.__ayaEndedHandoffToken === tokenEnded){
               try{ a.removeEventListener("loadedmetadata", continueNetwork); }catch(e){}
               try{ a.removeEventListener("canplay", continueNetwork); }catch(e){}
+              try{ a.removeEventListener("canplaythrough", continueNetwork); }catch(e){}
               a.__ayaEndedHandoffBusy = false;
             }
           }, 10000);
@@ -14202,7 +15822,7 @@ body.interface-old .app::after{
         }catch(e){}
       });
 
-      /* عند عودة الشبكة: لا تلمس src — فقط مدّد المقطع في الخلفية */
+      /* عودة الشبكة: الموضع دائماً من currentTime الحي (يعالجها onConnectivityChange أيضاً) */
       try{
         if(!window.__ayaOnlinePartialBound){
           window.__ayaOnlinePartialBound = true;
@@ -14210,50 +15830,17 @@ body.interface-old .app::after{
             try{
               var el = document.getElementById("audio");
               if(!el) return;
+              /* حدّث الموضع الحي فوراً قبل أي تبديل */
+              var live = Number(el.currentTime) || 0;
+              try{ el.__ayaResumeAfterPartial = live; }catch(e){}
               var maxSec = Number(el.__ayaPartialMaxSec) || 0;
               var url = audioUrlFor(currentSurahGuess());
               if(!url) return;
-              /* إذا انتهى الملف المحلي أثناء انقطاع الشبكة، أكمل من نهاية
-                 الجزء المحفوظ بعد عودة الاتصال بدلاً من بدء السورة من الصفر. */
-              if(el.__ayaOfflineEnded && !el.__ayaOnlineEndHandoffBusy){
-                var resumeOnline = Number(el.__ayaResumeAfterPartial) || maxSec || 0;
-                if(resumeOnline > 0.5){
-                  el.__ayaOnlineEndHandoffBusy = true;
-                  el.__ayaForceNet = true;
-                  var finishedOnline = false;
-                  var resumeToNetwork = function(){
-                    if(finishedOnline || el.readyState < 1) return;
-                    finishedOnline = true;
-                    try{ el.removeEventListener("loadedmetadata", resumeToNetwork); }catch(e){}
-                    try{ el.removeEventListener("canplay", resumeToNetwork); }catch(e){}
-                    try{
-                      var durOnline = Number(el.duration);
-                      var targetOnline = resumeOnline;
-                      if(Number.isFinite(durOnline) && durOnline > 0) targetOnline = Math.min(targetOnline, Math.max(0, durOnline - 0.2));
-                      el.currentTime = targetOnline;
-                    }catch(e){}
-                    try{ el.__ayaOfflineEnded = false; el.__ayaPartialUrl = url; el.__ayaPartialMaxSec = 0; }catch(e){}
-                    try{ el.play().catch(function(){}); }catch(e){}
-                    setTimeout(function(){ try{ el.__ayaOnlineEndHandoffBusy = false; el.__ayaForceNet = false; }catch(e){} }, 1200);
-                  };
-                  el.addEventListener("loadedmetadata", resumeToNetwork);
-                  el.addEventListener("canplay", resumeToNetwork);
-                  try{ el.src = url; el.load(); }catch(e){ el.__ayaOnlineEndHandoffBusy = false; el.__ayaForceNet = false; }
-                  setTimeout(resumeToNetwork, 700);
-                  setTimeout(function(){
-                    if(!finishedOnline){
-                      try{ el.removeEventListener("loadedmetadata", resumeToNetwork); }catch(e){}
-                      try{ el.removeEventListener("canplay", resumeToNetwork); }catch(e){}
-                      el.__ayaOnlineEndHandoffBusy = false;
-                      el.__ayaForceNet = false;
-                    }
-                  }, 12000);
-                  return;
-                }
+              var src = String(el.currentSrc || el.src || "");
+              if(src.indexOf("blob:") === 0 && maxSec > 1){
+                downloadAudioUpTo(url, Math.max(maxSec, live + 18), reachedAyahFromTiming());
               }
-              if(!(maxSec > 1 && maxSec < 1e8)) return;
-              var t = Number(el.currentTime) || 0;
-              downloadAudioUpTo(url, Math.max(maxSec, t) + 60, reachedAyahFromTiming());
+              /* التبديل الفعلي للشبكة عند الحاجة يتم في onConnectivityChange بالموضع الحي */
             }catch(e){}
           });
         }
@@ -14281,7 +15868,7 @@ body.interface-old .app::after{
         }
       }
     }catch(e){}
-    /* مقطع جزئي IndexedDB (بحث مرن بالرابط أو اسم الملف) */
+    /* مقطع جزئي IndexedDB (نفس القارئ+السورة فقط) */
     try{
       var rec = await idbFindPartial(url);
       if(rec && rec.blob){
@@ -14330,25 +15917,22 @@ body.interface-old .app::after{
               try{ desc.set.call(self, v); }catch(e){}
               return;
             }
-            var offline = false;
-            try{ offline = (typeof navigator !== "undefined" && navigator.onLine === false); }catch(e){}
-            /* أونلاين: شبكة مباشرة — صفر انتظار IndexedDB */
-            if(!offline){
-              try{ desc.set.call(self, v); }catch(e){}
-              return;
-            }
-            /* أوفلاين: محلي لنفس اسم الملف فقط */
+            /* فضّل المحلي (جزئي أو كامل) دائماً؛ الشبكة عند التعذّر أو ForceNet */
+            /* أوفلاين/أونلاين: محلي لنفس القارئ+السورة فقط */
             var token = (self.__ayaSrcToken = (self.__ayaSrcToken || 0) + 1);
-            var leafNeed = "";
-            try{ leafNeed = (String(v).split("/").pop() || "").split("?")[0]; }catch(e){}
             var applied = false;
             resolveLocal(v).then(function(local){
               if(token !== self.__ayaSrcToken) return;
               if(local){
                 try{
                   var pu = String(self.__ayaPartialUrl || v);
-                  var leafGot = (pu.split("/").pop() || "").split("?")[0];
-                  if(leafNeed && leafGot && leafNeed !== leafGot){
+                  var ok = true;
+                  if(typeof samePartialAudio === "function"){
+                    ok = samePartialAudio(pu, v);
+                  }else{
+                    ok = String(pu).split("?")[0] === String(v).split("?")[0];
+                  }
+                  if(!ok){
                     try{ desc.set.call(self, v); }catch(e){}
                     return;
                   }
@@ -14424,10 +16008,13 @@ body.interface-old .app::after{
       if(on) boot();
     },
     scheduleAudioProgress: scheduleAudioProgress,
+    schedulePagesAndTiming: schedulePagesAndTiming,
     downloadAudioUpTo: downloadAudioUpTo,
     resolveLocal: resolveLocal,
     tryPlayPartial: tryPlayPartial,
     seamlessToPartial: seamlessToPartial,
+    samePartialAudio: samePartialAudio,
+    audioIdentity: audioIdentity,
     idbGet: idbGet,
     idbFindPartial: idbFindPartial,
     idbGetAll: idbGetAll
