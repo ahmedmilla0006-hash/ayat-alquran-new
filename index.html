@@ -2928,7 +2928,7 @@ body.aya-storage-from-settings #splashScreen{
   </button>
 
   <div class="side-menu-footer" id="sideMenuFooter">
-    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.192</span></div>
+    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.189</span></div>
     <button type="button" class="side-menu-update-link" id="sideMenuUpdateLink" aria-label="تحديث التطبيق">إصدار جديد متوفر: تحديث</button>
   </div>
 
@@ -3423,7 +3423,7 @@ body.interface-old #ayaTourDots .tour-dot-active{
       </div>
 
       <div class="about-copy" id="aboutAppVersion">
-        الإصدار <span id="aboutAppVersionNum">1.0.192</span>
+        الإصدار <span id="aboutAppVersionNum">1.0.189</span>
       </div>
 
       <div class="about-copy">
@@ -9931,7 +9931,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 ===================================================== */
 (function(){
   /* غيّر الرقم فقط هنا عند كل إصدار جديد — كلمة «الإصدار» تُضاف تلقائياً */
-  const APP_VERSION = "1.0.192";
+  const APP_VERSION = "1.0.189";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   /* حدّث الرقم فقط — كلمة «الإصدار» ثابتة في HTML */
   function setAppVersionDisplays(){
@@ -10384,6 +10384,11 @@ document.addEventListener("DOMContentLoaded",()=>{
       <button type="button" class="popup-close" id="storageManageClose" aria-label="إغلاق">×</button>
     </div>
     <p class="search-hint" style="margin-top:0">عرض ما يستهلكه التطبيق من التخزين ومسحه بشكل انتقائي دون حذف إعداداتك أو علاماتك.</p>
+    <div style="direction:rtl;background:rgba(40,120,75,.14);border:1px solid rgba(100,210,140,.28);border-radius:12px;padding:12px;margin:10px 0">
+      <div style="font-weight:700;margin-bottom:6px">حماية التنزيلات من الحذف التلقائي</div>
+      <div id="stPersistenceStatus" class="search-hint" style="margin:0 0 9px">جارٍ فحص دعم حماية التخزين…</div>
+      <button type="button" class="popup-item" id="stRequestPersistence" style="margin:0;width:100%;text-align:center">طلب حماية التخزين</button>
+    </div>
     <div id="storageStats" style="direction:rtl;display:flex;flex-direction:column;gap:10px;margin:12px 0">
       <div style="background:rgba(0,0,0,.22);border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
         <span>المجموع</span><strong id="stTotal">—</strong>
@@ -12510,7 +12515,7 @@ body.interface-old #downloadsPopup .download-native-select{
     عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
     var WHATS_NEW = {
-    "1.0.192": [
+    "1.0.189": [
       "تحسينات وإصلاحات"
     ],
     "1.0.188": [
@@ -16626,6 +16631,50 @@ body.interface-old .app::after{
     }
   }
 
+  async function refreshPersistenceStatus(){
+    var label = $("stPersistenceStatus");
+    var button = $("stRequestPersistence");
+    if(!label) return;
+    try{
+      if(!navigator.storage || typeof navigator.storage.persisted !== "function"){
+        label.textContent = "هذا الإصدار من WebView لا يوفّر واجهة حماية التخزين؛ ستبقى الملفات ضمن التخزين الحالي للتطبيق.";
+        if(button) button.disabled = true;
+        return;
+      }
+      var isPersisted = await navigator.storage.persisted();
+      label.textContent = isPersisted
+        ? "حماية التخزين مفعّلة؛ طلب النظام عدم حذف بيانات التطبيق تلقائياً."
+        : "حماية التخزين غير مفعّلة حالياً. يمكنك طلبها من الزر أدناه إذا كان النظام يدعمها.";
+      if(button){
+        button.disabled = !!isPersisted || typeof navigator.storage.persist !== "function";
+        button.textContent = isPersisted ? "حماية التخزين مفعّلة" : "طلب حماية التخزين";
+      }
+    }catch(e){
+      label.textContent = "تعذّر التحقق من حالة حماية التخزين على هذا الجهاز.";
+    }
+  }
+
+  async function requestPersistentStorage(){
+    var label = $("stPersistenceStatus");
+    var button = $("stRequestPersistence");
+    if(!navigator.storage || typeof navigator.storage.persist !== "function"){
+      if(label) label.textContent = "ميزة حماية التخزين غير مدعومة في WebView الحالي.";
+      if(button) button.disabled = true;
+      return;
+    }
+    if(button) button.disabled = true;
+    if(label) label.textContent = "جارٍ طلب حماية الملفات من الحذف التلقائي…";
+    try{
+      var granted = await navigator.storage.persist();
+      if(label) label.textContent = granted
+        ? "تم تفعيل حماية التخزين وفق دعم النظام. هذا يقلّل احتمال الحذف التلقائي، لكنه لا يحمي من حذف التطبيق أو مسح بياناته يدوياً."
+        : "لم يمنح النظام حماية التخزين. لم تُحذف أي ملفات، وما زالت التنزيلات الحالية كما هي.";
+    }catch(e){
+      if(label) label.textContent = "تعذّر طلب الحماية. لم يتم تعديل أو حذف أي تنزيل.";
+    }
+    await refreshPersistenceStatus();
+  }
+
   async function refreshStats(){
     var st = $("stStatus");
     if(st) st.textContent = "جاري حساب المساحة…";
@@ -16710,6 +16759,7 @@ body.interface-old .app::after{
     if(!p) return;
     p.classList.add("show");
     try{ if(typeof closeSideMenu === "function") closeSideMenu(); }catch(e){}
+    refreshPersistenceStatus();
     refreshStats();
   }
   function closePopup(){
@@ -16719,6 +16769,9 @@ body.interface-old .app::after{
     try{ document.body.classList.remove("aya-storage-from-settings"); }catch(e){}
     forceHideSplash();
   }
+
+  var persistBtn = $("stRequestPersistence");
+  if(persistBtn) persistBtn.addEventListener("click", requestPersistentStorage);
 
   var btn = $("storageManageButton");
   if(btn) btn.addEventListener("click", openPopup);
