@@ -2928,7 +2928,7 @@ body.aya-storage-from-settings #splashScreen{
   </button>
 
   <div class="side-menu-footer" id="sideMenuFooter">
-    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.189</span></div>
+    <div class="side-menu-version" id="sideMenuVersion">الإصدار <span id="sideMenuVersionNum">1.0.192</span></div>
     <button type="button" class="side-menu-update-link" id="sideMenuUpdateLink" aria-label="تحديث التطبيق">إصدار جديد متوفر: تحديث</button>
   </div>
 
@@ -3423,7 +3423,7 @@ body.interface-old #ayaTourDots .tour-dot-active{
       </div>
 
       <div class="about-copy" id="aboutAppVersion">
-        الإصدار <span id="aboutAppVersionNum">1.0.189</span>
+        الإصدار <span id="aboutAppVersionNum">1.0.192</span>
       </div>
 
       <div class="about-copy">
@@ -9931,7 +9931,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 ===================================================== */
 (function(){
   /* غيّر الرقم فقط هنا عند كل إصدار جديد — كلمة «الإصدار» تُضاف تلقائياً */
-  const APP_VERSION = "1.0.189";
+  const APP_VERSION = "1.0.192";
   try{ window.AYA_APP_VERSION = APP_VERSION; }catch(e){}
   /* حدّث الرقم فقط — كلمة «الإصدار» ثابتة في HTML */
   function setAppVersionDisplays(){
@@ -10384,11 +10384,6 @@ document.addEventListener("DOMContentLoaded",()=>{
       <button type="button" class="popup-close" id="storageManageClose" aria-label="إغلاق">×</button>
     </div>
     <p class="search-hint" style="margin-top:0">عرض ما يستهلكه التطبيق من التخزين ومسحه بشكل انتقائي دون حذف إعداداتك أو علاماتك.</p>
-    <div style="direction:rtl;background:rgba(40,120,75,.14);border:1px solid rgba(100,210,140,.28);border-radius:12px;padding:12px;margin:10px 0">
-      <div style="font-weight:700;margin-bottom:6px">حماية التنزيلات من الحذف التلقائي</div>
-      <div id="stPersistenceStatus" class="search-hint" style="margin:0 0 9px">جارٍ فحص دعم حماية التخزين…</div>
-      <button type="button" class="popup-item" id="stRequestPersistence" style="margin:0;width:100%;text-align:center">طلب حماية التخزين</button>
-    </div>
     <div id="storageStats" style="direction:rtl;display:flex;flex-direction:column;gap:10px;margin:12px 0">
       <div style="background:rgba(0,0,0,.22);border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
         <span>المجموع</span><strong id="stTotal">—</strong>
@@ -12515,7 +12510,7 @@ body.interface-old #downloadsPopup .download-native-select{
     عند إصدار جديد: غيّر APP_VERSION وأضف عنصراً هنا بنفس رقم الإصدار.
   */
     var WHATS_NEW = {
-    "1.0.189": [
+    "1.0.192": [
       "تحسينات وإصلاحات"
     ],
     "1.0.188": [
@@ -14303,26 +14298,38 @@ body.interface-old .app::after{
     });
   }
 
-  function idbGet(url){
-    return openIdb().then(function(db){
-      return new Promise(function(resolve, reject){
-        var tx = db.transaction(IDB_STORE, "readonly");
-        var req = tx.objectStore(IDB_STORE).get(url);
-        req.onsuccess = function(){ resolve(req.result || null); };
-        req.onerror = function(){ reject(req.error); };
-      });
-    }).catch(function(){ return null; });
+  function nativeStore(){
+    try{ var n=window.AyaPrivateAudioStore; return n && typeof n.getPartial === "function" && typeof n.putPartial === "function" ? n : null; }
+    catch(e){ return null; }
   }
-
+  function decodeNativeRecord(raw){
+    if(!raw) return null;
+    try{ var r=(typeof raw === "string")?JSON.parse(raw):raw; if(!r || !r.url || !r.data) return null;
+      var bin=atob(r.data), bytes=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+      r.blob=new Blob([bytes],{type:"audio/mpeg"}); delete r.data; return r;
+    }catch(e){ return null; }
+  }
+  function encodeBlobBase64(blob){
+    return blob.arrayBuffer().then(function(buffer){ var bytes=new Uint8Array(buffer), chunk=0x8000, parts=[];
+      for(var i=0;i<bytes.length;i+=chunk) parts.push(String.fromCharCode.apply(null,bytes.subarray(i,Math.min(i+chunk,bytes.length))));
+      return btoa(parts.join(""));
+    });
+  }
+  function idbGet(url){
+    var native=nativeStore();
+    if(native){ try{ var raw=native.getPartial(String(url||"")); if(raw){var rec=decodeNativeRecord(raw);if(rec)return Promise.resolve(rec);} }catch(e){} }
+    return openIdb().then(function(db){ return new Promise(function(resolve,reject){
+      var tx=db.transaction(IDB_STORE,"readonly"), req=tx.objectStore(IDB_STORE).get(url);
+      req.onsuccess=function(){resolve(req.result||null);}; req.onerror=function(){reject(req.error);};
+    }); }).catch(function(){return null;});
+  }
   function idbGetAll(){
-    return openIdb().then(function(db){
-      return new Promise(function(resolve){
-        var tx = db.transaction(IDB_STORE, "readonly");
-        var req = tx.objectStore(IDB_STORE).getAll();
-        req.onsuccess = function(){ resolve(req.result || []); };
-        req.onerror = function(){ resolve([]); };
-      });
-    }).catch(function(){ return []; });
+    var native=nativeStore(), nativeRows=[];
+    if(native){try{var list=JSON.parse(native.listPartials()||"[]");for(var i=0;i<list.length;i++){var rec=decodeNativeRecord(native.getPartial(String(list[i].url||"")));if(rec)nativeRows.push(rec);}}catch(e){}}
+    return openIdb().then(function(db){return new Promise(function(resolve){
+      var tx=db.transaction(IDB_STORE,"readonly"),req=tx.objectStore(IDB_STORE).getAll();
+      req.onsuccess=function(){resolve(nativeRows.concat(req.result||[]));};req.onerror=function(){resolve(nativeRows);};
+    });}).catch(function(){return nativeRows;});
   }
 
   /*
@@ -14373,14 +14380,23 @@ body.interface-old .app::after{
   }
 
   function idbPut(record){
-    return openIdb().then(function(db){
-      return new Promise(function(resolve, reject){
-        var tx = db.transaction(IDB_STORE, "readwrite");
-        tx.objectStore(IDB_STORE).put(record);
-        tx.oncomplete = function(){ resolve(); };
-        tx.onerror = function(){ reject(tx.error); };
+    var native=nativeStore();
+    if(native && record && record.blob){
+      return encodeBlobBase64(record.blob).then(function(data){
+        var ok=native.putPartial(String(record.url||""),data,Number(record.maxSec)||0,Number(record.maxAyah)||0,
+          Number(record.byteEnd)||0,Number(record.contentLength)||0,Number(record.updatedAt)||Date.now());
+        if(String(ok)!=="true") throw new Error("native audio storage failed");
       });
-    }).catch(function(){});
+    }
+    /* تطبيق أندرويد: لا تُسقط التنزيلات الجديدة بصمت إلى WebView IndexedDB. */
+    try{
+      var isNativeAndroid = !!window.AndroidInterface || !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
+      if(isNativeAndroid) return Promise.reject(new Error("Android private audio storage bridge unavailable"));
+    }catch(e){}
+    return openIdb().then(function(db){return new Promise(function(resolve,reject){
+      var tx=db.transaction(IDB_STORE,"readwrite");tx.objectStore(IDB_STORE).put(record);
+      tx.oncomplete=function(){resolve();};tx.onerror=function(){reject(tx.error);};
+    });}).catch(function(){});
   }
 
   async function putUrl(cacheName, url){
@@ -15873,7 +15889,7 @@ body.interface-old .app::after{
         }
       }
     }catch(e){}
-    /* مقطع جزئي IndexedDB (نفس القارئ+السورة فقط) */
+    /* مقطع جزئي من التخزين الداخلي الخاص على أندرويد مع توافق البيانات القديمة */
     try{
       var rec = await idbFindPartial(url);
       if(rec && rec.blob){
@@ -16080,25 +16096,16 @@ body.interface-old .app::after{
   }
 
   async function partialSize(){
-    try{
-      var db = await openIdb();
-      return await new Promise(function(resolve){
-        var tx = db.transaction(IDB_STORE, "readonly");
-        var store = tx.objectStore(IDB_STORE);
-        var req = store.getAll();
-        req.onsuccess = function(){
-          var rows = req.result || [];
-          var total = 0;
-          for(var i=0;i<rows.length;i++){
-            var b = rows[i] && rows[i].blob;
-            if(b && typeof b.size === "number") total += b.size;
-            else if(rows[i] && rows[i].byteEnd) total += Number(rows[i].byteEnd) || 0;
-          }
-          resolve({ bytes: total, count: rows.length });
-        };
-        req.onerror = function(){ resolve({ bytes: 0, count: 0 }); };
-      });
-    }catch(e){ return { bytes: 0, count: 0 }; }
+    var nativeBytes=0,nativeCount=0;
+    try{var n=window.AyaPrivateAudioStore;if(n&&typeof n.getPartialStats==="function"){
+      var st=JSON.parse(n.getPartialStats()||"{}");nativeBytes=Number(st.bytes)||0;nativeCount=Number(st.count)||0;}}catch(e){}
+    try{var db=await openIdb();return await new Promise(function(resolve){
+      var tx=db.transaction(IDB_STORE,"readonly"),req=tx.objectStore(IDB_STORE).getAll();
+      req.onsuccess=function(){var rows=req.result||[],total=nativeBytes,count=nativeCount;
+        for(var i=0;i<rows.length;i++){var b=rows[i]&&rows[i].blob;if(b&&typeof b.size==="number")total+=b.size;else if(rows[i]&&rows[i].byteEnd)total+=Number(rows[i].byteEnd)||0;count++;}
+        resolve({bytes:total,count:count});};
+      req.onerror=function(){resolve({bytes:nativeBytes,count:nativeCount});};
+    });}catch(e){return {bytes:nativeBytes,count:nativeCount};}
   }
 
   async function timingLocalSize(){
@@ -16195,17 +16202,15 @@ body.interface-old .app::after{
   }
 
   async function listPartials(){
-    var rows = [];
-    try{
-      var db = await openIdb();
-      rows = await new Promise(function(resolve){
-        var tx = db.transaction(IDB_STORE, "readonly");
-        var req = tx.objectStore(IDB_STORE).getAll();
-        req.onsuccess = function(){ resolve(req.result || []); };
-        req.onerror = function(){ resolve([]); };
-      });
-    }catch(e){}
-    return rows;
+    var rows=[];
+    try{var n=window.AyaPrivateAudioStore;if(n&&typeof n.listPartials==="function"){
+      var a=JSON.parse(n.listPartials()||"[]");for(var i=0;i<a.length;i++){var m=a[i]||{};
+        rows.push({url:m.url,maxSec:m.maxSec,maxAyah:m.maxAyah,byteEnd:m.byteEnd,contentLength:m.contentLength,
+          updatedAt:m.updatedAt,blob:{size:Number(m.bytes)||0},__native:true});}}}catch(e){}
+    try{var db=await openIdb();var oldRows=await new Promise(function(resolve){
+      var tx=db.transaction(IDB_STORE,"readonly"),req=tx.objectStore(IDB_STORE).getAll();
+      req.onsuccess=function(){resolve(req.result||[]);};req.onerror=function(){resolve([]);};});rows=rows.concat(oldRows);
+    }catch(e){} return rows;
   }
 
   function listTimingKeys(){
@@ -16631,50 +16636,6 @@ body.interface-old .app::after{
     }
   }
 
-  async function refreshPersistenceStatus(){
-    var label = $("stPersistenceStatus");
-    var button = $("stRequestPersistence");
-    if(!label) return;
-    try{
-      if(!navigator.storage || typeof navigator.storage.persisted !== "function"){
-        label.textContent = "هذا الإصدار من WebView لا يوفّر واجهة حماية التخزين؛ ستبقى الملفات ضمن التخزين الحالي للتطبيق.";
-        if(button) button.disabled = true;
-        return;
-      }
-      var isPersisted = await navigator.storage.persisted();
-      label.textContent = isPersisted
-        ? "حماية التخزين مفعّلة؛ طلب النظام عدم حذف بيانات التطبيق تلقائياً."
-        : "حماية التخزين غير مفعّلة حالياً. يمكنك طلبها من الزر أدناه إذا كان النظام يدعمها.";
-      if(button){
-        button.disabled = !!isPersisted || typeof navigator.storage.persist !== "function";
-        button.textContent = isPersisted ? "حماية التخزين مفعّلة" : "طلب حماية التخزين";
-      }
-    }catch(e){
-      label.textContent = "تعذّر التحقق من حالة حماية التخزين على هذا الجهاز.";
-    }
-  }
-
-  async function requestPersistentStorage(){
-    var label = $("stPersistenceStatus");
-    var button = $("stRequestPersistence");
-    if(!navigator.storage || typeof navigator.storage.persist !== "function"){
-      if(label) label.textContent = "ميزة حماية التخزين غير مدعومة في WebView الحالي.";
-      if(button) button.disabled = true;
-      return;
-    }
-    if(button) button.disabled = true;
-    if(label) label.textContent = "جارٍ طلب حماية الملفات من الحذف التلقائي…";
-    try{
-      var granted = await navigator.storage.persist();
-      if(label) label.textContent = granted
-        ? "تم تفعيل حماية التخزين وفق دعم النظام. هذا يقلّل احتمال الحذف التلقائي، لكنه لا يحمي من حذف التطبيق أو مسح بياناته يدوياً."
-        : "لم يمنح النظام حماية التخزين. لم تُحذف أي ملفات، وما زالت التنزيلات الحالية كما هي.";
-    }catch(e){
-      if(label) label.textContent = "تعذّر طلب الحماية. لم يتم تعديل أو حذف أي تنزيل.";
-    }
-    await refreshPersistenceStatus();
-  }
-
   async function refreshStats(){
     var st = $("stStatus");
     if(st) st.textContent = "جاري حساب المساحة…";
@@ -16709,6 +16670,7 @@ body.interface-old .app::after{
   }
 
   async function clearPartials(){
+    try{var native=window.AyaPrivateAudioStore;if(native&&typeof native.clearPartials==="function")native.clearPartials();}catch(e){}
     try{
       var db = await openIdb();
       await new Promise(function(resolve){
@@ -16759,7 +16721,6 @@ body.interface-old .app::after{
     if(!p) return;
     p.classList.add("show");
     try{ if(typeof closeSideMenu === "function") closeSideMenu(); }catch(e){}
-    refreshPersistenceStatus();
     refreshStats();
   }
   function closePopup(){
@@ -16769,9 +16730,6 @@ body.interface-old .app::after{
     try{ document.body.classList.remove("aya-storage-from-settings"); }catch(e){}
     forceHideSplash();
   }
-
-  var persistBtn = $("stRequestPersistence");
-  if(persistBtn) persistBtn.addEventListener("click", requestPersistentStorage);
 
   var btn = $("storageManageButton");
   if(btn) btn.addEventListener("click", openPopup);
