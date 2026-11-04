@@ -3558,7 +3558,9 @@ function loadPage(n, options = {}){
     {
       autoContinue: navShouldContinue,
       surahNumber: options.surahNumber || null,
-      startAyah: options.startAyah || null
+      startAyah: options.startAyah || null,
+      /* اختيار الجزء: الشبكة أولاً، مع إبقاء المسار المحلي للأوفلاين */
+      preferNetwork: !!options.preferNetwork
     }
   );
 }
@@ -6224,6 +6226,7 @@ function updateAudioSource(keepPosition = false, options = {}){
     !audio.paused ||
     !!(typeof userWantsPlay !== "undefined" && userWantsPlay);
   const autoContinue = !!options.autoContinue;
+  const preferNetwork = !!options.preferNetwork;
   /* أثناء تبديل المصدر بسبب التنقل لا تُفسَّر pause على أنها إيقاف من المستخدم */
   var __continueAfterSource =
     !!(wasPlaying || autoContinue);
@@ -6527,34 +6530,40 @@ function updateAudioSource(keepPosition = false, options = {}){
           }
         };
         try{
-          var pLocal = null;
-          if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.resolveLocal === "function"){
-            pLocal = window.__ayaAutoOffline.resolveLocal(url);
-          }else if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.idbFindPartial === "function"){
-            pLocal = window.__ayaAutoOffline.idbFindPartial(url).then(function(rec){
-              if(rec && rec.blob){
-                try{ audio.__ayaPartialMaxSec = Number(rec.maxSec) || 0; }catch(e){}
-                return URL.createObjectURL(rec.blob);
-              }
-              return null;
-            });
-          }
-          if(pLocal && typeof pLocal.then === "function"){
-            pLocal.then(function(local){
-              if(audio._ayaLoadToken !== loadToken) return;
-              if(local){
-                var maxSec = 0;
-                try{ maxSec = Number(audio.__ayaPartialMaxSec) || 0; }catch(e){}
-                applyLocalOnline(local, maxSec);
-              }else fallNet();
-            }).catch(fallNet);
-            /* مهلة احتياطية فقط إن تأخر التخزين */
-            setTimeout(function(){
-              if(audio._ayaLoadToken !== loadToken) return;
-              if(!decidedOnline) fallNet();
-            }, 900);
-          }else{
+          /* اختيار الجزء يذهب إلى الشبكة فوراً ولا ينتظر فحص التخزين المحلي.
+             يبقى البحث المحلي كما هو في بقية التنقل، ويظل مستخدماً عند انقطاع الإنترنت. */
+          if(preferNetwork){
             fallNet();
+          }else{
+            var pLocal = null;
+            if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.resolveLocal === "function"){
+              pLocal = window.__ayaAutoOffline.resolveLocal(url);
+            }else if(window.__ayaAutoOffline && typeof window.__ayaAutoOffline.idbFindPartial === "function"){
+              pLocal = window.__ayaAutoOffline.idbFindPartial(url).then(function(rec){
+                if(rec && rec.blob){
+                  try{ audio.__ayaPartialMaxSec = Number(rec.maxSec) || 0; }catch(e){}
+                  return URL.createObjectURL(rec.blob);
+                }
+                return null;
+              });
+            }
+            if(pLocal && typeof pLocal.then === "function"){
+              pLocal.then(function(local){
+                if(audio._ayaLoadToken !== loadToken) return;
+                if(local){
+                  var maxSec = 0;
+                  try{ maxSec = Number(audio.__ayaPartialMaxSec) || 0; }catch(e){}
+                  applyLocalOnline(local, maxSec);
+                }else fallNet();
+              }).catch(fallNet);
+              /* مهلة البحث المحلي المعتادة للتنقل العادي فقط */
+              setTimeout(function(){
+                if(audio._ayaLoadToken !== loadToken) return;
+                if(!decidedOnline) fallNet();
+              }, 900);
+            }else{
+              fallNet();
+            }
           }
         }catch(e){ fallNet(); }
       }
@@ -8366,7 +8375,7 @@ function buildJuzList(){
         /* الجزء = صفحة فقط، بدون surahNumber أو startAyah.
            وعند الانتقال من قائمة الأجزاء يبدأ تشغيل التلاوة تلقائياً
            من موضع الصفحة الجديدة، دون استخدام منطق السور. */
-        loadPage(juzPage,{ autoContinue: true });
+        loadPage(juzPage,{ autoContinue: true, preferNetwork: true });
 
         juzOverlay.classList.remove(
           "show"
