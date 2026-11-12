@@ -867,26 +867,49 @@ jobs:
           from pathlib import Path
           import re
 
-          strings = Path("android-app/android/app/src/main/res/values/strings.xml")
-          if not strings.exists():
-              raise SystemExit("ERROR: Android strings.xml not found")
+          res = Path("android-app/android/app/src/main/res")
+          manifest = Path("android-app/android/app/src/main/AndroidManifest.xml")
+          if not manifest.exists():
+              raise SystemExit("ERROR: AndroidManifest.xml not found")
 
-          content = strings.read_text(encoding="utf-8")
+          # Update app_name in every localized strings resource so a device
+          # language cannot silently restore the original app name.
+          found = 0
+          for strings in res.glob("values*/strings.xml"):
+              content = strings.read_text(encoding="utf-8")
+              updated, count = re.subn(
+                  r'(<string\s+name=["\'](?:app_name|title_activity_main)["\']\s*>).*?(</string>)',
+                  r'\1آية تجريبي\2',
+                  content,
+                  flags=re.DOTALL,
+              )
+              if count:
+                  strings.write_text(updated, encoding="utf-8")
+                  found += count
+
+          # Set the launcher label explicitly on the application element.
+          xml = manifest.read_text(encoding="utf-8")
           updated, count = re.subn(
-              r'(<string\s+name=["\']app_name["\']\s*>).*?(</string>)',
-              r'\1آية تجريبي\2',
-              content,
+              r'(<application\b[^>]*\bandroid:label=)["\'][^"\']*["\']',
+              r'\1"آية تجريبي"',
+              xml,
               count=1,
-              flags=re.DOTALL,
           )
+          if count == 0:
+              updated, count = re.subn(
+                  r'<application\b',
+                  '<application android:label="آية تجريبي"',
+                  xml,
+                  count=1,
+              )
           if count != 1:
-              raise SystemExit("ERROR: Could not find app_name string in strings.xml")
-          strings.write_text(updated, encoding="utf-8")
+              raise SystemExit("ERROR: Could not set Android application label")
+          manifest.write_text(updated, encoding="utf-8")
 
-          check = strings.read_text(encoding="utf-8")
-          if not re.search(r'<string\s+name=["\']app_name["\']\s*>آية تجريبي</string>', check):
-              raise SystemExit("ERROR: Experimental app name verification failed")
-          print("Verified Android display name: آية تجريبي")
+          final_xml = manifest.read_text(encoding="utf-8")
+          if 'android:label="آية تجريبي"' not in final_xml:
+              raise SystemExit("ERROR: Launcher label verification failed")
+          print(f"Verified launcher label: آية تجريبي; localized string entries updated: {found}")
           PY_APP_NAME
 
       - name: Build signed release APK
