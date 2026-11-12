@@ -847,7 +847,15 @@ jobs:
           source = Path("android-app/www/index.html")
           packaged.parent.mkdir(parents=True, exist_ok=True)
           packaged.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
-          print("Injected version", version, "into menu and About displays.")
+
+          # Final strict verification: never produce an APK with the raw placeholder.
+          for path in (source, packaged):
+              final_html = path.read_text(encoding="utf-8")
+              if "__AYA_BUILD_VERSION__" in final_html:
+                  raise SystemExit(f"ERROR: unresolved version placeholder remains in {path}")
+              if version not in final_html:
+                  raise SystemExit(f"ERROR: injected version {version} not found in {path}")
+          print("Verified app version", version, "in source and packaged web interface.")
           PY_VERSION
           if grep -q "update.json\|download-apk\|updatesOverlay" android-app/android/app/src/main/assets/public/index.html; then
             echo "::error::In-app updater residue remains in packaged web assets"
