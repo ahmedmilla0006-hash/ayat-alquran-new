@@ -87,34 +87,6 @@ jobs:
         working-directory: android-app
         run: npx cap sync android
 
-      - name: Set experimental Android display name after sync
-        run: |
-          python3 <<'PY_APP_NAME'
-          from pathlib import Path
-          import re
-
-          strings = Path("android-app/android/app/src/main/res/values/strings.xml")
-          if not strings.exists():
-              raise SystemExit("ERROR: Android strings.xml not found")
-
-          content = strings.read_text(encoding="utf-8")
-          updated, count = re.subn(
-              r'(<string\s+name=["\']app_name["\']\s*>).*?(</string>)',
-              r'\1آية تجريبي\2',
-              content,
-              count=1,
-              flags=re.DOTALL,
-          )
-          if count != 1:
-              raise SystemExit("ERROR: Could not find app_name string in strings.xml")
-          strings.write_text(updated, encoding="utf-8")
-
-          check = strings.read_text(encoding="utf-8")
-          if not re.search(r'<string\s+name=["\']app_name["\']\s*>آية تجريبي</string>', check):
-              raise SystemExit("ERROR: Experimental app name verification failed")
-          print("Verified Android display name: آية تجريبي")
-          PY_APP_NAME
-
       - name: Install Aya app icon
         run: |
           python3 << 'PY'
@@ -838,6 +810,7 @@ jobs:
           import os
 
           version = os.environ["VERSION_NAME"]
+          display_version = version + " – تجريبي"
           roots = [
               Path("android-app/www"),
               Path("android-app/android/app/src/main/assets/public"),
@@ -857,7 +830,7 @@ jobs:
                   except UnicodeDecodeError:
                       continue
                   if "__AYA_BUILD_VERSION__" in content:
-                      path.write_text(content.replace("__AYA_BUILD_VERSION__", version), encoding="utf-8")
+                      path.write_text(content.replace("__AYA_BUILD_VERSION__", display_version), encoding="utf-8")
                       changed.append(str(path))
 
           # Verify every packaged web asset, not only index.html.
@@ -876,10 +849,10 @@ jobs:
               raise SystemExit("ERROR: unresolved version placeholder in: " + ", ".join(unresolved))
 
           index = packaged / "index.html"
-          if not index.exists() or version not in index.read_text(encoding="utf-8"):
-              raise SystemExit("ERROR: version value not found in packaged index.html")
+          if not index.exists() or display_version not in index.read_text(encoding="utf-8"):
+              raise SystemExit("ERROR: experimental display version not found in packaged index.html")
 
-          print(f"Injected version {version}; changed files: {changed}")
+          print(f"Injected display version {display_version}; changed files: {changed}")
           print("Verified no raw version placeholder remains in packaged web assets.")
           PY_VERSION
           if grep -q "update.json\|download-apk\|updatesOverlay" android-app/android/app/src/main/assets/public/index.html; then
@@ -887,6 +860,34 @@ jobs:
             exit 1
           fi
           echo "Verified: packaged assets have no in-app updater."
+
+      - name: Set experimental Android display name after sync
+        run: |
+          python3 <<'PY_APP_NAME'
+          from pathlib import Path
+          import re
+
+          strings = Path("android-app/android/app/src/main/res/values/strings.xml")
+          if not strings.exists():
+              raise SystemExit("ERROR: Android strings.xml not found")
+
+          content = strings.read_text(encoding="utf-8")
+          updated, count = re.subn(
+              r'(<string\s+name=["\']app_name["\']\s*>).*?(</string>)',
+              r'\1آية تجريبي\2',
+              content,
+              count=1,
+              flags=re.DOTALL,
+          )
+          if count != 1:
+              raise SystemExit("ERROR: Could not find app_name string in strings.xml")
+          strings.write_text(updated, encoding="utf-8")
+
+          check = strings.read_text(encoding="utf-8")
+          if not re.search(r'<string\s+name=["\']app_name["\']\s*>آية تجريبي</string>', check):
+              raise SystemExit("ERROR: Experimental app name verification failed")
+          print("Verified Android display name: آية تجريبي")
+          PY_APP_NAME
 
       - name: Build signed release APK
         working-directory: android-app/android
