@@ -78,27 +78,6 @@ jobs:
           print("Experimental application ID configured: com.aya.alquran.test")
           PY
 
-      - name: Configure Android app name
-        working-directory: android-app
-        run: |
-          python3 << 'PY'
-          from pathlib import Path
-
-          p = Path("android/app/src/main/res/values/strings.xml")
-
-          if p.exists():
-              text = p.read_text(encoding="utf-8")
-
-              text = text.replace(
-                  "app_name\">App",
-                  "app_name\">آية تجريبي"
-              )
-
-              p.write_text(text, encoding="utf-8")
-
-          print("Android app name configured.")
-          PY
-
       - name: Install Pillow
         run: |
           python3 -m pip install --upgrade pip
@@ -565,7 +544,7 @@ jobs:
           PY
 
       # ============================================================
-      # NATIVE NETWORK STATE — مزامنة حالة الإنترنت مع WebView
+      # FIX: إخفاء إشعار التلاوة عند الإيقاف (لا يبقى معلّقاً)
       # ============================================================
 
       - name: Add reliable Android network state bridge
@@ -719,6 +698,7 @@ jobs:
       # ============================================================
       # FIX: إخفاء إشعار التلاوة عند الإيقاف (لا يبقى معلّقاً)
       # ============================================================
+
 
       - name: Fix media notification dismiss behavior
         run: |
@@ -973,7 +953,7 @@ jobs:
           echo "---- Manifest manageSpace check ----"
           grep -n "manageSpaceActivity\|ManageSpaceActivity" android-app/android/app/src/main/AndroidManifest.xml || (echo "MISSING manageSpace" && exit 1)
 
-      - name: Inject app version into web interface
+      - name: Inject app version into all web assets
         env:
           VERSION_NAME: ${{ steps.ver.outputs.versionName }}
         run: |
@@ -981,39 +961,109 @@ jobs:
           python3 <<'PY_VERSION'
           from pathlib import Path
           import os
-          version = os.environ["VERSION_NAME"]
-          for rel in (
-              "android-app/www/index.html",
-              "android-app/android/app/src/main/assets/public/index.html",
-          ):
-              path = Path(rel)
-              if not path.exists():
-                  if rel.endswith("assets/public/index.html"):
-                      continue
-                  raise SystemExit(f"ERROR: {rel} not found")
-              html = path.read_text(encoding="utf-8")
-              if "__AYA_BUILD_VERSION__" not in html:
-                  raise SystemExit(f"ERROR: version placeholder missing in {rel}")
-              path.write_text(html.replace("__AYA_BUILD_VERSION__", version), encoding="utf-8")
-          packaged = Path("android-app/android/app/src/main/assets/public/index.html")
-          source = Path("android-app/www/index.html")
-          packaged.parent.mkdir(parents=True, exist_ok=True)
-          packaged.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
 
-          # Final strict verification: never produce an APK with the raw placeholder.
-          for path in (source, packaged):
-              final_html = path.read_text(encoding="utf-8")
-              if "__AYA_BUILD_VERSION__" in final_html:
-                  raise SystemExit(f"ERROR: unresolved version placeholder remains in {path}")
-              if version not in final_html:
-                  raise SystemExit(f"ERROR: injected version {version} not found in {path}")
-          print("Verified app version", version, "in source and packaged web interface.")
+          version = os.environ["VERSION_NAME"]
+          display_version = version + " – تجريبي"
+          roots = [
+              Path("android-app/www"),
+              Path("android-app/android/app/src/main/assets/public"),
+          ]
+          text_suffixes = {".html", ".js", ".css", ".json", ".webmanifest", ".txt", ".xml"}
+          changed = []
+          unresolved = []
+
+          for root in roots:
+              if not root.exists():
+                  raise SystemExit(f"ERROR: web assets directory not found: {root}")
+              for path in root.rglob("*"):
+                  if not path.is_file() or path.suffix.lower() not in text_suffixes:
+                      continue
+                  try:
+                      content = path.read_text(encoding="utf-8")
+                  except UnicodeDecodeError:
+                      continue
+                  if "__AYA_BUILD_VERSION__" in content:
+                      path.write_text(content.replace("__AYA_BUILD_VERSION__", display_version), encoding="utf-8")
+                      changed.append(str(path))
+
+          # Verify every packaged web asset, not only index.html.
+          packaged = roots[1]
+          for path in packaged.rglob("*"):
+              if not path.is_file() or path.suffix.lower() not in text_suffixes:
+                  continue
+              try:
+                  content = path.read_text(encoding="utf-8")
+              except UnicodeDecodeError:
+                  continue
+              if "__AYA_BUILD_VERSION__" in content:
+                  unresolved.append(str(path))
+
+          if unresolved:
+              raise SystemExit("ERROR: unresolved version placeholder in: " + ", ".join(unresolved))
+
+          index = packaged / "index.html"
+          if not index.exists() or display_version not in index.read_text(encoding="utf-8"):
+              raise SystemExit("ERROR: experimental display version not found in packaged index.html")
+
+          print(f"Injected display version {display_version}; changed files: {changed}")
+          print("Verified no raw version placeholder remains in packaged web assets.")
           PY_VERSION
           if grep -q "update.json\|download-apk\|updatesOverlay" android-app/android/app/src/main/assets/public/index.html; then
             echo "::error::In-app updater residue remains in packaged web assets"
             exit 1
           fi
           echo "Verified: packaged assets have no in-app updater."
+
+      - name: Set experimental Android display name after sync
+        run: |
+          python3 <<'PY_APP_NAME'
+          from pathlib import Path
+          import re
+
+          res = Path("android-app/android/app/src/main/res")
+          manifest = Path("android-app/android/app/src/main/AndroidManifest.xml")
+          if not manifest.exists():
+              raise SystemExit("ERROR: AndroidManifest.xml not found")
+
+          # Update app_name in every localized strings resource so a device
+          # language cannot silently restore the original app name.
+          found = 0
+          for strings in res.glob("values*/strings.xml"):
+              content = strings.read_text(encoding="utf-8")
+              updated, count = re.subn(
+                  r'(<string\s+name=["\'](?:app_name|title_activity_main)["\']\s*>).*?(</string>)',
+                  r'\1آية تجريبي\2',
+                  content,
+                  flags=re.DOTALL,
+              )
+              if count:
+                  strings.write_text(updated, encoding="utf-8")
+                  found += count
+
+          # Set the launcher label explicitly on the application element.
+          xml = manifest.read_text(encoding="utf-8")
+          updated, count = re.subn(
+              r'(<application\b[^>]*\bandroid:label=)["\'][^"\']*["\']',
+              r'\1"آية تجريبي"',
+              xml,
+              count=1,
+          )
+          if count == 0:
+              updated, count = re.subn(
+                  r'<application\b',
+                  '<application android:label="آية تجريبي"',
+                  xml,
+                  count=1,
+              )
+          if count != 1:
+              raise SystemExit("ERROR: Could not set Android application label")
+          manifest.write_text(updated, encoding="utf-8")
+
+          final_xml = manifest.read_text(encoding="utf-8")
+          if 'android:label="آية تجريبي"' not in final_xml:
+              raise SystemExit("ERROR: Launcher label verification failed")
+          print(f"Verified launcher label: آية تجريبي; localized string entries updated: {found}")
+          PY_APP_NAME
 
       - name: Build signed release APK
         working-directory: android-app/android
@@ -1052,7 +1102,11 @@ jobs:
             exit 1
           fi
 
-          echo "APK: $APK"
+          # Give the downloadable APK a clear, user-friendly filename.
+          APK_DIR=$(dirname "$APK")
+          APK_NAMED="$APK_DIR/Aya-Test-${{ steps.ver.outputs.versionName }}.apk"
+          cp "$APK" "$APK_NAMED"
+          echo "APK: $APK_NAMED"
           echo "AAB: $AAB"
 
           AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt -o -name aapt2 | head -n 1)
@@ -1076,7 +1130,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: aya-play-store-apk-${{ steps.ver.outputs.versionName }}
-          path: android-app/android/app/build/outputs/apk/release/*.apk
+          path: android-app/android/app/build/outputs/apk/release/Aya-Test-*.apk
           if-no-files-found: error
 
       - name: Upload AAB (Google Play)
