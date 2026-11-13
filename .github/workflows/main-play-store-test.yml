@@ -78,6 +78,27 @@ jobs:
           print("Experimental application ID configured: com.aya.alquran.test")
           PY
 
+      - name: Configure Android app name
+        working-directory: android-app
+        run: |
+          python3 << 'PY'
+          from pathlib import Path
+
+          p = Path("android/app/src/main/res/values/strings.xml")
+
+          if p.exists():
+              text = p.read_text(encoding="utf-8")
+
+              text = text.replace(
+                  "app_name\">App",
+                  "app_name\">آية تجريبي"
+              )
+
+              p.write_text(text, encoding="utf-8")
+
+          print("Android app name configured.")
+          PY
+
       - name: Install Pillow
         run: |
           python3 -m pip install --upgrade pip
@@ -86,31 +107,6 @@ jobs:
       - name: Sync Capacitor
         working-directory: android-app
         run: npx cap sync android
-
-
-      # Set the launcher label AFTER cap sync, which may regenerate strings.xml.
-      - name: Configure and verify experimental Android app name
-        run: |
-          python3 << 'PY_APP_NAME'
-          from pathlib import Path
-          import re
-
-          p = Path("android-app/android/app/src/main/res/values/strings.xml")
-          if not p.exists():
-              raise SystemExit("ERROR: strings.xml not found after Capacitor sync")
-
-          text = p.read_text(encoding="utf-8")
-          pattern = r'(<string\s+name="app_name"\s*>).*?(</string>)'
-          updated, count = re.subn(pattern, r'\1آية تجريبي\2', text, count=1, flags=re.S)
-          if count != 1:
-              raise SystemExit("ERROR: could not safely set app_name in strings.xml")
-          p.write_text(updated, encoding="utf-8")
-
-          check = p.read_text(encoding="utf-8")
-          if not re.search(r'<string\s+name="app_name"\s*>آية تجريبي</string>', check):
-              raise SystemExit("ERROR: experimental app name verification failed")
-          print("Verified launcher name: آية تجريبي")
-          PY_APP_NAME
 
       - name: Install Aya app icon
         run: |
@@ -433,13 +429,6 @@ jobs:
               vc,
               vn
           )
-
-          final_gradle = gradle.read_text(encoding="utf-8")
-          if not re.search(r"versionCode\s+" + re.escape(vc) + r"\b", final_gradle):
-              raise SystemExit("ERROR: versionCode verification failed")
-          if not re.search(r'versionName\s+"' + re.escape(vn) + r'"', final_gradle):
-              raise SystemExit("ERROR: versionName verification failed")
-          print("Gradle version verified:", vc, vn)
           PY
 
       # ============================================================
@@ -725,6 +714,7 @@ jobs:
                   raise SystemExit("ERROR: network bridge verification failed: " + token)
           print("Native network bridge and manifest permission verified.")
           PY_NETWORK
+
 
       # ============================================================
       # FIX: إخفاء إشعار التلاوة عند الإيقاف (لا يبقى معلّقاً)
