@@ -575,6 +575,131 @@ jobs:
 
           echo "Quran widget step completed and verified successfully."
 
+      - name: Add Adhan (prayer) notifications
+        run: |
+          set -e
+          echo "==== Installing native Adhan notification components ===="
+          test -f app-source/scripts/add-adhan-notifications.py
+          python3 app-source/scripts/add-adhan-notifications.py
+
+          JAVA_DIR="android-app/android/app/src/main/java/com/aya/alquran"
+          MANIFEST="android-app/android/app/src/main/AndroidManifest.xml"
+          MAIN="$JAVA_DIR/MainActivity.java"
+
+          # Required Java classes
+          for f in AyaAdhanScheduler.java AyaAdhanReceiver.java AyaAdhanBootReceiver.java AyaAdhanBridge.java; do
+            if [ ! -f "$JAVA_DIR/$f" ]; then
+              echo "::error::Missing $f after add-adhan-notifications.py"
+              ls -la "$JAVA_DIR" || true
+              exit 1
+            fi
+            echo "OK: $f"
+          done
+
+          # Manifest: receivers + permissions
+          grep -q 'android:name=".AyaAdhanReceiver"' "$MANIFEST" || { echo "::error::AyaAdhanReceiver not in Manifest"; exit 1; }
+          grep -q 'android:name=".AyaAdhanBootReceiver"' "$MANIFEST" || { echo "::error::AyaAdhanBootReceiver not in Manifest"; exit 1; }
+          grep -q 'android.permission.SCHEDULE_EXACT_ALARM' "$MANIFEST" || { echo "::error::SCHEDULE_EXACT_ALARM missing"; exit 1; }
+          grep -q 'android.permission.RECEIVE_BOOT_COMPLETED' "$MANIFEST" || { echo "::error::RECEIVE_BOOT_COMPLETED missing"; exit 1; }
+          grep -q 'android.permission.POST_NOTIFICATIONS' "$MANIFEST" || { echo "::error::POST_NOTIFICATIONS missing"; exit 1; }
+          echo "OK: Manifest receivers and permissions"
+
+          # Bridge must be registered on WebView as "AyaAdhan" (matches window.AyaAdhan in JS)
+          grep -q 'addJavascriptInterface(new AyaAdhanBridge' "$MAIN" || { echo "::error::AyaAdhanBridge not injected into MainActivity"; exit 1; }
+          grep -q '"AyaAdhan"' "$MAIN" || { echo "::error::JS interface name AyaAdhan missing"; exit 1; }
+          echo "OK: AyaAdhan bridge linked in MainActivity"
+
+          # ---- Fix: create notification channel at app start (not only on first alarm) ----
+          # Also ensure USE_EXACT_ALARM is declared for better exact-alarm reliability on modern Android.
+          python3 << 'PY_FIX'
+          from pathlib import Path
+          import re
+
+          root = Path("android-app/android/app/src/main")
+          manifest = root / "AndroidManifest.xml"
+          mt = manifest.read_text(encoding="utf-8")
+          if 'android.permission.USE_EXACT_ALARM' not in mt:
+              mt = re.sub(
+                  r'(<manifest[^>]*>)',
+                  r'\1\n    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />',
+                  mt,
+                  count=1,
+              )
+              manifest.write_text(mt, encoding="utf-8")
+              print("Added USE_EXACT_ALARM")
+
+          # Ensure channel is created early: inject into MainActivity.onCreate after super
+          main = root / "java/com/aya/alquran/MainActivity.java"
+          code = main.read_text(encoding="utf-8")
+          marker = "AYA_ADHAN_CHANNEL_EARLY_V1"
+          if marker not in code:
+              # Prefer after createNotificationChannel for media if present, else after super.onCreate
+              inject = (
+                  "\n        // " + marker + "\n"
+                  "        try {\n"
+                  "            if (android.os.Build.VERSION.SDK_INT >= 26) {\n"
+                  "                android.app.NotificationManager nm = getSystemService(android.app.NotificationManager.class);\n"
+                  "                if (nm != null) {\n"
+                  "                    android.app.NotificationChannel ch = new android.app.NotificationChannel(\n"
+                  "                        \"aya_adhan_alerts\", \"تنبيهات الأذان\",\n"
+                  "                        android.app.NotificationManager.IMPORTANCE_HIGH);\n"
+                  "                    ch.setDescription(\"تنبيهات أوقات الصلاة\");\n"
+                  "                    ch.enableVibration(true);\n"
+                  "                    ch.setShowBadge(true);\n"
+                  "                    nm.createNotificationChannel(ch);\n"
+                  "                }\n"
+                  "            }\n"
+                  "        } catch (Exception ignored) {}\n"
+              )
+              # Insert after super.onCreate(...) ;
+              m = re.search(r"super\s*\.\s*onCreate\s*\(\s*savedInstanceState\s*\)\s*;", code)
+              if not m:
+                  raise SystemExit("ERROR: could not find super.onCreate in MainActivity for Adhan channel")
+              pos = m.end()
+              code = code[:pos] + inject + code[pos:]
+              main.write_text(code, encoding="utf-8")
+              print("Injected early Adhan notification channel creation into MainActivity.onCreate")
+          else:
+              print("Early Adhan channel already present")
+
+          # Harden receiver: still create channel, use high importance, sound default
+          recv = root / "java/com/aya/alquran/AyaAdhanReceiver.java"
+          rt = recv.read_text(encoding="utf-8")
+          if "setDefaults(NotificationCompat.DEFAULT_ALL)" not in rt:
+              rt = rt.replace(
+                  ".setPriority(NotificationCompat.PRIORITY_HIGH)",
+                  ".setPriority(NotificationCompat.PRIORITY_HIGH)\n"
+                  "            .setCategory(NotificationCompat.CATEGORY_ALARM)\n"
+                  "            .setDefaults(NotificationCompat.DEFAULT_ALL)\n"
+                  "            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)",
+                  1,
+              )
+              recv.write_text(rt, encoding="utf-8")
+              print("Hardened AyaAdhanReceiver notification defaults")
+          else:
+              print("Receiver already hardened")
+          PY_FIX
+
+          # Re-verify after patches
+          grep -q 'AYA_ADHAN_CHANNEL_EARLY_V1' "$MAIN" || { echo "::error::Early channel injection failed"; exit 1; }
+          grep -q 'aya_adhan_alerts' "$MAIN" || { echo "::error::Channel id missing in MainActivity"; exit 1; }
+          grep -q 'تنبيهات الأذان' "$MAIN" || { echo "::error::Channel name missing in MainActivity"; exit 1; }
+          grep -q 'android.permission.USE_EXACT_ALARM' "$MANIFEST" || { echo "::error::USE_EXACT_ALARM not present"; exit 1; }
+          grep -q 'CATEGORY_ALARM\|setDefaults' "$JAVA_DIR/AyaAdhanReceiver.java" || { echo "::error::Receiver not hardened"; exit 1; }
+
+          # Confirm scheduler uses exact alarms path
+          grep -q 'setExactAndAllowWhileIdle\|setExact' "$JAVA_DIR/AyaAdhanScheduler.java" || {
+            echo "::error::Scheduler does not use exact alarms"
+            exit 1
+          }
+          grep -q 'scheduleNextDay' "$JAVA_DIR/AyaAdhanScheduler.java" || {
+            echo "::error::scheduleNextDay missing"
+            exit 1
+          }
+          grep -q 'BOOT_COMPLETED' "$MANIFEST" || true
+
+          echo "==== Adhan notifications installed and verified successfully ===="
+
       - name: Remove invalid Activity onTaskRemoved override
         run: |
           python3 << 'PY'
