@@ -517,6 +517,64 @@ jobs:
           print("AyaMediaService.java restored and verified without overwriting it later.")
 
 
+      - name: Add Quran widget
+        run: |
+          set -e
+          echo "Running Quran widget installation script..."
+          python3 app-source/scripts/add-quran-widget.py
+
+          # Verify widget Java files exist
+          JAVA_DIR="android-app/android/app/src/main/java/com/aya/alquran"
+          WIDGET_JAVA=$(find "$JAVA_DIR" -name '*Widget*.java' -o -name '*QuranWidget*.java' 2>/dev/null | head -5)
+          if [ -z "$WIDGET_JAVA" ]; then
+            echo "::error::No widget Java files found after running add-quran-widget.py"
+            ls -la "$JAVA_DIR" || true
+            exit 1
+          fi
+          echo "Found widget Java files:"
+          echo "$WIDGET_JAVA"
+
+          # Verify widget XML resources exist (provider info, layouts, etc.)
+          RES_DIR="android-app/android/app/src/main/res"
+          WIDGET_XML=$(find "$RES_DIR" -type f \( -name '*widget*.xml' -o -name '*quran*widget*.xml' -o -path '*/xml/*widget*' \) 2>/dev/null | head -10)
+          if [ -z "$WIDGET_XML" ]; then
+            # also check common locations
+            WIDGET_XML=$(find "$RES_DIR" -type f -name '*.xml' | xargs grep -l -i 'AppWidgetProvider\|appwidget-provider' 2>/dev/null | head -5)
+          fi
+          if [ -z "$WIDGET_XML" ]; then
+            echo "::error::No widget XML files found after running add-quran-widget.py"
+            find "$RES_DIR" -name '*widget*' -o -name '*quran*' 2>/dev/null | head -20 || true
+            exit 1
+          fi
+          echo "Found widget XML files:"
+          echo "$WIDGET_XML"
+
+          # Verify widget is registered in AndroidManifest.xml
+          MANIFEST="android-app/android/app/src/main/AndroidManifest.xml"
+          if ! grep -qE 'android:name=.*[Ww]idget|AppWidgetProvider|receiver.*[Ww]idget' "$MANIFEST"; then
+            echo "::error::Widget not registered in AndroidManifest.xml"
+            grep -n -i widget "$MANIFEST" || true
+            exit 1
+          fi
+          echo "Widget registration found in AndroidManifest.xml:"
+          grep -n -i -E 'widget|AppWidget' "$MANIFEST" || true
+
+          # Verify MainActivity is linked / references the widget (or at least exists and is intact)
+          MAIN_ACT="$JAVA_DIR/MainActivity.java"
+          if [ ! -f "$MAIN_ACT" ]; then
+            echo "::error::MainActivity.java missing after widget script"
+            exit 1
+          fi
+          # Soft check: script may inject widget-related code into MainActivity
+          if grep -qiE 'widget|AppWidget|QuranWidget' "$MAIN_ACT"; then
+            echo "MainActivity contains widget-related references (good)."
+            grep -n -i -E 'widget|AppWidget|QuranWidget' "$MAIN_ACT" | head -10 || true
+          else
+            echo "Note: No explicit widget string found in MainActivity (may be OK if linking is via Manifest only)."
+          fi
+
+          echo "Quran widget step completed and verified successfully."
+
       - name: Remove invalid Activity onTaskRemoved override
         run: |
           python3 << 'PY'
